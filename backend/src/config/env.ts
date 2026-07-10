@@ -71,16 +71,3 @@ export const readCsv = (name: string): string[] => {
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 };
-
-/** Enum read validated against the spec's declared values; null when unset. */
-export const readEnum = (name: string): string | null => {
-  const spec = getSpec(name);
-  const raw = readRaw(name);
-  if (!raw) return null;
-  const normalized = raw.trim();
-  if (normalized.length === 0) return null;
-  if (spec.values && !spec.values.includes(normalized)) {
-    throw new Error(`${name} must be one of: ${spec.values.join(", ")}`);
-  }
-  return normalized;
-};

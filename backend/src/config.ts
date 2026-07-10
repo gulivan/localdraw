@@ -63,7 +63,12 @@ interface Config {
   jwtAccessExpiresIn: string;
   jwtRefreshExpiresIn: string;
   rateLimitMaxRequests: number;
+  rateLimitWindowMs: number;
   csrfMaxRequests: number;
+  csrfRateLimitWindowMs: number;
+  snapshotRetentionMs: number;
+  uploadMaxBytes: number;
+  bodyLimitMb: number;
   csrfSecret: string | null;
   debugCsrf: boolean;
   apiKeyHashPepper: string;
@@ -351,7 +356,12 @@ export const config: Config = {
   jwtAccessExpiresIn: readString("JWT_ACCESS_EXPIRES_IN", "15m"),
   jwtRefreshExpiresIn: readString("JWT_REFRESH_EXPIRES_IN", "7d"),
   rateLimitMaxRequests: readNumber("RATE_LIMIT_MAX_REQUESTS", 1000),
+  rateLimitWindowMs: readNumber("RATE_LIMIT_WINDOW_MS", 900000),
   csrfMaxRequests: readNumber("CSRF_MAX_REQUESTS", 60),
+  csrfRateLimitWindowMs: readNumber("CSRF_RATE_LIMIT_WINDOW_MS", 60000),
+  snapshotRetentionMs: readNumber("SNAPSHOT_RETENTION_DAYS", 2) * 24 * 60 * 60 * 1000,
+  uploadMaxBytes: readNumber("UPLOAD_MAX_MB", 100) * 1024 * 1024,
+  bodyLimitMb: readNumber("BODY_LIMIT_MB", 50),
   csrfSecret: readRaw("CSRF_SECRET") || null,
   debugCsrf: readRaw("DEBUG_CSRF") === "true",
   apiKeyHashPepper: readRaw("API_KEY_HASH_PEPPER") || "api-key-hash-pepper",

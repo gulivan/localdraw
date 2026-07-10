@@ -89,33 +89,6 @@ export const isS3Enabled = (): boolean =>
 export const getS3Config = (): S3Config | null => s3Config;
 
 /**
- * Generate a presigned PUT URL that allows a browser to upload a single object directly to S3.
- * @param key      S3 object key
- * @param mimeType Content-Type of the upload
- * @param expiresInSeconds URL validity window (default: 5 minutes)
- */
-export const generatePresignedUploadUrl = async (
-  key: string,
-  mimeType: string,
-  expiresInSeconds = 300
-): Promise<string> => {
-  if (!s3Client || !s3Config) {
-    throw new Error("S3 is not configured");
-  }
-
-  const command = new PutObjectCommand({
-    Bucket: s3Config.bucket,
-    Key: key,
-    ContentType: mimeType,
-    // Image keys contain a content hash, so they are immutable — cache
-    // aggressively to reduce repeated downloads from S3/CDN.
-    CacheControl: "public, max-age=31536000, immutable",
-  });
-
-  return getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds });
-};
-
-/**
  * Generate a presigned GET URL for reading a private S3 object.
  * @param key             S3 object key
  * @param expiresInSeconds URL validity window (default: 1 hour)

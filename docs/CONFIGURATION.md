@@ -14,6 +14,9 @@ This file and `backend/.env.example` are generated from that registry; do not ed
 | `FRONTEND_URL` | — | No | Comma-separated CORS allowlist of frontend origins; also drives HTTPS detection. |
 | `TRUST_PROXY` | `false` | No | Express trust proxy setting: true, false, or a positive hop count. |
 | `DRAWINGS_CACHE_TTL_MS` | `5000` | No | In-memory drawings list cache TTL in milliseconds. |
+| `SNAPSHOT_RETENTION_DAYS` | `2` | No | Number of days to retain drawing snapshots before the hourly sweep prunes them. |
+| `UPLOAD_MAX_MB` | `100` | No | Maximum size (in MB) of a single uploaded file accepted by multer (imports, database restores). |
+| `BODY_LIMIT_MB` | `50` | No | Maximum request body size (in MB) for JSON/urlencoded payloads and the Socket.IO buffer. |
 
 ## Database
 
@@ -73,6 +76,8 @@ This file and `backend/.env.example` are generated from that registry; do not ed
 | `CSRF_SECRET` | _(none — secret)_ | In production | Secret used to sign CSRF tokens; a dev fallback is derived when unset. |
 | `CSRF_MAX_REQUESTS` | `60` | No | Maximum CSRF-token issuances per rate-limit window. |
 | `RATE_LIMIT_MAX_REQUESTS` | `1000` | No | Maximum general API requests per rate-limit window. |
+| `RATE_LIMIT_WINDOW_MS` | `900000` | No | General API rate-limit window in milliseconds (default 15 minutes); pairs with RATE_LIMIT_MAX_REQUESTS. |
+| `CSRF_RATE_LIMIT_WINDOW_MS` | `60000` | No | CSRF-token issuance rate-limit window in milliseconds (default 1 minute); pairs with CSRF_MAX_REQUESTS. |
 | `ENFORCE_HTTPS_REDIRECT` | `true` | No | Redirect HTTP requests to HTTPS when a secure origin is detected. |
 | `API_KEY_HASH_PEPPER` | _(none — secret)_ | No | Pepper mixed into API-key hashes; set before creating keys (see docs). |
 | `DEBUG_CSRF` | `false` | No | Enable verbose CSRF debug logging. |

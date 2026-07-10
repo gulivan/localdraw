@@ -24,6 +24,20 @@ export const securityEnv: readonly EnvVarSpec[] = [
     doc: "Maximum general API requests per rate-limit window.",
   },
   {
+    name: "RATE_LIMIT_WINDOW_MS",
+    group: "Security",
+    kind: "number",
+    default: "900000",
+    doc: "General API rate-limit window in milliseconds (default 15 minutes); pairs with RATE_LIMIT_MAX_REQUESTS.",
+  },
+  {
+    name: "CSRF_RATE_LIMIT_WINDOW_MS",
+    group: "Security",
+    kind: "number",
+    default: "60000",
+    doc: "CSRF-token issuance rate-limit window in milliseconds (default 1 minute); pairs with CSRF_MAX_REQUESTS.",
+  },
+  {
     name: "ENFORCE_HTTPS_REDIRECT",
     group: "Security",
     kind: "boolean",

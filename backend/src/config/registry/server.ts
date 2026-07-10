@@ -38,6 +38,27 @@ export const serverEnv: readonly EnvVarSpec[] = [
     default: "5000",
     doc: "In-memory drawings list cache TTL in milliseconds.",
   },
+  {
+    name: "SNAPSHOT_RETENTION_DAYS",
+    group: "Server",
+    kind: "number",
+    default: "2",
+    doc: "Number of days to retain drawing snapshots before the hourly sweep prunes them.",
+  },
+  {
+    name: "UPLOAD_MAX_MB",
+    group: "Server",
+    kind: "number",
+    default: "100",
+    doc: "Maximum size (in MB) of a single uploaded file accepted by multer (imports, database restores).",
+  },
+  {
+    name: "BODY_LIMIT_MB",
+    group: "Server",
+    kind: "number",
+    default: "50",
+    doc: "Maximum request body size (in MB) for JSON/urlencoded payloads and the Socket.IO buffer.",
+  },
 ];
 
 export const databaseEnv: readonly EnvVarSpec[] = [
