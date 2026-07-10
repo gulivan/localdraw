@@ -8,6 +8,10 @@ export interface DrawingSummary {
   preview?: string | null;
   accessLevel?: "none" | "view" | "edit" | "owner";
   creatorName?: string | null;
+  // Privacy/Encryption fields (private vault)
+  isPrivate?: boolean;
+  encryptedData?: string | null;
+  iv?: string | null;
 }
 export interface Drawing extends DrawingSummary {
   elements: any[];
@@ -21,6 +25,19 @@ export interface Collection {
   sharedRole?: "view" | "edit" | null;
   isOwner?: boolean;
   isShared?: boolean;
+}
+
+// Vault types (private vault)
+export interface VaultStatus {
+  isSetup: boolean;
+  salt?: string;
+  hint?: string | null;
+  privateDrawingsCount?: number;
+}
+
+export interface VaultVerifyResult {
+  success: boolean;
+  salt: string;
 }
 
 export type CollectionShareRole = "view" | "edit";
