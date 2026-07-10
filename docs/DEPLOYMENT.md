@@ -254,6 +254,14 @@ export DATABASE_URL="postgresql://user:password@localhost:5432/excalidash"
 
 The helper prompts for SQLite or PostgreSQL, sets `DATABASE_PROVIDER`, and writes the generated migration under `backend/prisma/migrations/<provider>/`. Switching providers does not migrate existing data between SQLite and PostgreSQL; treat the target database as a separate install unless you build and verify an explicit data migration.
 
+**PostgreSQL:** `docker-compose.pg-test.yml` is a runnable local example that brings up a PostgreSQL container alongside the backend wired to it. Use it to try the PostgreSQL path end to end:
+
+```bash
+docker compose -f docker-compose.pg-test.yml up
+```
+
+The credentials baked into that file are for local testing only; supply your own secrets and connection string for any real deployment.
+
 </details>
 
 <details>

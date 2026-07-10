@@ -21,12 +21,7 @@ export const resetSecuritySettings = (): void => { activeConfig = { ...defaultCo
  * Get current security configuration
  */
 export const getSecurityConfig = (): SecurityConfig => { return { ...activeConfig }; };
-/**
- * Sanitize HTML/JS content using DOMPurify (battle-tested library)
- */
-export const sanitizeHtml = (input: string): string => { if (typeof input !== "string") return ""; return purify
-.sanitize(input, { ALLOWED_TAGS: ["b", "i", "u", "em", "strong", "p", "br", "span", "div"], ALLOWED_ATTR: [], FORBID_TAGS: [ "script", "iframe", "object", "embed", "link", "style", "form", "input", "button", "select", "textarea", "svg", "foreignObject", ], FORBID_ATTR: [ "onload", "onclick", "onerror", "onmouseover", "onfocus", "onblur", "onchange", "onsubmit", "onreset", "onkeydown", "onkeyup", "onkeypress", "href", "src", "action", "formaction", ], KEEP_CONTENT: true, })
-.trim(); }; export const sanitizeSvg = (svgContent: string): string => { if (typeof svgContent !== "string") return ""; const safeImageDataUrlPattern =
+export const sanitizeSvg = (svgContent: string): string => { if (typeof svgContent !== "string") return ""; const safeImageDataUrlPattern =
 /^data:image\/(?:png|jpe?g|gif|webp|avif|bmp);base64,[a-z0-9+/=\s]+$/i; const sanitizeSvgImageTags = (content: string): string => content.replace(/<image\b[^>]*>/gi, (imageTag) => { const hrefMatch = imageTag.match(/\shref\s*=\s*"([^"]*)"/i) ?? imageTag.match(/\shref\s*=\s*'([^']*)'/i) ?? imageTag.match(/\sxlink:href\s*=\s*"([^"]*)"/i) ?? imageTag.match(/\sxlink:href\s*=\s*'([^']*)'/i); const hrefValue = hrefMatch?.[1]?.trim(); if (!hrefValue || !safeImageDataUrlPattern.test(hrefValue)) { return ""; } const withoutXlinkHref = imageTag.replace(
 /\sxlink:href\s*=\s*(?:"[^"]*"|'[^']*')/gi, "" ); if (/\shref\s*=/i.test(withoutXlinkHref)) { return withoutXlinkHref.replace(
 /\shref\s*=\s*(?:"[^"]*"|'[^']*')/i,

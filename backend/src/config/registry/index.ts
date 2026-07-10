@@ -5,6 +5,7 @@ import { oidcEnv } from "./oidc";
 import { securityEnv } from "./security";
 import { storageEnv, backupEnv } from "./storage";
 import { updateCheckEnv, linkSharingEnv } from "./misc";
+import { frontendEnv } from "./frontend";
 
 export type { EnvKind, EnvVarSpec } from "./types";
 
@@ -18,6 +19,7 @@ export const ENV_REGISTRY: readonly EnvVarSpec[] = [
   ...backupEnv,
   ...updateCheckEnv,
   ...linkSharingEnv,
+  ...frontendEnv,
 ];
 
 const SPEC_BY_NAME = new Map<string, EnvVarSpec>(

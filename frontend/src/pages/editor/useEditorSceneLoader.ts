@@ -125,16 +125,6 @@ export const useEditorSceneLoader = ({
         const loadedRenderable = hasRenderableElements(elements);
         refs.suspiciousBlankLoad.current = !loadedRenderable && hasPreview;
         refs.hasSceneChangesSinceLoad.current = false;
-        if (import.meta.env.DEV) {
-          console.log("[Editor] Loaded drawing", {
-            drawingId: id,
-            elementCount: elements.length,
-            loadedRenderable,
-            hasPreview,
-            version: data.version ?? null,
-            suspiciousBlankLoad: refs.suspiciousBlankLoad.current,
-          });
-        }
         refs.latestElements.current = elements;
         refs.initialSceneElements.current = elements;
         refs.latestFiles.current = files;

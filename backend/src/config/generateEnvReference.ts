@@ -28,11 +28,15 @@ const hasActiveDefault = (spec: EnvVarSpec): boolean =>
 const commentedValue = (spec: EnvVarSpec): string =>
   spec.example ?? spec.default ?? "";
 
+/** Group whose vars are documented only; never emitted into .env.example. */
+const FRONTEND_GROUP = "Frontend (build-time)";
+
 export const renderEnvExample = (): string => {
   const lines: string[] = [];
   lines.push(`# ${GENERATED_NOTE}`);
   lines.push("# Backend environment variables. Copy to .env and adjust.");
   for (const group of groupOrder()) {
+    if (group === FRONTEND_GROUP) continue;
     lines.push("");
     lines.push(`# === ${group} ===`);
     for (const spec of specsInGroup(group)) {

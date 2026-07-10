@@ -112,3 +112,11 @@ This file and `backend/.env.example` are generated from that registry; do not ed
 | `LINK_SHARE_EDIT_DEFAULT_TTL_MS` | `604800000` | No | Default lifetime (ms) of edit share links (7 days). |
 | `LINK_SHARE_VIEW_DEFAULT_TTL_MS` | `2592000000` | No | Default lifetime (ms) of view share links (30 days). |
 | `LINK_SHARE_MAX_TTL_MS` | `7776000000` | No | Maximum allowed lifetime (ms) for any share link (90 days). |
+
+## Frontend (build-time)
+
+| Variable | Default | Required | Description |
+| --- | --- | --- | --- |
+| `VITE_API_URL` | `/api` | No | Base URL the frontend uses to reach the backend API. Keep /api so requests stay same-origin (proxied by Vite in dev and nginx in production), avoiding CORS. Consumed outside the backend; documented only. |
+| `VITE_EXCALIDASH_UI_FONT_FAMILY` | `Excalifont` | No | Optional app-shell display font family override. Falls back to Excalifont when unset. Consumed outside the backend; documented only. |
+| `VITE_EXCALIDASH_UI_FONT_URL` | — | No | Optional self-hosted WOFF2 URL for the display font; when set, a matching @font-face is injected for VITE_EXCALIDASH_UI_FONT_FAMILY. Consumed outside the backend; documented only. |

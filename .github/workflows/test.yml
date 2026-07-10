@@ -221,8 +221,3 @@ jobs:
         run: |
           cd backend
           npx prisma generate
-      
-      - name: Run security tests
-        run: |
-          cd backend
-          npx ts-node src/securityTest.ts

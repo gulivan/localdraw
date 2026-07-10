@@ -11,7 +11,8 @@ export interface EnvVarSpec {
     | "S3 storage"
     | "Backups"
     | "Update check"
-    | "Link sharing";
+    | "Link sharing"
+    | "Frontend (build-time)";
   kind: EnvKind;
   /** Human-readable default shown in docs; omit if none. */
   default?: string;
