@@ -11,9 +11,8 @@ import type { Collection } from "../types";
 import clsx from "clsx";
 import { ConfirmModal } from "./ConfirmModal";
 import { ShareCollectionModal } from "./ShareCollectionModal";
-import { Logo } from "./Logo";
 import { useAuth } from "../context/AuthContext";
-import { displayFontFamily } from "../utils/displayFont";
+import { LocalDrawBrand } from "./LocalDrawBrand";
 import { SidebarItem } from "./sidebar/SidebarItem";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
 import {
@@ -88,19 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       <div className="w-full flex flex-col h-full bg-transparent">
         <div className="p-4 sm:p-5 pb-2">
-          <h1
-            className="text-2xl text-slate-900 dark:text-white flex items-center gap-3 tracking-tight"
-            style={{ fontFamily: displayFontFamily }}
-          >
-            <Logo className="w-10 h-10" />
-            <span className="mt-1">ExcaliDash</span>
-            <span
-              className="text-xs font-bold text-red-500 mt-2"
-              style={{ fontFamily: "sans-serif" }}
-            >
-              BETA
-            </span>
-          </h1>
+          <LocalDrawBrand />
         </div>
         <nav
           className="flex-1 overflow-y-auto py-3 sm:py-4 space-y-4 sm:space-y-8 custom-scrollbar"
