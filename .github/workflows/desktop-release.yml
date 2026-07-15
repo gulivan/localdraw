@@ -93,7 +93,12 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev xvfb zstd
+          sudo apt-get install -y \
+            libayatana-appindicator3-1 \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            xvfb \
+            zstd
       - name: Install dependencies
         run: |
           npm ci --prefix backend
@@ -109,6 +114,8 @@ jobs:
           mkdir -p desktop/portable-linux
           zstd --decompress --stdout "$ARCHIVE" | tar -xf - -C desktop/portable-linux
           test -x desktop/portable-linux/ExcaliDash/bin/launcher
+          ldd desktop/portable-linux/ExcaliDash/bin/libNativeWrapper.so | tee localdraw-linux-ldd.log
+          ! grep -q 'not found' localdraw-linux-ldd.log
       - name: Smoke test packaged app
         shell: bash
         run: |
