@@ -1,32 +1,28 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
+import { spawn, spawnSync } from "node:child_process";
 import {
   createReadStream,
   createWriteStream,
   existsSync,
   mkdirSync,
+  readFileSync,
+  renameSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { spawn, spawnSync } from "node:child_process";
+import {
+  RELEASE_VERSION,
+  getInstallLayout,
+  getTarget,
+} from "../lib/platform.js";
 
-const VERSION = "0.5.1-desktop";
-const MAC_ARM64_SHA256 = "9f8f618377a0a2ae70bde1a0c946ad69aeedd12a4083dd6d8a85628f00ab0b2d";
-const userApplicationsDir = join(homedir(), "Applications");
-const installedMacApp = join(userApplicationsDir, "ExcaliDash.app");
-
-const candidates = {
-  darwin: [
-    join(installedMacApp, "Contents/MacOS/launcher"),
-    "/Applications/ExcaliDash.app/Contents/MacOS/launcher",
-  ],
-  linux: [join(homedir(), ".local/bin/excalidash"), "/usr/local/bin/excalidash"],
-  win32: [join(process.env.LOCALAPPDATA || "", "ExcaliDash", "ExcaliDash.exe")],
-};
+const RELEASE_BASE_URL = `https://github.com/gulivan/ExcaliDash/releases/download/v${RELEASE_VERSION}`;
 
 const run = (command, args) => {
   const result = spawnSync(command, args, { stdio: "inherit" });
@@ -35,67 +31,109 @@ const run = (command, args) => {
   }
 };
 
+const download = async (url, destination) => {
+  const response = await fetch(url, { redirect: "follow" });
+  if (!response.ok || !response.body) {
+    throw new Error(`Download failed (${response.status} ${response.statusText})`);
+  }
+  await pipeline(Readable.fromWeb(response.body), createWriteStream(destination));
+};
+
 const sha256 = async (file) => {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(file)) hash.update(chunk);
   return hash.digest("hex");
 };
 
-const installMacArm64 = async () => {
-  if (process.arch !== "arm64") {
-    throw new Error("The first ExcaliDash desktop release supports Apple silicon Macs only.");
+const verifyDownload = async (archivePath, checksumPath) => {
+  const expected = readFileSync(checksumPath, "utf8").trim().split(/\s+/)[0];
+  if (!/^[a-f\d]{64}$/i.test(expected) || (await sha256(archivePath)) !== expected) {
+    throw new Error("The downloaded application failed its checksum verification.");
   }
+};
 
-  const workDir = join(tmpdir(), `excalidash-${process.pid}`);
-  const dmgPath = join(workDir, "ExcaliDash.dmg");
+const installDmg = (archivePath, installDir, workDir) => {
   const mountPath = join(workDir, "mounted");
-  const downloadUrl = `https://github.com/gulivan/ExcaliDash/releases/download/v${VERSION}/stable-macos-arm64-ExcaliDash.dmg`;
   mkdirSync(mountPath, { recursive: true });
+  run("hdiutil", ["attach", "-nobrowse", "-readonly", "-mountpoint", mountPath, archivePath]);
+  try {
+    mkdirSync(dirname(installDir), { recursive: true });
+    rmSync(installDir, { recursive: true, force: true });
+    run("ditto", [join(mountPath, "ExcaliDash.app"), installDir]);
+  } finally {
+    // APFS can briefly report "resource busy" after copying. A failed detach
+    // must not turn a successful installation into a failed npx run.
+    spawnSync("hdiutil", ["detach", mountPath], { stdio: "ignore" });
+  }
+};
+
+const installTarball = (archivePath, installDir) => {
+  const nextDir = `${installDir}.next-${process.pid}`;
+  rmSync(nextDir, { recursive: true, force: true });
+  mkdirSync(nextDir, { recursive: true });
+  run("tar", ["-xzf", archivePath, "-C", nextDir]);
+  rmSync(installDir, { recursive: true, force: true });
+  mkdirSync(dirname(installDir), { recursive: true });
+  renameSync(nextDir, installDir);
+};
+
+const installZip = (archivePath, installDir) => {
+  rmSync(installDir, { recursive: true, force: true });
+  mkdirSync(installDir, { recursive: true });
+  const escapedArchive = archivePath.replaceAll("'", "''");
+  const escapedInstallDir = installDir.replaceAll("'", "''");
+  run("powershell.exe", [
+    "-NoProfile",
+    "-NonInteractive",
+    "-Command",
+    `Expand-Archive -LiteralPath '${escapedArchive}' -DestinationPath '${escapedInstallDir}' -Force`,
+  ]);
+};
+
+const findExecutable = (executables) => executables.find(existsSync);
+const layout = getInstallLayout();
+const explicitlyConfiguredBinary = process.env.EXCALIDASH_BINARY;
+let executable = explicitlyConfiguredBinary || findExecutable(layout.executables);
+const installedVersion = existsSync(layout.versionFile)
+  ? readFileSync(layout.versionFile, "utf8").trim()
+  : null;
+
+if (!explicitlyConfiguredBinary && (!executable || installedVersion !== RELEASE_VERSION)) {
+  const workDir = join(tmpdir(), `localdraw-${process.pid}`);
+  mkdirSync(workDir, { recursive: true });
 
   try {
-    console.log(`Downloading ExcaliDash ${VERSION}...`);
-    const response = await fetch(downloadUrl, { redirect: "follow" });
-    if (!response.ok || !response.body) {
-      throw new Error(`Download failed (${response.status} ${response.statusText})`);
-    }
-    await pipeline(Readable.fromWeb(response.body), createWriteStream(dmgPath));
-    if ((await sha256(dmgPath)) !== MAC_ARM64_SHA256) {
-      throw new Error("The downloaded application failed its checksum verification.");
-    }
+    const target = getTarget();
+    const archivePath = join(workDir, target.archive);
+    const checksumPath = `${archivePath}.sha256`;
+    console.log(`Downloading LocalDraw ${RELEASE_VERSION} for ${process.platform}/${process.arch}...`);
+    await download(`${RELEASE_BASE_URL}/${target.archive}`, archivePath);
+    await download(`${RELEASE_BASE_URL}/${target.archive}.sha256`, checksumPath);
+    await verifyDownload(archivePath, checksumPath);
 
-    run("hdiutil", ["attach", "-nobrowse", "-readonly", "-mountpoint", mountPath, dmgPath]);
-    mkdirSync(userApplicationsDir, { recursive: true });
-    rmSync(installedMacApp, { recursive: true, force: true });
-    run("ditto", [join(mountPath, "ExcaliDash.app"), installedMacApp]);
-    // APFS images can report a short-lived "resource busy" after ditto.
-    // The finally block retries the detach and cleanup without turning a
-    // successful installation into a failed npx run.
-    spawnSync("hdiutil", ["detach", mountPath], { stdio: "ignore" });
-    console.log(`Installed ExcaliDash in ${userApplicationsDir}`);
+    if (target.kind === "dmg") installDmg(archivePath, layout.installDir, workDir);
+    if (target.kind === "tar.gz") installTarball(archivePath, layout.installDir);
+    if (target.kind === "zip") installZip(archivePath, layout.installDir);
+
+    executable = findExecutable(layout.executables);
+    if (!executable) throw new Error("Installation finished but the application executable was not found.");
+    mkdirSync(dirname(layout.versionFile), { recursive: true });
+    writeFileSync(layout.versionFile, `${RELEASE_VERSION}\n`);
+    console.log(`Installed LocalDraw in ${layout.installDir}`);
+  } catch (error) {
+    console.error(`Unable to install LocalDraw: ${error instanceof Error ? error.message : error}`);
+    process.exit(1);
   } finally {
+    const mountPath = join(workDir, "mounted");
     if (existsSync(mountPath)) {
       spawnSync("hdiutil", ["detach", mountPath], { stdio: "ignore" });
     }
     rmSync(workDir, { recursive: true, force: true });
   }
-};
-
-let executable = process.env.EXCALIDASH_BINARY || candidates[process.platform]?.find(existsSync);
-if (!executable && process.platform === "darwin") {
-  try {
-    await installMacArm64();
-    executable = candidates.darwin.find(existsSync);
-  } catch (error) {
-    console.error(`Unable to install ExcaliDash: ${error instanceof Error ? error.message : error}`);
-    process.exit(1);
-  }
 }
 
 if (!executable) {
-  console.error([
-    `ExcaliDash ${VERSION} does not have an automatic installer for this platform yet.`,
-    "Download a build from https://github.com/gulivan/ExcaliDash/releases/latest",
-  ].join("\n"));
+  console.error(`LocalDraw ${RELEASE_VERSION} is not installed.`);
   process.exit(1);
 }
 

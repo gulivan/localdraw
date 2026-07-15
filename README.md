@@ -127,7 +127,7 @@ Notes:
 
 # Installation
 
-## Personal desktop app (Apple silicon)
+## Personal desktop app
 
 Run ExcaliDash as a local Electrobun application without Docker, accounts, or passwords:
 
@@ -135,7 +135,9 @@ Run ExcaliDash as a local Electrobun application without Docker, accounts, or pa
 npx localdraw
 ```
 
-The first run installs the checksum-verified app in `~/Applications`; later runs open it directly. Drawings live in a private SQLite database under the app's standard user-data directory. The desktop build binds its frontend and API to `127.0.0.1` only and disables outbound update checks.
+The first run downloads and installs a checksum-verified native build; later runs open it directly. LocalDraw supports Apple silicon and Intel Macs, x64 Windows, and x64 Linux. Windows on ARM uses the x64 build through emulation.
+
+Drawings live in a private SQLite database under the app's standard user-data directory. The desktop build binds its frontend and API to `127.0.0.1` only and disables outbound update checks.
 
 To build it from source:
 
@@ -145,7 +147,7 @@ npm install
 npm run build
 ```
 
-Native artifacts are written to `desktop/artifacts/`. Linux, Windows, and Intel Mac packages are not part of the first desktop release.
+Native artifacts are written to `desktop/artifacts/`. Because Electrobun builds are host-specific, release artifacts are produced by the macOS, Windows, and Linux matrix in `.github/workflows/desktop-release.yml`.
 
 > [!CAUTION]
 > This is a BETA deployment and production-readiness depends on deployment controls:

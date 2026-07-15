@@ -6,6 +6,9 @@ export default {
     identifier: "dev.gulivan.excalidash",
     version: "0.5.1",
   },
+  runtime: {
+    exitOnLastWindowClosed: true,
+  },
   build: {
     bun: {
       entrypoint: "src/bun/index.ts",
@@ -16,7 +19,7 @@ export default {
       "build/template.db": "template.db",
     },
     mac: { bundleCEF: false },
-    linux: { bundleCEF: false },
+    linux: { bundleCEF: true, defaultRenderer: "cef" },
     win: { bundleCEF: false },
   },
 } satisfies ElectrobunConfig;

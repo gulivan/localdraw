@@ -36,6 +36,7 @@ interface Config {
   port: number;
   nodeEnv: string;
   databaseUrl?: string;
+  uploadDir: string;
   frontendUrl?: string;
   authMode: AuthMode;
   jwtSecret: string;
@@ -351,6 +352,8 @@ export const config: Config = {
   port: getRequiredEnvNumber("PORT", 8000),
   nodeEnv: getOptionalEnv("NODE_ENV", "development"),
   databaseUrl: process.env.DATABASE_URL,
+  uploadDir:
+    getOptionalTrimmedEnv("UPLOAD_DIR") || path.resolve(__dirname, "../uploads"),
   frontendUrl: parseFrontendUrl(process.env.FRONTEND_URL),
   authMode: resolvedAuthMode,
   jwtSecret: resolveJwtSecret(getOptionalEnv("NODE_ENV", "development")),

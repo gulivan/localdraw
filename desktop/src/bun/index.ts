@@ -3,7 +3,6 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
-  symlinkSync,
 } from "node:fs";
 import { join } from "node:path";
 
@@ -20,14 +19,6 @@ const uploadsDir = join(dataDir, "uploads");
 
 mkdirSync(dataDir, { recursive: true });
 mkdirSync(uploadsDir, { recursive: true });
-const backendUploadsDir = join(backendDir, "uploads");
-if (!existsSync(backendUploadsDir)) {
-  symlinkSync(
-    uploadsDir,
-    backendUploadsDir,
-    process.platform === "win32" ? "junction" : "dir",
-  );
-}
 if (!existsSync(databasePath)) {
   copyFileSync(join(resourcesDir, "template.db"), databasePath);
 }
@@ -44,6 +35,7 @@ Object.assign(process.env, {
   NODE_ENV: "production",
   PORT: String(BACKEND_PORT),
   TRUST_PROXY: "false",
+  UPLOAD_DIR: uploadsDir,
   UPDATE_CHECK_OUTBOUND: "false",
 });
 
@@ -93,6 +85,7 @@ Bun.serve({
 new BrowserWindow({
   title: "ExcaliDash",
   url: appUrl,
+  renderer: process.platform === "linux" ? "cef" : "native",
   frame: {
     width: 1440,
     height: 960,

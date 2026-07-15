@@ -1,0 +1,157 @@
+name: Desktop Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (for example, v0.5.1-desktop)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: macOS (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            arch: arm64
+          - runner: macos-13
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            desktop/package-lock.json
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci --prefix frontend
+          npm ci --prefix desktop
+      - name: Build desktop app
+        run: npm run build --prefix desktop
+      - name: Prepare release asset
+        id: asset
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          VERSION="${TAG#v}"
+          VERSION="${VERSION%-desktop}"
+          SOURCE=$(find desktop/artifacts -type f -name '*.dmg' | head -1)
+          test -n "$SOURCE"
+          ASSET="localdraw-${VERSION}-darwin-${{ matrix.arch }}.dmg"
+          cp "$SOURCE" "$ASSET"
+          shasum -a 256 "$ASSET" > "${ASSET}.sha256"
+          echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name || inputs.tag }}" \
+            "${{ steps.asset.outputs.asset }}" \
+            "${{ steps.asset.outputs.asset }}.sha256" --clobber
+
+  linux:
+    name: Linux (x64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            desktop/package-lock.json
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci --prefix frontend
+          npm ci --prefix desktop
+      - name: Build desktop app
+        run: npm run build --prefix desktop
+      - name: Prepare release asset
+        id: asset
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          VERSION="${TAG#v}"
+          VERSION="${VERSION%-desktop}"
+          BUILD_DIR=$(find desktop/build -maxdepth 1 -type d -name 'stable-linux-*' | head -1)
+          test -n "$BUILD_DIR"
+          ASSET="localdraw-${VERSION}-linux-x64.tar.gz"
+          tar -C "$BUILD_DIR" -czf "$ASSET" .
+          sha256sum "$ASSET" > "${ASSET}.sha256"
+          echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name || inputs.tag }}" \
+            "${{ steps.asset.outputs.asset }}" \
+            "${{ steps.asset.outputs.asset }}.sha256" --clobber
+
+  windows:
+    name: Windows (x64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            desktop/package-lock.json
+      - name: Install dependencies
+        shell: bash
+        run: |
+          npm ci --prefix backend
+          npm ci --prefix frontend
+          npm ci --prefix desktop
+      - name: Build desktop app
+        run: npm run build --prefix desktop
+      - name: Prepare release asset
+        id: asset
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name || inputs.tag }}"
+          $version = $tag -replace '^v', '' -replace '-desktop$', ''
+          $buildDir = Get-ChildItem desktop/build -Directory -Filter 'stable-win-*' | Select-Object -First 1
+          if (-not $buildDir) { throw 'No Windows build output found' }
+          $asset = "localdraw-$version-win-x64.zip"
+          Compress-Archive -Path "$($buildDir.FullName)/*" -DestinationPath $asset -Force
+          $hash = (Get-FileHash -Algorithm SHA256 $asset).Hash.ToLowerInvariant()
+          "$hash  $asset" | Set-Content -NoNewline "$asset.sha256"
+          "asset=$asset" >> $env:GITHUB_OUTPUT
+      - name: Upload release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name || inputs.tag }}" \
+            "${{ steps.asset.outputs.asset }}" \
+            "${{ steps.asset.outputs.asset }}.sha256" --clobber
