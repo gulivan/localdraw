@@ -1,9 +1,15 @@
-import { BrowserWindow, PATHS, Utils } from "electrobun/bun";
+import Electrobun, {
+  ApplicationMenu,
+  BrowserWindow,
+  PATHS,
+  Utils,
+} from "electrobun/bun";
 import {
   copyFileSync,
   existsSync,
   mkdirSync,
 } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
 const HOST = "127.0.0.1";
@@ -11,7 +17,11 @@ const FRONTEND_PORT = 32144;
 const BACKEND_PORT = 32145;
 const appUrl = `http://${HOST}:${FRONTEND_PORT}`;
 const backendUrl = `http://${HOST}:${BACKEND_PORT}`;
-const browserMode = process.argv.includes("--browser");
+const browserMode =
+  process.argv.includes("--browser") ||
+  process.env.LOCALDRAW_BROWSER_MODE === "1";
+const skipBrowserOpen = process.env.LOCALDRAW_SKIP_BROWSER_OPEN === "1";
+const browserLifecycleToken = browserMode ? randomUUID() : null;
 const resourcesDir = join(PATHS.RESOURCES_FOLDER, "app");
 const backendDir = join(resourcesDir, "backend");
 const dataDir = Utils.paths.userData;
@@ -69,15 +79,87 @@ await new Promise<void>((resolve, reject) => {
 });
 
 const frontendDir = join(resourcesDir, "frontend");
-Bun.serve({
+const indexFile = Bun.file(join(frontendDir, "index.html"));
+const browserLifecycleScript = browserLifecycleToken
+  ? `<script>(()=>{const token=${JSON.stringify(browserLifecycleToken)};const heartbeat=()=>fetch('/__localdraw/heartbeat',{method:'POST',body:token,keepalive:true}).catch(()=>{});heartbeat();const timer=setInterval(heartbeat,1000);addEventListener('pagehide',()=>{clearInterval(timer);navigator.sendBeacon('/__localdraw/quit',token);});})();</script>`
+  : "";
+const browserIndexHtml = browserLifecycleToken
+  ? (await indexFile.text()).replace("</body>", `${browserLifecycleScript}</body>`)
+  : null;
+let browserQuitTimer: ReturnType<typeof setTimeout> | null = null;
+let frontendServer: ReturnType<typeof Bun.serve> | null = null;
+let shutdownPromise: Promise<void> | null = null;
+
+const shutdown = () => {
+  shutdownPromise ??= (async () => {
+    if (browserQuitTimer) clearTimeout(browserQuitTimer);
+    frontendServer?.stop(true);
+    backend.httpServer.close();
+    try {
+      await database.prisma.$disconnect();
+    } finally {
+      Utils.quit();
+    }
+  })();
+  return shutdownPromise;
+};
+
+ApplicationMenu.setApplicationMenu([
+  {
+    label: "LocalDraw",
+    submenu: [
+      {
+        label: "Quit LocalDraw",
+        action: "quit",
+        accelerator:
+          process.platform === "darwin" ? "CommandOrControl+Q" : "Alt+F4",
+      },
+    ],
+  },
+]);
+
+Electrobun.events.on("application-menu-clicked", (event) => {
+  if ((event as any).data?.action === "quit") void shutdown();
+});
+
+frontendServer = Bun.serve({
   hostname: HOST,
   port: FRONTEND_PORT,
   async fetch(request) {
-    const pathname = decodeURIComponent(new URL(request.url).pathname);
+    const url = new URL(request.url);
+    const pathname = decodeURIComponent(url.pathname);
+    if (
+      browserLifecycleToken &&
+      request.method === "POST" &&
+      (pathname === "/__localdraw/heartbeat" ||
+        pathname === "/__localdraw/quit")
+    ) {
+      if ((await request.text()) !== browserLifecycleToken) {
+        return new Response(null, { status: 403 });
+      }
+      if (pathname === "/__localdraw/heartbeat") {
+        if (browserQuitTimer) {
+          clearTimeout(browserQuitTimer);
+          browserQuitTimer = null;
+        }
+      } else {
+        if (browserQuitTimer) clearTimeout(browserQuitTimer);
+        browserQuitTimer = setTimeout(() => void shutdown(), 2_000);
+      }
+      return new Response(null, { status: 204 });
+    }
     const requestedPath = pathname === "/" ? "/index.html" : pathname;
+    if (browserIndexHtml && requestedPath === "/index.html") {
+      return new Response(browserIndexHtml, {
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Type": "text/html; charset=utf-8",
+        },
+      });
+    }
     const asset = Bun.file(join(frontendDir, requestedPath));
     if (await asset.exists()) return new Response(asset);
-    return new Response(Bun.file(join(frontendDir, "index.html")), {
+    return new Response(browserIndexHtml ?? indexFile, {
       headers: { "Cache-Control": "no-store" },
     });
   },
@@ -96,7 +178,8 @@ const openNativeWindow = () =>
     },
   });
 
-const openedInBrowser = browserMode && Utils.openExternal(appUrl);
+const openedInBrowser =
+  browserMode && (skipBrowserOpen || Utils.openExternal(appUrl));
 if (!openedInBrowser) {
   openNativeWindow();
 }

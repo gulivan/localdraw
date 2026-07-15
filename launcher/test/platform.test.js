@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import { getInstallLayout, getTarget } from "../lib/platform.js";
 
 test("maps supported platforms to release assets", () => {
-  assert.equal(getTarget("darwin", "arm64").archive, "localdraw-0.5.6-darwin-arm64.dmg");
-  assert.equal(getTarget("darwin", "x64").archive, "localdraw-0.5.6-darwin-x64.dmg");
-  assert.equal(getTarget("linux", "x64").archive, "localdraw-0.5.6-linux-x64.tar.gz");
-  assert.equal(getTarget("win32", "arm64").archive, "localdraw-0.5.6-win-x64.zip");
+  assert.equal(getTarget("darwin", "arm64").archive, "localdraw-0.5.7-darwin-arm64.dmg");
+  assert.equal(getTarget("darwin", "x64").archive, "localdraw-0.5.7-darwin-x64.dmg");
+  assert.equal(getTarget("linux", "x64").archive, "localdraw-0.5.7-linux-x64.tar.gz");
+  assert.equal(getTarget("win32", "arm64").archive, "localdraw-0.5.7-win-x64.zip");
 });
 
 test("rejects architectures without a published native build", () => {

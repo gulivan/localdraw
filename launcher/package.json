@@ -1,6 +1,6 @@
 {
   "name": "localdraw",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "Launch the local-first ExcaliDash desktop app",
   "license": "AGPL-3.0-only",
   "type": "module",
