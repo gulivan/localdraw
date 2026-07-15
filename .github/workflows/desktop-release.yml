@@ -113,8 +113,12 @@ jobs:
           test -n "$ARCHIVE"
           mkdir -p desktop/portable-linux
           zstd --decompress --stdout "$ARCHIVE" | tar -xf - -C desktop/portable-linux
-          test -x desktop/portable-linux/ExcaliDash/bin/launcher
-          ldd desktop/portable-linux/ExcaliDash/bin/libNativeWrapper.so | tee localdraw-linux-ldd.log
+          APP_BIN=desktop/portable-linux/ExcaliDash/bin
+          test -x "$APP_BIN/launcher"
+          mv "$APP_BIN/launcher" "$APP_BIN/launcher-bin"
+          cp desktop/scripts/linux-launcher.sh "$APP_BIN/launcher"
+          chmod +x "$APP_BIN/launcher"
+          LD_LIBRARY_PATH="$APP_BIN" ldd "$APP_BIN/libNativeWrapper.so" | tee localdraw-linux-ldd.log
           ! grep -q 'not found' localdraw-linux-ldd.log
       - name: Smoke test packaged app
         shell: bash
