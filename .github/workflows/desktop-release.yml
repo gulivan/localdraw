@@ -67,6 +67,21 @@ jobs:
           cp "$SOURCE" "$ASSET"
           shasum -a 256 "$ASSET" > "${ASSET}.sha256"
           echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+      - name: Report and enforce release size
+        shell: bash
+        run: |
+          ASSET="${{ steps.asset.outputs.asset }}"
+          BYTES=$(stat -f%z "$ASSET")
+          LIMIT=$((60 * 1024 * 1024))
+          {
+            echo "### macOS ${{ matrix.arch }} desktop size"
+            echo
+            echo "- Download: $(du -h "$ASSET" | cut -f1) ($BYTES bytes)"
+            echo "- Backend: $(du -sh desktop/build/stable-macos-*/ExcaliDash.app/Contents/Resources/app/backend | cut -f1)"
+            echo "- Frontend: $(du -sh desktop/build/stable-macos-*/ExcaliDash.app/Contents/Resources/app/frontend | cut -f1)"
+            echo "- Limit: 60 MiB"
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$BYTES" -le "$LIMIT"
       - name: Upload release asset
         env:
           GH_TOKEN: ${{ github.token }}
@@ -118,6 +133,12 @@ jobs:
           mv "$APP_BIN/launcher" "$APP_BIN/launcher-bin"
           cp desktop/scripts/linux-launcher.sh "$APP_BIN/launcher"
           chmod +x "$APP_BIN/launcher"
+          strip --strip-unneeded \
+            "$APP_BIN/bun" \
+            "$APP_BIN/launcher-bin" \
+            "$APP_BIN/libNativeWrapper.so" \
+            "$APP_BIN/libasar.so" \
+            "$APP_BIN/zig-zstd"
           LD_LIBRARY_PATH="$APP_BIN" ldd "$APP_BIN/libNativeWrapper.so" | tee localdraw-linux-ldd.log
           ! grep -q 'not found' localdraw-linux-ldd.log
       - name: Smoke test packaged app
@@ -152,6 +173,22 @@ jobs:
           tar -C "$BUNDLE_DIR" -czf "$ASSET" .
           sha256sum "$ASSET" > "${ASSET}.sha256"
           echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+      - name: Report and enforce release size
+        shell: bash
+        run: |
+          ASSET="${{ steps.asset.outputs.asset }}"
+          BYTES=$(stat -c%s "$ASSET")
+          LIMIT=$((85 * 1024 * 1024))
+          {
+            echo "### Linux x64 desktop size"
+            echo
+            echo "- Download: $(du -h "$ASSET" | cut -f1) ($BYTES bytes)"
+            echo "- Runtime: $(du -sh desktop/portable-linux/ExcaliDash/bin | cut -f1)"
+            echo "- Backend: $(du -sh desktop/portable-linux/ExcaliDash/Resources/app/backend | cut -f1)"
+            echo "- Frontend: $(du -sh desktop/portable-linux/ExcaliDash/Resources/app/frontend | cut -f1)"
+            echo "- Limit: 85 MiB"
+          } >> "$GITHUB_STEP_SUMMARY"
+          test "$BYTES" -le "$LIMIT"
       - name: Upload release asset
         env:
           GH_TOKEN: ${{ github.token }}
@@ -204,6 +241,30 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 $asset).Hash.ToLowerInvariant()
           "$hash  $asset" | Set-Content -NoNewline "$asset.sha256"
           "asset=$asset" >> $env:GITHUB_OUTPUT
+      - name: Report and enforce release size
+        shell: pwsh
+        run: |
+          $asset = "${{ steps.asset.outputs.asset }}"
+          $bytes = (Get-Item $asset).Length
+          $limit = 100 * 1024 * 1024
+          $bundle = 'desktop/portable-win/ExcaliDash'
+          $directorySize = {
+            param($path)
+            $total = (Get-ChildItem $path -File -Recurse | Measure-Object Length -Sum).Sum
+            '{0:N1} MiB' -f ($total / 1MB)
+          }
+          @(
+            '### Windows x64 desktop size'
+            ''
+            "- Download: $('{0:N1}' -f ($bytes / 1MB)) MiB ($bytes bytes)"
+            "- Runtime: $(& $directorySize "$bundle/bin")"
+            "- Backend: $(& $directorySize "$bundle/Resources/app/backend")"
+            "- Frontend: $(& $directorySize "$bundle/Resources/app/frontend")"
+            '- Limit: 100 MiB'
+          ) | Add-Content $env:GITHUB_STEP_SUMMARY
+          if ($bytes -gt $limit) {
+            throw "Windows desktop artifact exceeds the 100 MiB limit"
+          }
       - name: Upload release asset
         shell: bash
         env:
