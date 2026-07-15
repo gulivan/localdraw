@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-export const RELEASE_VERSION = "0.5.2-desktop";
+export const RELEASE_VERSION = "0.5.3-desktop";
 export const APP_VERSION = RELEASE_VERSION.replace(/-desktop$/, "");
 
 export const getTarget = (platform = process.platform, arch = process.arch) => {
@@ -37,6 +37,7 @@ export const getInstallLayout = (
   if (platform === "darwin") {
     const app = join(home, "Applications", "ExcaliDash.app");
     return {
+      appBundle: app,
       installDir: app,
       executables: [
         join(app, "Contents/MacOS/launcher"),

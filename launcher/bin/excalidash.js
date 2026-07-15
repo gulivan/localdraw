@@ -13,7 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import {
@@ -21,15 +21,11 @@ import {
   getInstallLayout,
   getTarget,
 } from "../lib/platform.js";
+import { createCommandRunner, getLaunchCommand } from "../lib/process.js";
 
 const RELEASE_BASE_URL = `https://github.com/gulivan/localdraw/releases/download/v${RELEASE_VERSION}`;
-
-const run = (command, args) => {
-  const result = spawnSync(command, args, { stdio: "inherit" });
-  if (result.status !== 0) {
-    throw new Error(`${basename(command)} exited with status ${result.status}`);
-  }
-};
+const verbose = process.env.LOCALDRAW_VERBOSE === "1";
+const run = createCommandRunner({ verbose });
 
 const download = async (url, destination) => {
   const response = await fetch(url, { redirect: "follow" });
@@ -111,6 +107,7 @@ if (!explicitlyConfiguredBinary && (!executable || installedVersion !== RELEASE_
     await download(`${RELEASE_BASE_URL}/${target.archive}.sha256`, checksumPath);
     await verifyDownload(archivePath, checksumPath);
 
+    console.log("Installing LocalDraw...");
     if (target.kind === "dmg") installDmg(archivePath, layout.installDir, workDir);
     if (target.kind === "tar.gz") installTarball(archivePath, layout.installDir);
     if (target.kind === "zip") installZip(archivePath, layout.installDir);
@@ -137,8 +134,20 @@ if (!executable) {
   process.exit(1);
 }
 
-const child = spawn(executable, process.argv.slice(2), {
-  detached: true,
-  stdio: "ignore",
+console.log("Launching LocalDraw...");
+const launch = getLaunchCommand({
+  appBundle: layout.appBundle,
+  executable,
+  args: process.argv.slice(2),
+  useConfiguredBinary: Boolean(explicitlyConfiguredBinary),
 });
-child.unref();
+
+if (launch.detached) {
+  const child = spawn(launch.command, launch.args, {
+    detached: true,
+    stdio: verbose ? "inherit" : "ignore",
+  });
+  child.unref();
+} else {
+  run(launch.command, launch.args);
+}
