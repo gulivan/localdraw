@@ -116,7 +116,6 @@ if (!explicitlyConfiguredBinary && (!executable || installedVersion !== RELEASE_
     if (!executable) throw new Error("Installation finished but the application executable was not found.");
     mkdirSync(dirname(layout.versionFile), { recursive: true });
     writeFileSync(layout.versionFile, `${RELEASE_VERSION}\n`);
-    console.log(`Installed LocalDraw in ${layout.installDir}`);
   } catch (error) {
     console.error(`Unable to install LocalDraw: ${error instanceof Error ? error.message : error}`);
     process.exit(1);

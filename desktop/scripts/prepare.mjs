@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -8,6 +8,8 @@ const backendDir = resolve(rootDir, "backend");
 const frontendDir = resolve(rootDir, "frontend");
 const buildDir = resolve(desktopDir, "build");
 const stagedBackendDir = resolve(buildDir, "backend");
+const generatedClientDir = resolve(backendDir, "src/generated/client");
+const stagedGeneratedClientDir = resolve(stagedBackendDir, "dist/generated/client");
 const templateDb = resolve(buildDir, "template.db");
 
 const run = (command, args, options = {}) => {
@@ -41,6 +43,19 @@ mkdirSync(stagedBackendDir, { recursive: true });
 cpSync(resolve(backendDir, "dist"), resolve(stagedBackendDir, "dist"), {
   recursive: true,
 });
+const queryEngines = readdirSync(generatedClientDir).filter(
+  (name) => name.includes("query_engine") && name.endsWith(".node"),
+);
+if (queryEngines.length === 0) {
+  throw new Error("Prisma generated no native query engine for the desktop package.");
+}
+mkdirSync(stagedGeneratedClientDir, { recursive: true });
+for (const queryEngine of queryEngines) {
+  cpSync(
+    resolve(generatedClientDir, queryEngine),
+    resolve(stagedGeneratedClientDir, queryEngine),
+  );
+}
 cpSync(resolve(backendDir, "package.json"), resolve(stagedBackendDir, "package.json"));
 cpSync(
   resolve(backendDir, "package-lock.json"),
