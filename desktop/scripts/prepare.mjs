@@ -1,9 +1,7 @@
 import {
   cpSync,
-  existsSync,
   mkdirSync,
   readFileSync,
-  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -14,6 +12,7 @@ import {
   pruneDesktopDependencies,
   pruneDesktopFrontend,
 } from "./prepare-utils.mjs";
+import { resolveElectrobunBun } from "./electrobun-bun.mjs";
 
 const desktopDir = resolve(import.meta.dirname, "..");
 const rootDir = resolve(desktopDir, "..");
@@ -76,22 +75,7 @@ run("npx", ["prisma", "db", "push", "--skip-generate"], {
 rmSync(stagedBackendDir, { recursive: true, force: true });
 mkdirSync(stagedBackendDistDir, { recursive: true });
 
-const electrobunDir = resolve(desktopDir, "node_modules/electrobun");
-const electrobunRuntimeDir = readdirSync(electrobunDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && entry.name.startsWith("dist-"))
-  .map((entry) => resolve(electrobunDir, entry.name))
-  .find((directory) =>
-    existsSync(
-      resolve(directory, process.platform === "win32" ? "bun.exe" : "bun"),
-    ),
-  );
-if (!electrobunRuntimeDir) {
-  throw new Error("Could not find Electrobun's host Bun runtime.");
-}
-const bunExecutable = resolve(
-  electrobunRuntimeDir,
-  process.platform === "win32" ? "bun.exe" : "bun",
-);
+const bunExecutable = resolveElectrobunBun(desktopDir);
 run(
   bunExecutable,
   [
