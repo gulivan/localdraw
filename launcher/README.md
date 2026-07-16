@@ -15,6 +15,10 @@ local app in your default browser instead of the embedded webview:
 npx localdraw --browser
 ```
 
+Browser mode prints and opens `http://127.0.0.1:32144`. Run
+`npx localdraw --help` to see all launcher options without installing or
+starting the app.
+
 Set `LOCALDRAW_VERBOSE=1` to show native installer output when troubleshooting.
 
 The desktop application keeps its SQLite database on your computer and starts with authentication disabled. Supported targets are macOS arm64/x64, Windows x64 (including Windows on ARM through emulation), and Linux x64.

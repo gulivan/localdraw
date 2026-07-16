@@ -41,13 +41,13 @@ test("launches the macOS bundle through LaunchServices", () => {
   assert.deepEqual(
     getLaunchCommand({
       platform: "darwin",
-      appBundle: "/Users/me/Applications/ExcaliDash.app",
+      appBundle: "/Users/me/Applications/LocalDraw.app",
       executable: "/internal/launcher",
       args: ["--example"],
     }),
     {
       command: "open",
-      args: ["/Users/me/Applications/ExcaliDash.app", "--args", "--example"],
+      args: ["/Users/me/Applications/LocalDraw.app", "--args", "--example"],
       detached: false,
     },
   );
@@ -57,7 +57,7 @@ test("keeps configured binaries and non-macOS launches direct", () => {
   assert.equal(
     getLaunchCommand({
       platform: "darwin",
-      appBundle: "/Applications/ExcaliDash.app",
+      appBundle: "/Applications/LocalDraw.app",
       executable: "/tmp/test-binary",
       useConfiguredBinary: true,
     }).command,

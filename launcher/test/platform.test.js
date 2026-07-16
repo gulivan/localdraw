@@ -17,7 +17,10 @@ test("rejects architectures without a published native build", () => {
 });
 
 test("uses user-writable install locations", () => {
-  assert.match(getInstallLayout("darwin", "/home/me").installDir, /Applications/);
+  assert.equal(
+    getInstallLayout("darwin", "/home/me").installDir,
+    "/home/me/Applications/LocalDraw.app",
+  );
   assert.match(getInstallLayout("linux", "/home/me").installDir, /\.local/);
   assert.match(
     getInstallLayout("win32", "C:\\Users\\me", "C:\\LocalAppData").installDir,

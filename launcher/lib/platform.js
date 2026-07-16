@@ -35,13 +35,13 @@ export const getInstallLayout = (
   localAppData = process.env.LOCALAPPDATA,
 ) => {
   if (platform === "darwin") {
-    const app = join(home, "Applications", "ExcaliDash.app");
+    const app = join(home, "Applications", "LocalDraw.app");
     return {
       appBundle: app,
       installDir: app,
       executables: [
         join(app, "Contents/MacOS/launcher"),
-        "/Applications/ExcaliDash.app/Contents/MacOS/launcher",
+        "/Applications/LocalDraw.app/Contents/MacOS/launcher",
       ],
       versionFile: join(home, ".local", "share", "localdraw", "version"),
     };

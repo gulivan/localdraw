@@ -1,4 +1,4 @@
-import {
+import Electrobun, {
   ApplicationMenu,
   BrowserWindow,
   PATHS,
@@ -123,6 +123,22 @@ ApplicationMenu.on("application-menu-clicked", (event) => {
   if ((event as any).data?.action === "quit") void shutdown();
 });
 
+Electrobun.events.on("new-window-open", (event) => {
+  const detail = (event as any).data?.detail;
+  const externalUrl = typeof detail === "string" ? detail : detail?.url;
+
+  if (typeof externalUrl !== "string") return;
+
+  try {
+    const url = new URL(externalUrl);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      Utils.openExternal(url.href);
+    }
+  } catch {
+    // Ignore malformed URLs emitted by the native webview.
+  }
+});
+
 frontendServer = Bun.serve({
   hostname: HOST,
   port: FRONTEND_PORT,
@@ -183,12 +199,12 @@ const openNativeWindow = () =>
     },
   });
 
-const openedInBrowser =
-  browserMode && (skipBrowserOpen || Utils.openExternal(appUrl));
-if (!openedInBrowser) {
+if (browserMode) {
+  if (!skipBrowserOpen) Utils.openExternal(appUrl);
+} else {
   openNativeWindow();
 }
 
 console.log(
-  `LocalDraw is running locally at ${appUrl} (API: ${backendUrl}, renderer: ${openedInBrowser ? "browser" : "native"})`,
+  `LocalDraw is running locally at ${appUrl} (API: ${backendUrl}, renderer: ${browserMode ? "browser" : "native"})`,
 );

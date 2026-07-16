@@ -87,8 +87,8 @@ jobs:
             echo "### macOS ${{ matrix.arch }} desktop size"
             echo
             echo "- Download: $(du -h "$ASSET" | cut -f1) ($BYTES bytes)"
-            echo "- Backend: $(du -sh desktop/build/stable-macos-*/ExcaliDash.app/Contents/Resources/app/backend | cut -f1)"
-            echo "- Frontend: $(du -sh desktop/build/stable-macos-*/ExcaliDash.app/Contents/Resources/app/frontend | cut -f1)"
+            echo "- Backend: $(du -sh desktop/build/stable-macos-*/LocalDraw.app/Contents/Resources/app/backend | cut -f1)"
+            echo "- Frontend: $(du -sh desktop/build/stable-macos-*/LocalDraw.app/Contents/Resources/app/frontend | cut -f1)"
             echo "- Limit: 40 MiB"
           } >> "$GITHUB_STEP_SUMMARY"
           test "$BYTES" -le "$LIMIT"
@@ -144,11 +144,11 @@ jobs:
       - name: Extract portable app bundle
         shell: bash
         run: |
-          ARCHIVE=$(find desktop/artifacts -maxdepth 1 -type f -name '*-ExcaliDash.tar.zst' | head -1)
+          ARCHIVE=$(find desktop/artifacts -maxdepth 1 -type f -name '*-LocalDraw.tar.zst' | head -1)
           test -n "$ARCHIVE"
           mkdir -p desktop/portable-linux
           zstd --decompress --stdout "$ARCHIVE" | tar -xf - -C desktop/portable-linux
-          APP_BIN=desktop/portable-linux/ExcaliDash/bin
+          APP_BIN=desktop/portable-linux/LocalDraw/bin
           test -x "$APP_BIN/launcher"
           mv "$APP_BIN/launcher" "$APP_BIN/launcher-bin"
           cp desktop/scripts/linux-launcher.sh "$APP_BIN/launcher"
@@ -164,7 +164,7 @@ jobs:
       - name: Smoke test packaged app
         shell: bash
         run: |
-          APP_DIR=desktop/portable-linux/ExcaliDash
+          APP_DIR=desktop/portable-linux/LocalDraw
           xvfb-run -a "$APP_DIR/bin/launcher" >localdraw-linux.log 2>&1 &
           APP_PID=$!
           trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
@@ -187,7 +187,7 @@ jobs:
           TAG="${{ github.event.release.tag_name || inputs.tag }}"
           VERSION="${TAG#v}"
           VERSION="${VERSION%-desktop}"
-          BUNDLE_DIR=desktop/portable-linux/ExcaliDash
+          BUNDLE_DIR=desktop/portable-linux/LocalDraw
           test -d "$BUNDLE_DIR"
           ASSET="localdraw-${VERSION}-linux-x64.tar.gz"
           tar -C "$BUNDLE_DIR" -czf "$ASSET" .
@@ -203,9 +203,9 @@ jobs:
             echo "### Linux x64 desktop size"
             echo
             echo "- Download: $(du -h "$ASSET" | cut -f1) ($BYTES bytes)"
-            echo "- Runtime: $(du -sh desktop/portable-linux/ExcaliDash/bin | cut -f1)"
-            echo "- Backend: $(du -sh desktop/portable-linux/ExcaliDash/Resources/app/backend | cut -f1)"
-            echo "- Frontend: $(du -sh desktop/portable-linux/ExcaliDash/Resources/app/frontend | cut -f1)"
+            echo "- Runtime: $(du -sh desktop/portable-linux/LocalDraw/bin | cut -f1)"
+            echo "- Backend: $(du -sh desktop/portable-linux/LocalDraw/Resources/app/backend | cut -f1)"
+            echo "- Frontend: $(du -sh desktop/portable-linux/LocalDraw/Resources/app/frontend | cut -f1)"
             echo "- Limit: 70 MiB"
           } >> "$GITHUB_STEP_SUMMARY"
           test "$BYTES" -le "$LIMIT"
@@ -254,19 +254,19 @@ jobs:
       - name: Extract portable app bundle
         shell: pwsh
         run: |
-          $archive = Get-ChildItem desktop/artifacts -File -Filter '*-ExcaliDash.tar.zst' | Select-Object -First 1
+          $archive = Get-ChildItem desktop/artifacts -File -Filter '*-LocalDraw.tar.zst' | Select-Object -First 1
           if (-not $archive) { throw 'No Windows portable archive found' }
           $portableDir = 'desktop/portable-win'
           New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
           tar -xf $archive.FullName -C $portableDir
-          if (-not (Test-Path "$portableDir/ExcaliDash/bin/launcher.exe")) { throw 'Windows launcher not found' }
+          if (-not (Test-Path "$portableDir/LocalDraw/bin/launcher.exe")) { throw 'Windows launcher not found' }
       - name: Prepare release asset
         id: asset
         shell: pwsh
         run: |
           $tag = "${{ github.event.release.tag_name || inputs.tag }}"
           $version = $tag -replace '^v', '' -replace '-desktop$', ''
-          $bundleDir = 'desktop/portable-win/ExcaliDash'
+          $bundleDir = 'desktop/portable-win/LocalDraw'
           $portableExe = "localdraw-$version-win-x64-portable.exe"
           $portable = "localdraw-$version-win-x64-portable.zip"
           Compress-Archive -Path "$bundleDir/*" -DestinationPath $portable -Force
@@ -288,7 +288,7 @@ jobs:
           $bytes = (Get-Item $asset).Length
           $portableBytes = (Get-Item $portable).Length
           $limit = 80 * 1024 * 1024
-          $bundle = 'desktop/portable-win/ExcaliDash'
+          $bundle = 'desktop/portable-win/LocalDraw'
           $directorySize = {
             param($path)
             $total = (Get-ChildItem $path -File -Recurse | Measure-Object Length -Sum).Sum

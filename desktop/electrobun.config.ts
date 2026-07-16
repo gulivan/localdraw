@@ -2,7 +2,7 @@ import type { ElectrobunConfig } from "electrobun";
 
 export default {
   app: {
-    name: "ExcaliDash",
+    name: "LocalDraw",
     identifier: "dev.gulivan.excalidash",
     version: "0.5.8",
   },
@@ -20,7 +20,7 @@ export default {
       "build/template.db": "template.db",
       "build/xiaolai-manifest.json": "xiaolai-manifest.json",
     },
-    mac: { bundleCEF: false },
+    mac: { bundleCEF: false, icons: "icon.iconset" },
     linux: { bundleCEF: false, defaultRenderer: "native" },
     win: { bundleCEF: false },
   },

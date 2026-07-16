@@ -59,7 +59,7 @@ assertBudget("Desktop frontend", treeSize(frontendDir), 4_500_000);
 if (existsSync(artifactsDir)) {
   for (const entry of readdirSync(artifactsDir)) {
     if (entry.endsWith(".dmg")) {
-      const budget = process.arch === "arm64" ? 22_000_000 : 25_000_000;
+      const budget = process.arch === "arm64" ? 22_500_000 : 25_500_000;
       assertBudget("macOS DMG", statSync(resolve(artifactsDir, entry)).size, budget);
     }
   }

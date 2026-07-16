@@ -21,11 +21,28 @@ import {
   getInstallLayout,
   getTarget,
 } from "../lib/platform.js";
+import {
+  LOCALDRAW_URL,
+  formatHelp,
+  parseCliArgs,
+} from "../lib/cli.js";
 import { createCommandRunner, getLaunchCommand } from "../lib/process.js";
 
 const RELEASE_BASE_URL = `https://github.com/gulivan/localdraw/releases/download/v${RELEASE_VERSION}`;
 const verbose = process.env.LOCALDRAW_VERBOSE === "1";
 const run = createCommandRunner({ verbose });
+const args = process.argv.slice(2);
+const options = parseCliArgs(args);
+
+if (options.help) {
+  console.log(formatHelp());
+  process.exit(0);
+}
+
+if (options.version) {
+  console.log(RELEASE_VERSION.replace(/-desktop$/, ""));
+  process.exit(0);
+}
 
 const download = async (url, destination) => {
   const response = await fetch(url, { redirect: "follow" });
@@ -55,7 +72,7 @@ const installDmg = (archivePath, installDir, workDir) => {
   try {
     mkdirSync(dirname(installDir), { recursive: true });
     rmSync(installDir, { recursive: true, force: true });
-    run("ditto", [join(mountPath, "ExcaliDash.app"), installDir]);
+    run("ditto", [join(mountPath, "LocalDraw.app"), installDir]);
   } finally {
     // APFS can briefly report "resource busy" after copying. A failed detach
     // must not turn a successful installation into a failed npx run.
@@ -133,11 +150,15 @@ if (!executable) {
   process.exit(1);
 }
 
-console.log("Launching LocalDraw...");
+if (options.browser) {
+  console.log(`Opening LocalDraw in your browser at ${LOCALDRAW_URL}`);
+} else {
+  console.log("Launching LocalDraw...");
+}
 const launch = getLaunchCommand({
   appBundle: layout.appBundle,
   executable,
-  args: process.argv.slice(2),
+  args,
   useConfiguredBinary: Boolean(explicitlyConfiguredBinary),
 });
 
