@@ -3,7 +3,7 @@ param(
   [string]$Version,
 
   [Parameter(Mandatory = $true)]
-  [string]$PayloadPath,
+  [string]$BundlePath,
 
   [Parameter(Mandatory = $true)]
   [string]$OutputPath
@@ -11,78 +11,57 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$payload = [IO.Path]::GetFullPath($PayloadPath)
+$bundle = [IO.Path]::GetFullPath($BundlePath)
 $output = [IO.Path]::GetFullPath($OutputPath)
-if (-not (Test-Path $payload)) {
-  throw "Windows portable payload is missing: $payload"
+if (-not (Test-Path (Join-Path $bundle 'bin/launcher.exe'))) {
+  throw "Windows portable launcher is missing from: $bundle"
 }
 
-$stagingDir = Join-Path $env:RUNNER_TEMP "localdraw-$Version-portable"
-Remove-Item $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Path $stagingDir | Out-Null
-Copy-Item $payload (Join-Path $stagingDir 'LocalDraw.zip')
+$sevenZip = (Get-Command '7z.exe' -ErrorAction Stop).Source
+$sfxModule = Join-Path (Split-Path $sevenZip) '7z.sfx'
+if (-not (Test-Path $sfxModule)) {
+  throw "7-Zip SFX module is missing: $sfxModule"
+}
 
-$launcher = @'
-@echo off
-setlocal
-set "DEST=%TEMP%\LocalDraw-__VERSION__-%RANDOM%%RANDOM%"
-powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%~dp0LocalDraw.zip' -DestinationPath '%DEST%' -Force"
-if errorlevel 1 exit /b %errorlevel%
-start "" "%DEST%\bin\launcher.exe"
-'@.Replace('__VERSION__', $Version)
-[IO.File]::WriteAllText(
-  (Join-Path $stagingDir 'launch.cmd'),
-  $launcher,
-  [Text.Encoding]::ASCII
-)
+$archive = Join-Path $env:RUNNER_TEMP "localdraw-$Version-portable.7z"
+$config = Join-Path $env:RUNNER_TEMP "localdraw-$Version-portable-config.txt"
+Remove-Item $archive -Force -ErrorAction SilentlyContinue
+Remove-Item $output -Force -ErrorAction SilentlyContinue
 
-$sourceWithSeparator = $stagingDir.TrimEnd('\') + '\'
-$sedPath = Join-Path $env:RUNNER_TEMP "localdraw-$Version-portable.sed"
-$sed = @"
-[Version]
-Class=IEXPRESS
-SEDVersion=3
+Push-Location $bundle
+try {
+  & $sevenZip a -t7z -mx=9 $archive '*'
+  if ($LASTEXITCODE -ne 0) {
+    throw "7-Zip failed to create portable archive"
+  }
+} finally {
+  Pop-Location
+}
 
-[Options]
-PackagePurpose=InstallApp
-ShowInstallProgramWindow=0
-HideExtractAnimation=1
-UseLongFileName=1
-InsideCompressed=0
-CAB_FixedSize=0
-CAB_ResvCodeSigning=0
-RebootMode=N
-InstallPrompt=
-DisplayLicense=
-FinishMessage=
-TargetName=%TargetName%
-FriendlyName=%FriendlyName%
-AppLaunched=%AppLaunched%
-PostInstallCmd=<None>
-AdminQuietInstCmd=
-UserQuietInstCmd=
-SourceFiles=SourceFiles
-
-[SourceFiles]
-SourceFiles0=%SourceFiles0%
-
-[SourceFiles0]
-%FILE0%=
-%FILE1%=
-
-[Strings]
-TargetName="$output"
-FriendlyName="LocalDraw $Version Portable"
-AppLaunched="cmd.exe /d /c launch.cmd"
-SourceFiles0="$sourceWithSeparator"
-FILE0="LocalDraw.zip"
-FILE1="launch.cmd"
+$sfxConfig = @"
+;!@Install@!UTF-8!
+Title="LocalDraw $Version Portable"
+RunProgram="bin\\launcher.exe"
+;!@InstallEnd@!
 "@
+[IO.File]::WriteAllText($config, $sfxConfig, [Text.UTF8Encoding]::new($false))
 
-[IO.File]::WriteAllText($sedPath, $sed, [Text.Encoding]::ASCII)
-& "$env:SystemRoot/System32/iexpress.exe" /N /Q $sedPath
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path $output)) {
-  throw "IExpress failed to create $output"
+$outputStream = [IO.File]::Create($output)
+try {
+  foreach ($part in @($sfxModule, $config, $archive)) {
+    $inputStream = [IO.File]::OpenRead($part)
+    try {
+      $inputStream.CopyTo($outputStream)
+    } finally {
+      $inputStream.Dispose()
+    }
+  }
+} finally {
+  $outputStream.Dispose()
+}
+
+if (-not (Test-Path $output) -or (Get-Item $output).Length -le (Get-Item $archive).Length) {
+  throw "Failed to create single-file portable launcher: $output"
 }
 
 Write-Host "Created single-file portable Windows launcher: $output"

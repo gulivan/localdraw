@@ -272,7 +272,7 @@ jobs:
           Compress-Archive -Path "$bundleDir/*" -DestinationPath $portable -Force
           desktop/scripts/create-windows-portable-exe.ps1 `
             -Version $version `
-            -PayloadPath $portable `
+            -BundlePath $bundleDir `
             -OutputPath $portableExe
           foreach ($asset in @($portableExe, $portable)) {
             $hash = (Get-FileHash -Algorithm SHA256 $asset).Hash.ToLowerInvariant()
