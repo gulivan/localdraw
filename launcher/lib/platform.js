@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-export const RELEASE_VERSION = "0.5.8-desktop";
+export const RELEASE_VERSION = "0.5.9-desktop";
 export const APP_VERSION = RELEASE_VERSION.replace(/-desktop$/, "");
 
 export const getTarget = (platform = process.platform, arch = process.arch) => {

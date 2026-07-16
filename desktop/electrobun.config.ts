@@ -4,7 +4,7 @@ export default {
   app: {
     name: "LocalDraw",
     identifier: "dev.gulivan.excalidash",
-    version: "0.5.8",
+    version: "0.5.9",
   },
   runtime: {
     exitOnLastWindowClosed: true,
