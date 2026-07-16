@@ -12,6 +12,7 @@ import { spawnSync } from "node:child_process";
 import {
   createXiaolaiManifest,
   pruneDesktopDependencies,
+  pruneDesktopFrontend,
 } from "./prepare-utils.mjs";
 
 const desktopDir = resolve(import.meta.dirname, "..");
@@ -46,6 +47,8 @@ run("npm", ["run", "build"], {
     VITE_DESKTOP_MINIMAL: "true",
   },
 });
+const prunedFrontend = pruneDesktopFrontend(resolve(frontendDir, "dist"));
+console.log(`Pruned ${prunedFrontend.localeChunks} desktop locale chunks.`);
 
 const excalidrawPackage = JSON.parse(
   readFileSync(
@@ -127,20 +130,6 @@ cpSync(
   resolve(workerDir, "db-verify.js"),
 );
 
-const libsqlScopeDir = resolve(backendDir, "node_modules/@libsql");
-const libsqlNativePackage = readdirSync(libsqlScopeDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .find((entry) => existsSync(resolve(libsqlScopeDir, entry.name, "index.node")));
-if (!libsqlNativePackage) {
-  throw new Error("Could not find libSQL's host native package.");
-}
-const stagedLibsqlScopeDir = resolve(stagedBackendDir, "node_modules/@libsql");
-mkdirSync(stagedLibsqlScopeDir, { recursive: true });
-cpSync(
-  resolve(libsqlScopeDir, libsqlNativePackage.name),
-  resolve(stagedLibsqlScopeDir, libsqlNativePackage.name),
-  { recursive: true },
-);
 cpSync(
   resolve(backendDir, "package.json"),
   resolve(stagedBackendDir, "package.json"),

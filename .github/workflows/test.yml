@@ -60,6 +60,34 @@ jobs:
           cd frontend
           npm test
 
+  desktop-tests:
+    name: Desktop Runtime and Bundle Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            desktop/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci --prefix frontend
+          npm ci --prefix desktop
+
+      - name: Run desktop tests
+        run: |
+          npm test --prefix desktop
+          npm run typecheck --prefix desktop
+          npm run test:runtime --prefix desktop
+
   e2e-tests:
     name: E2E Browser Tests
     runs-on: ubuntu-latest

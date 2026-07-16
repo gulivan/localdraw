@@ -141,7 +141,10 @@ Drawings live in a private SQLite database under the app's standard user-data di
 
 To keep the native download compact, LocalDraw omits deployment-only OIDC,
 S3, password-sharing, and Mermaid/text-to-diagram implementations. These
-features remain available in the self-hosted server build.
+features remain available in the self-hosted server build. The desktop editor
+ships its English interface only; the server build continues to include every
+Excalidraw translation. Desktop persistence uses Bun's built-in SQLite runtime,
+so no second native database library is packaged.
 
 The CJK handwriting font is optional and is not bundled with the desktop
 download. When a drawing first needs a Xiaolai Unicode subset, LocalDraw fetches
@@ -155,6 +158,8 @@ To build it from source:
 cd desktop
 npm install
 npm run build
+npm run test:runtime
+npm run check:bundle
 ```
 
 Native artifacts are written to `desktop/artifacts/`. Because Electrobun builds are host-specific, release artifacts are produced by the macOS, Windows, and Linux matrix in `.github/workflows/desktop-release.yml`.

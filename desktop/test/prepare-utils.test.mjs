@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   createXiaolaiManifest,
   pruneDesktopDependencies,
+  pruneDesktopFrontend,
 } from "../scripts/prepare-utils.mjs";
 
 test(
@@ -92,4 +93,27 @@ test("prunes desktop build material while retaining runtime and license files", 
   assert.equal(existsSync(join(root, "node_modules/example/README.md")), false);
   assert.equal(existsSync(join(root, "node_modules/example/LICENSE.md")), true);
   assert.equal(existsSync(join(root, "node_modules/example/package.json")), true);
+});
+
+test("prunes desktop locales and deprecated fonts", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "localdraw-frontend-prune-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const [relativePath, contents] of [
+    ["assets/fr-FR-ABCDE-hash.js", "translation"],
+    ["assets/kaa-ABCDE-hash.js", "translation"],
+    ["assets/index-ABCDE.js", "application"],
+    ["fonts/Assistant/Assistant-Regular.woff2", "font"],
+    ["fonts/Virgil/Virgil-Regular.woff2", "font"],
+  ]) {
+    const path = join(root, relativePath);
+    mkdirSync(join(path, ".."), { recursive: true });
+    writeFileSync(path, contents);
+  }
+
+  assert.deepEqual(pruneDesktopFrontend(root), { localeChunks: 2 });
+  assert.equal(existsSync(join(root, "assets/fr-FR-ABCDE-hash.js")), false);
+  assert.equal(existsSync(join(root, "assets/kaa-ABCDE-hash.js")), false);
+  assert.equal(existsSync(join(root, "assets/index-ABCDE.js")), true);
+  assert.equal(existsSync(join(root, "fonts/Assistant")), false);
+  assert.equal(existsSync(join(root, "fonts/Virgil/Virgil-Regular.woff2")), true);
 });

@@ -16,6 +16,8 @@ function detectLanguage(): string {
 }
 
 export function getInitialLangCode(): string {
+  if (import.meta.env.VITE_DESKTOP_MINIMAL === 'true') return 'en';
+
   try {
     return localStorage.getItem(STORAGE_KEY) ?? detectLanguage();
   } catch {

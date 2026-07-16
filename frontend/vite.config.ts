@@ -32,6 +32,7 @@ export default defineConfig(({ command }) => {
     resolve: minimalDesktopBuild
       ? {
           alias: {
+            "./App.tsx": path.resolve(__dirname, "src/App.desktop.tsx"),
             "@excalidraw/mermaid-to-excalidraw": path.resolve(
               __dirname,
               "src/stubs/mermaid-to-excalidraw.ts",

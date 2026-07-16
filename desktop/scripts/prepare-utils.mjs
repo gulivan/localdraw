@@ -30,6 +30,34 @@ export const createXiaolaiManifest = (directory, packageVersion) => {
   return { packageVersion, files };
 };
 
+const desktopLocaleChunk =
+  /^[a-z]{2,3}(?:-[A-Z]{2})?-[A-Z0-9]+-[A-Za-z0-9_-]+\.js$/;
+
+export const pruneDesktopFrontend = (frontendDistDir) => {
+  const assetsDir = resolve(frontendDistDir, "assets");
+  let localeChunks = 0;
+  if (existsSync(assetsDir)) {
+    for (const entry of readdirSync(assetsDir, { withFileTypes: true })) {
+      if (entry.isFile() && desktopLocaleChunk.test(entry.name)) {
+        rmSync(resolve(assetsDir, entry.name), { force: true });
+        localeChunks += 1;
+      }
+    }
+  }
+
+  for (const family of ["Assistant", "ComicShanns", "Lilita", "Nunito"]) {
+    rmSync(resolve(frontendDistDir, "fonts", family), {
+      recursive: true,
+      force: true,
+    });
+  }
+
+  if (localeChunks === 0) {
+    throw new Error("No desktop locale chunks were found to prune");
+  }
+  return { localeChunks };
+};
+
 export const pruneDesktopDependencies = (stagedBackendDir) => {
   const relativePaths = [
     "node_modules/.cache",

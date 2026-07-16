@@ -46,7 +46,6 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@prisma/adapter-libsql": "^6.19.3",
     "@types/archiver": "^7.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",

@@ -256,6 +256,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
           excalidrawAPI={onSetExcalidrawAPI}
           UIOptions={UIOptions}
           aiEnabled={import.meta.env.VITE_DESKTOP_MINIMAL !== "true"}
+          showDeprecatedFonts={import.meta.env.VITE_DESKTOP_MINIMAL !== "true"}
           viewModeEnabled={!canEdit}
         >
           <MainMenu>
@@ -264,10 +265,14 @@ export const EditorView: React.FC<EditorViewProps> = ({
             <MainMenu.DefaultItems.ClearCanvas />
             <MainMenu.DefaultItems.ChangeCanvasBackground />
             <MainMenu.DefaultItems.Help />
-            <MainMenu.Separator />
-            <MainMenu.ItemCustom>
-              <LanguageSelector langCode={langCode} onChange={onSetLangCode} />
-            </MainMenu.ItemCustom>
+            {import.meta.env.VITE_DESKTOP_MINIMAL !== "true" && (
+              <>
+                <MainMenu.Separator />
+                <MainMenu.ItemCustom>
+                  <LanguageSelector langCode={langCode} onChange={onSetLangCode} />
+                </MainMenu.ItemCustom>
+              </>
+            )}
           </MainMenu>
         </Excalidraw>
       ) : (

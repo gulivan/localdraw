@@ -7,7 +7,9 @@ Release date: 2026-06-21
 - Keep the backend SQLite-only and remove unused database-provider dependencies and configuration.
 - Use Prisma's standard migration layout while preserving every existing SQLite migration name and checksum.
 - Reduce Docker startup work by reusing the build-stage Prisma Client instead of regenerating it at runtime.
-- Reduce the LocalDraw desktop runtime bundle and omit deployment-only implementations.
+- Reduce the LocalDraw desktop runtime bundle by using Bun's built-in SQLite,
+  pruning server-only routes, translations, and deprecated fonts, and enforcing
+  payload-size budgets in the desktop build.
 
 ## Upgrading
 

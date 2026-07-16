@@ -8,6 +8,8 @@
     "dev": "npm run prepare:app && electrobun dev",
     "build": "npm run prepare:app && electrobun build --env=stable",
     "build:canary": "npm run prepare:app && electrobun build --env=canary",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
+    "test:runtime": "npm run prepare:app && node scripts/run-electrobun-bun.mjs scripts/bun-sqlite-smoke.ts && npm run check:bundle",
     "typecheck": "tsc --noEmit",
     "test": "node --test"
   },

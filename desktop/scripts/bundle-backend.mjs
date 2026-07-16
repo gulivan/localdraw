@@ -11,10 +11,9 @@ const backendDir = resolve(entrypoint, "../..");
 const requireFromBackend = createRequire(resolve(backendDir, "package.json"));
 const desktopOnlyModules = new Map([
   [
-    "@prisma/adapter-libsql",
-    requireFromBackend.resolve("@prisma/adapter-libsql"),
+    "@prisma/adapter-better-sqlite3",
+    requireFromBackend.resolve("@prisma/adapter-better-sqlite3"),
   ],
-  ["@prisma/adapter-better-sqlite3", resolve(stubsDir, "prisma-adapter.ts")],
   ["better-sqlite3", resolve(stubsDir, "better-sqlite3.ts")],
   ["bcrypt", resolve(stubsDir, "bcrypt.ts")],
   ["openid-client", resolve(stubsDir, "openid-client.ts")],
@@ -27,6 +26,7 @@ const result = await Bun.build({
   target: "bun",
   format: "cjs",
   minify: true,
+  define: { __EXCALIDASH_DESKTOP__: "true" },
   external: ["*generated/client"],
   plugins: [{
     name: "localdraw-server-feature-stubs",
