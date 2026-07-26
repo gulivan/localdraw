@@ -16,6 +16,7 @@ import {
 } from "../../components/LanguageSelector";
 import { UIOptions } from "./shared";
 import { EditorProjectRail } from "../../components/workspace/EditorProjectRail";
+import type { DisposableDraft } from "./disposableDraft";
 
 type EditorViewProps = {
   id?: string;
@@ -37,10 +38,14 @@ type EditorViewProps = {
   onBackClick: () => void;
   onCanvasChange: (elements: readonly any[], appState: any, files?: Record<string, any>) => void;
   onCanvasDropCapture: (event: React.DragEvent<HTMLDivElement>) => void;
-  onDrawingSwitch: (drawingId: string, drawingName: string) => Promise<boolean>;
+  onDrawingSwitch: (
+    drawingId: string,
+    drawingName: string,
+    disposableDraft?: DisposableDraft,
+  ) => Promise<boolean>;
   onExportClick: () => void;
   onLibraryChange: (items: readonly any[]) => void;
-  onNavigateHome: () => void;
+  onNavigateTo: (destination: string) => Promise<boolean>;
   onNewNameChange: (value: string) => void;
   onPointerUpdate: (payload: any) => void;
   onRenameBlur: () => void;
@@ -75,7 +80,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onDrawingSwitch,
   onExportClick,
   onLibraryChange,
-  onNavigateHome,
+  onNavigateTo,
   onNewNameChange,
   onPointerUpdate,
   onRenameBlur,
@@ -116,6 +121,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
         drawingNameSourceId={drawingNameSourceId}
         canEdit={canEdit}
         onSelectDrawing={onDrawingSwitch}
+        onNavigateTo={onNavigateTo}
         onNavigate={() => window.innerWidth < 768 && setRailOpen(false)}
       />
     </div>
@@ -238,7 +244,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
             </p>
           </div>
           <button
-            onClick={onNavigateHome}
+            onClick={() => void onNavigateTo("/")}
             className="px-4 py-2 rounded-lg border-2 border-black dark:border-neutral-700 bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 font-semibold hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
           >
             Back to dashboard

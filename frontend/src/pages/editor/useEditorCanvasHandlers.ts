@@ -12,6 +12,7 @@ import {
   MULTI_IMAGE_DROP_GAP,
 } from "./droppedImages";
 import {
+  getPersistedAppState,
   hasRenderableElements,
   haveSameElements,
   isStaleNonRenderableSnapshot,
@@ -91,6 +92,13 @@ export const useEditorCanvasHandlers = ({
       if (!canEdit) return;
       if (isUnmountingRef.current) return;
       if (isSyncingRef.current) return;
+      const previousPersistedAppState = getPersistedAppState(
+        latestAppStateRef.current,
+      );
+      const nextPersistedAppState = getPersistedAppState(appState);
+      const appStateChanged =
+        JSON.stringify(previousPersistedAppState) !==
+        JSON.stringify(nextPersistedAppState);
       latestAppStateRef.current = appState;
       const currentFiles =
         files || excalidrawAPIRef.current?.getFiles() || {};
@@ -118,7 +126,11 @@ export const useEditorCanvasHandlers = ({
         isBootstrappingSceneRef.current = false;
         if (matchesInitialSnapshot) return;
       }
-      if (haveSameElements(allElements, latestElementsRef.current)) return;
+      const elementsChanged = !haveSameElements(
+        allElements,
+        latestElementsRef.current,
+      );
+      if (!elementsChanged && !appStateChanged) return;
       const { prevented: preventedCanvasOverwrite } =
         resolveSafeSnapshot(allElements);
       if (preventedCanvasOverwrite) return;
@@ -128,13 +140,31 @@ export const useEditorCanvasHandlers = ({
       }
       if (isBootstrappingSceneRef.current && !hasRenderable) return;
       latestElementsRef.current = allElements;
+      hasSceneChangesSinceLoadRef.current = true;
+      if (
+        !elementsChanged &&
+        drawingId &&
+        debouncedSaveRef.current
+      ) {
+        debouncedSaveRef.current(
+          drawingId,
+          allElements,
+          appState,
+          currentFiles,
+        );
+        debouncedSavePreview(drawingId);
+        return;
+      }
       broadcastChanges(allElements, currentFiles);
     },
     [
       broadcastChanges,
       canEdit,
+      debouncedSavePreview,
+      debouncedSaveRef,
       excalidrawAPIRef,
       hasHydratedInitialSceneRef,
+      hasSceneChangesSinceLoadRef,
       initialSceneElementsRef,
       isBootstrappingSceneRef,
       isSyncingRef,
@@ -142,6 +172,7 @@ export const useEditorCanvasHandlers = ({
       latestAppStateRef,
       latestElementsRef,
       latestFilesRef,
+      drawingId,
       resolveSafeSnapshot,
       suspiciousBlankLoadRef,
     ],

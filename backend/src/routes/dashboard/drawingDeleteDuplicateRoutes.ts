@@ -35,6 +35,24 @@ export const registerDrawingDeleteDuplicateRoutes = (
     asyncHandler(async (req, res) => {
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       const { id } = req.params;
+      const deleteOnlyIfUntouched = req.query.ifUntouched === "true";
+      const expectedUpdatedAtRaw =
+        typeof req.query.expectedUpdatedAt === "string"
+          ? req.query.expectedUpdatedAt
+          : null;
+      const expectedUpdatedAt = expectedUpdatedAtRaw
+        ? new Date(expectedUpdatedAtRaw)
+        : null;
+
+      if (
+        deleteOnlyIfUntouched &&
+        (!expectedUpdatedAt || Number.isNaN(expectedUpdatedAt.getTime()))
+      ) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "A valid expectedUpdatedAt value is required",
+        });
+      }
 
       const drawing = await prisma.drawing.findFirst({
         where: { id, userId: req.user.id },
@@ -43,12 +61,27 @@ export const registerDrawingDeleteDuplicateRoutes = (
 
       const deleteResult = await prisma.$transaction(async (tx) => {
         const result = await tx.drawing.deleteMany({
-          where: { id, userId: req.user!.id },
+          where: deleteOnlyIfUntouched
+            ? {
+                id,
+                userId: req.user!.id,
+                version: 1,
+                updatedAt: expectedUpdatedAt!,
+                elements: "[]",
+                files: "{}",
+                preview: null,
+              }
+            : { id, userId: req.user!.id },
         });
-        await normalizeDrawingOrder(tx, drawing.collectionId, req.user!.id);
+        if (result.count > 0) {
+          await normalizeDrawingOrder(tx, drawing.collectionId, req.user!.id);
+        }
         return result;
       });
       if (deleteResult.count === 0) {
+        if (deleteOnlyIfUntouched) {
+          return res.json({ success: true, deleted: false });
+        }
         return res.status(404).json({ error: "Drawing not found" });
       }
       try {
@@ -69,7 +102,11 @@ export const registerDrawingDeleteDuplicateRoutes = (
         });
       }
 
-      return res.json({ success: true });
+      return res.json(
+        deleteOnlyIfUntouched
+          ? { success: true, deleted: true }
+          : { success: true },
+      );
     }),
   );
 

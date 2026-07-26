@@ -116,13 +116,13 @@ export const getDrawing = async (id: string) => {
 };
 
 export const createDrawing = async (name?: string, collectionId?: string | null) => {
-  const response = await api.post<{ id: string }>("/drawings", {
+  const response = await api.post<Drawing>("/drawings", {
     name: name || "Untitled Drawing",
     collectionId: collectionId ?? null,
     elements: [],
     appState: {},
   });
-  return response.data;
+  return deserializeDrawing(response.data);
 };
 
 export const placeDrawing = async (
@@ -145,6 +145,22 @@ export const updateDrawing = async (id: string, data: Partial<Drawing>) => {
 export const deleteDrawing = async (id: string) => {
   const response = await api.delete<{ success: true }>(`/drawings/${id}`);
   return response.data;
+};
+
+export const deleteDrawingIfUntouched = async (
+  id: string,
+  expectedUpdatedAt: number,
+) => {
+  const response = await api.delete<{ success: true; deleted: boolean }>(
+    `/drawings/${id}`,
+    {
+      params: {
+        ifUntouched: "true",
+        expectedUpdatedAt: new Date(expectedUpdatedAt).toISOString(),
+      },
+    },
+  );
+  return response.data.deleted;
 };
 
 export const duplicateDrawing = async (id: string) => {

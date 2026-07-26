@@ -6,6 +6,7 @@ import {
   Search,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { disposableDraftNavigationState } from "./editor/disposableDraft";
 import { useNavigate } from "react-router-dom";
 import * as api from "../api";
 import { NewProjectDialog } from "../components/workspace/NewProjectDialog";
@@ -93,7 +94,9 @@ export const Home = () => {
 
   const createSlide = async (collectionId: string | null = null) => {
     const drawing = await api.createDrawing("Untitled Canvas", collectionId);
-    navigate(`/editor/${drawing.id}`);
+    navigate(`/editor/${drawing.id}`, {
+      state: disposableDraftNavigationState(drawing),
+    });
   };
 
   const importFiles = async (files: FileList | null) => {

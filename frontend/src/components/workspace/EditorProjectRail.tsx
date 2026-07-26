@@ -11,11 +11,11 @@ import {
   MoreHorizontal,
   Trash2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import * as api from "../../api";
 import type { Collection, DrawingSummary } from "../../types";
 import { productName } from "../../utils/productBrand";
 import { Logo } from "../Logo";
+import type { DisposableDraft } from "../../pages/editor/disposableDraft";
 
 const slideRowTone = (active: boolean) =>
   active
@@ -28,16 +28,21 @@ export const EditorProjectRail = ({
   drawingNameSourceId,
   canEdit,
   onSelectDrawing,
+  onNavigateTo,
   onNavigate,
 }: {
   drawingId?: string;
   drawingName: string;
   drawingNameSourceId: string | null;
   canEdit: boolean;
-  onSelectDrawing: (drawingId: string, drawingName: string) => Promise<boolean>;
+  onSelectDrawing: (
+    drawingId: string,
+    drawingName: string,
+    disposableDraft?: DisposableDraft,
+  ) => Promise<boolean>;
+  onNavigateTo: (destination: string) => Promise<boolean>;
   onNavigate?: () => void;
 }) => {
-  const navigate = useNavigate();
   const [projects, setProjects] = useState<Collection[]>([]);
   const [slides, setSlides] = useState<DrawingSummary[]>([]);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
@@ -79,8 +84,12 @@ export const EditorProjectRail = ({
       ),
     );
   }, [drawingId, drawingName, drawingNameSourceId]);
-  const go = async (id: string, name: string) => {
-    const switched = await onSelectDrawing(id, name);
+  const go = async (
+    id: string,
+    name: string,
+    disposableDraft?: DisposableDraft,
+  ) => {
+    const switched = await onSelectDrawing(id, name, disposableDraft);
     if (switched) onNavigate?.();
   };
 
@@ -103,7 +112,10 @@ export const EditorProjectRail = ({
       name,
       activeCollectionId,
     );
-    await go(created.id, name);
+    await go(created.id, name, {
+      drawingId: created.id,
+      updatedAt: created.updatedAt,
+    });
   };
 
   const duplicateSlide = async (slideId: string) => {
@@ -126,10 +138,10 @@ export const EditorProjectRail = ({
       if (nextSlide) {
         await go(nextSlide.id, nextSlide.name);
       } else if (activeCollectionId) {
-        navigate(`/projects/${activeCollectionId}`);
+        await onNavigateTo(`/projects/${activeCollectionId}`);
         onNavigate?.();
       } else {
-        navigate("/collections?id=unorganized");
+        await onNavigateTo("/collections?id=unorganized");
         onNavigate?.();
       }
     } catch (error) {
@@ -140,14 +152,14 @@ export const EditorProjectRail = ({
   return (
     <aside className="workspace-shell flex h-full w-64 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="flex h-14 items-center gap-2 border-b border-zinc-200 px-3 dark:border-zinc-800">
-        <button type="button" onClick={() => navigate("/")} className="workspace-focus flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left">
+        <button type="button" onClick={() => void onNavigateTo("/")} className="workspace-focus flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left">
           <Logo className="h-7 w-7" />
           <span className="truncate text-sm font-semibold">{productName}</span>
         </button>
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="Projects and slides">
-        <button type="button" onClick={() => navigate("/")} className="workspace-focus mb-3 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-200 dark:text-zinc-200 dark:hover:bg-zinc-800"><Home size={15} /> Home</button>
+        <button type="button" onClick={() => void onNavigateTo("/")} className="workspace-focus mb-3 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-200 dark:text-zinc-200 dark:hover:bg-zinc-800"><Home size={15} /> Home</button>
         {loading ? (
           <div className="flex justify-center py-8 text-violet-600"><Loader2 size={18} className="animate-spin" /></div>
         ) : (
@@ -165,7 +177,7 @@ export const EditorProjectRail = ({
                   }}
                   className={active ? "rounded-xl bg-white dark:bg-zinc-900" : ""}
                 >
-                  <button type="button" onClick={() => navigate(`/projects/${project.id}`)} className={`workspace-focus flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-semibold ${active ? "text-zinc-950 dark:text-white" : "text-zinc-700 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"}`}>
+                  <button type="button" onClick={() => void onNavigateTo(`/projects/${project.id}`)} className={`workspace-focus flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-semibold ${active ? "text-zinc-950 dark:text-white" : "text-zinc-700 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"}`}>
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: project.color || "#7c3aed" }} />
                     <span className="min-w-0 flex-1 truncate">{project.name}</span>
                     <span className="text-[10px] font-medium text-zinc-500">{project.drawingCount ?? 0}</span>

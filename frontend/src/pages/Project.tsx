@@ -13,6 +13,7 @@ import * as api from "../api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { PROJECT_COLORS } from "../components/workspace/projectColors";
 import { ProjectSlideCard } from "../components/workspace/ProjectSlideCard";
+import { disposableDraftNavigationState } from "./editor/disposableDraft";
 import { UploadStatus } from "../components/UploadStatus";
 import { useUpload } from "../context/UploadContext";
 import type { Collection, DrawingSummary } from "../types";
@@ -87,7 +88,9 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
 
   const createSlide = async () => {
     const drawing = await api.createDrawing(`Slide ${slides.length + 1}`, collectionId);
-    navigate(`/editor/${drawing.id}`);
+    navigate(`/editor/${drawing.id}`, {
+      state: disposableDraftNavigationState(drawing),
+    });
   };
 
   const saveName = async () => {
