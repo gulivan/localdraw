@@ -44,6 +44,7 @@ type EditorViewProps = {
     drawingName: string,
     disposableDraft?: DisposableDraft,
   ) => Promise<boolean>;
+  onDrawingRenamed: (drawingId: string, drawingName: string) => void;
   onExportClick: () => void;
   onLibraryChange: (items: readonly any[]) => void;
   onNavigateTo: (destination: string) => Promise<boolean>;
@@ -79,6 +80,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onCanvasChange,
   onCanvasDropCapture,
   onDrawingSwitch,
+  onDrawingRenamed,
   onExportClick,
   onLibraryChange,
   onNavigateTo,
@@ -124,6 +126,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
         canEdit={canEdit}
         projectScope={projectScope}
         onSelectDrawing={onDrawingSwitch}
+        onDrawingRenamed={onDrawingRenamed}
         onNavigateTo={onNavigateTo}
         onNavigate={() => window.innerWidth < 768 && setRailOpen(false)}
       />

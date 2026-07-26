@@ -11,7 +11,7 @@ vi.mock("../../context/ThemeContext", () => ({
 }));
 
 describe("WorkspaceHeader", () => {
-  it("links the workspace attribution to Excalidraw in a new tab", () => {
+  it("links the workspace attribution to Excalidraw and ExcaliDash", () => {
     render(
       <MemoryRouter>
         <WorkspaceHeader query="" onQueryChange={vi.fn()} onNewSlide={vi.fn()} onImport={vi.fn()} />
@@ -23,10 +23,25 @@ describe("WorkspaceHeader", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
 
+    const excaliDashLink = screen.getByRole("link", { name: "ExcaliDash" });
+    expect(excaliDashLink.parentElement).toHaveTextContent(
+      "based on Excalidraw & ExcaliDash",
+    );
+    expect(excaliDashLink).toHaveAttribute(
+      "href",
+      "https://github.com/ZimengXiong/ExcaliDash",
+    );
+    expect(excaliDashLink).toHaveAttribute("target", "_blank");
+    expect(excaliDashLink).toHaveAttribute("rel", "noopener noreferrer");
+
     const githubLink = screen.getByRole("link", { name: "GitHub" });
     expect(githubLink.parentElement).toHaveTextContent(/^LocalDraw v/);
     expect(githubLink).toHaveAttribute("href", "https://github.com/gulivan/localdraw");
     expect(githubLink).toHaveAttribute("target", "_blank");
     expect(githubLink).toHaveAttribute("rel", "noopener noreferrer");
+
+    expect(
+      screen.getByRole("button", { name: "New Canvas" }),
+    ).toBeVisible();
   });
 });

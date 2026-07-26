@@ -11,15 +11,17 @@ import { EditorProjectRail } from "./EditorProjectRail";
 const getDrawing = vi.fn();
 const getCollections = vi.fn();
 const getDrawings = vi.fn();
+const updateDrawing = vi.fn();
+const createDrawing = vi.fn();
 
 vi.mock("../../api", () => ({
   getDrawing: (...args: unknown[]) => getDrawing(...args),
   getCollections: (...args: unknown[]) => getCollections(...args),
   getDrawings: (...args: unknown[]) => getDrawings(...args),
   placeDrawing: vi.fn(),
-  createDrawing: vi.fn(),
+  createDrawing: (...args: unknown[]) => createDrawing(...args),
   duplicateDrawing: vi.fn(),
-  updateDrawing: vi.fn(),
+  updateDrawing: (...args: unknown[]) => updateDrawing(...args),
 }));
 
 const project = {
@@ -44,20 +46,25 @@ const projectSlide = {
   collectionId: project.id,
 };
 
-const renderRail = (projectScope: "current" | "all") => {
+const renderRail = (
+  projectScope: "current" | "all",
+  drawing = otherSlide,
+) => {
   const onNavigateTo = vi.fn().mockResolvedValue(true);
+  const onDrawingRenamed = vi.fn();
   render(
     <EditorProjectRail
-      drawingId={otherSlide.id}
-      drawingName={otherSlide.name}
-      drawingNameSourceId={otherSlide.id}
+      drawingId={drawing.id}
+      drawingName={drawing.name}
+      drawingNameSourceId={drawing.id}
       canEdit
       projectScope={projectScope}
       onSelectDrawing={vi.fn().mockResolvedValue(true)}
       onNavigateTo={onNavigateTo}
+      onDrawingRenamed={onDrawingRenamed}
     />,
   );
-  return { onNavigateTo };
+  return { onNavigateTo, onDrawingRenamed };
 };
 
 describe("EditorProjectRail project visibility", () => {
@@ -65,6 +72,13 @@ describe("EditorProjectRail project visibility", () => {
     getDrawing.mockReset();
     getCollections.mockReset();
     getDrawings.mockReset();
+    updateDrawing.mockReset();
+    updateDrawing.mockResolvedValue(undefined);
+    createDrawing.mockReset();
+    createDrawing.mockResolvedValue({
+      id: "canvas-new",
+      updatedAt: 2,
+    });
     getDrawing.mockResolvedValue({ ...otherSlide, elements: [], appState: {}, files: {} });
     getCollections.mockResolvedValue([project]);
     getDrawings.mockImplementation(
@@ -132,5 +146,89 @@ describe("EditorProjectRail project visibility", () => {
       null,
       expect.objectContaining({ limit: 200 }),
     );
+  });
+
+  it("renames a canvas inline on double click", async () => {
+    getDrawing.mockResolvedValue({
+      ...projectSlide,
+      elements: [],
+      appState: {},
+      files: {},
+    });
+    const { onDrawingRenamed } = renderRail("current", projectSlide);
+
+    const canvas = (await screen.findByText("Project canvas")).closest("button");
+    expect(canvas).not.toBeNull();
+    fireEvent.doubleClick(canvas!);
+    const input = screen.getByRole("textbox", { name: "Rename Project canvas" });
+    fireEvent.change(input, { target: { value: "Roadmap" } });
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() =>
+      expect(updateDrawing).toHaveBeenCalledWith(projectSlide.id, {
+        name: "Roadmap",
+      }),
+    );
+    expect(onDrawingRenamed).toHaveBeenCalledWith(projectSlide.id, "Roadmap");
+    expect(await screen.findByText("Roadmap")).toBeVisible();
+  });
+
+  it("offers Rename in the canvas actions menu", async () => {
+    getDrawing.mockResolvedValue({
+      ...projectSlide,
+      elements: [],
+      appState: {},
+      files: {},
+    });
+    renderRail("current", projectSlide);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Actions for Project canvas",
+      }),
+    );
+    const rename = screen.getByRole("button", { name: "Rename" });
+    expect(rename.querySelector(".lucide-pencil")).not.toBeNull();
+    fireEvent.click(rename);
+
+    expect(
+      screen.getByRole("textbox", { name: "Rename Project canvas" }),
+    ).toHaveFocus();
+  });
+
+  it("creates new items with canvas terminology", async () => {
+    getDrawing.mockResolvedValue({
+      ...projectSlide,
+      elements: [],
+      appState: {},
+      files: {},
+    });
+    renderRail("current", projectSlide);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add canvas" }));
+
+    await waitFor(() =>
+      expect(createDrawing).toHaveBeenCalledWith("Canvas 2", project.id),
+    );
+  });
+
+  it("cancels inline renaming when focus moves elsewhere", async () => {
+    getDrawing.mockResolvedValue({
+      ...projectSlide,
+      elements: [],
+      appState: {},
+      files: {},
+    });
+    renderRail("current", projectSlide);
+
+    const canvas = (await screen.findByText("Project canvas")).closest("button");
+    fireEvent.doubleClick(canvas!);
+    const input = screen.getByRole("textbox", { name: "Rename Project canvas" });
+    fireEvent.change(input, { target: { value: "Discarded name" } });
+    fireEvent.blur(input);
+
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByText("Project canvas")).toBeVisible();
+    expect(updateDrawing).not.toHaveBeenCalled();
   });
 });

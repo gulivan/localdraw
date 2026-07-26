@@ -389,6 +389,9 @@ export const Editor: React.FC = () => {
         onCanvasChange={handleCanvasChange}
         onCanvasDropCapture={handleCanvasDropCapture}
         onDrawingSwitch={handleDrawingSwitch}
+        onDrawingRenamed={(drawingId, name) => {
+          if (drawingId === id) setDrawingTitle(drawingId, name);
+        }}
         onExportClick={handleExportClick}
         onLibraryChange={handleLibraryChange}
         onNavigateTo={navigateAfterSave}
