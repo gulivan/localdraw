@@ -107,13 +107,6 @@ writeFileSync(
   'module.exports = require("../../dist/generated/client");\n',
 );
 
-const workerDir = resolve(stagedBackendDistDir, "workers");
-mkdirSync(workerDir, { recursive: true });
-cpSync(
-  resolve(backendDir, "dist/workers/db-verify.js"),
-  resolve(workerDir, "db-verify.js"),
-);
-
 cpSync(
   resolve(backendDir, "package.json"),
   resolve(stagedBackendDir, "package.json"),
