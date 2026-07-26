@@ -5,12 +5,15 @@ import { Project } from "./Project";
 
 const mocks = vi.hoisted(() => ({
   deleteCollection: vi.fn(),
+  deleteDrawing: vi.fn(),
   getCollections: vi.fn(),
+  getDrawing: vi.fn(),
   getDrawings: vi.fn(),
   placeDrawing: vi.fn(),
   updateCollection: vi.fn(),
   updateDrawing: vi.fn(),
   uploadFiles: vi.fn(),
+  exportDrawingToFile: vi.fn(),
 }));
 
 vi.mock("../api", () => mocks);
@@ -18,20 +21,34 @@ vi.mock("../context/UploadContext", () => ({
   useUpload: () => ({ uploadFiles: mocks.uploadFiles }),
 }));
 vi.mock("../components/UploadStatus", () => ({ UploadStatus: () => null }));
+vi.mock("../utils/exportUtils", () => ({
+  exportDrawingToFile: mocks.exportDrawingToFile,
+}));
 vi.mock("../components/workspace/ProjectSlideCard", () => ({
   ProjectSlideCard: ({
     slide,
     index,
     onDelete,
     onReorder,
+    isSelected,
+    onToggleSelection,
   }: {
     slide: { name: string };
     index: number;
     onDelete: () => void;
     onReorder: (targetIndex: number) => void;
+    isSelected: boolean;
+    onToggleSelection: () => void;
   }) => (
     <article>
       <span>{slide.name}</span>
+      <button
+        type="button"
+        aria-pressed={isSelected}
+        onClick={onToggleSelection}
+      >
+        {isSelected ? "Deselect" : "Select"} {slide.name}
+      </button>
       <button type="button" onClick={() => onReorder(index - 1)}>
         Move {slide.name} earlier
       </button>
@@ -76,8 +93,15 @@ describe("Project workspace", () => {
       },
     ]);
     mocks.getDrawings.mockResolvedValue({ drawings: slides, totalCount: 2 });
+    mocks.getDrawing.mockImplementation(async (id: string) => ({
+      ...slides.find((slide) => slide.id === id),
+      elements: [],
+      appState: {},
+      files: {},
+    }));
     mocks.placeDrawing.mockResolvedValue({ drawing: {}, orders: [] });
     mocks.deleteCollection.mockResolvedValue({ success: true });
+    mocks.deleteDrawing.mockResolvedValue({ success: true });
     mocks.updateCollection.mockResolvedValue({
       id: "project-1",
       name: "Storyboard",
@@ -172,5 +196,79 @@ describe("Project workspace", () => {
         deleteSlides: true,
       }),
     );
+  });
+
+  it("selects multiple canvases for bulk export and deletion", async () => {
+    render(
+      <MemoryRouter initialEntries={["/projects/project-1"]}>
+        <Routes>
+          <Route path="/projects/:id" element={<Project />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("First");
+    expect(screen.queryByRole("button", { name: "Export bulk" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Select First" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select Second" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Export bulk" }));
+    await waitFor(() => {
+      expect(mocks.getDrawing).toHaveBeenCalledWith("slide-1");
+      expect(mocks.getDrawing).toHaveBeenCalledWith("slide-2");
+      expect(mocks.exportDrawingToFile).toHaveBeenCalledTimes(2);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete bulk" }));
+    expect(
+      screen.getByText("Delete 2 selected canvases?"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("The selected canvases will move to Trash."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
+    await waitFor(() => {
+      expect(mocks.updateDrawing).toHaveBeenCalledWith("slide-1", {
+        collectionId: "trash",
+      });
+      expect(mocks.updateDrawing).toHaveBeenCalledWith("slide-2", {
+        collectionId: "trash",
+      });
+    });
+    expect(screen.queryByText("First")).not.toBeInTheDocument();
+    expect(screen.queryByText("Second")).not.toBeInTheDocument();
+  });
+
+  it("can permanently bulk delete selected canvases instead of using Trash", async () => {
+    render(
+      <MemoryRouter initialEntries={["/projects/project-1"]}>
+        <Routes>
+          <Route path="/projects/:id" element={<Project />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("First");
+    fireEvent.click(screen.getByRole("button", { name: "Select First" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete bulk" }));
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "Skip Trash and delete permanently.",
+      }),
+    );
+
+    expect(
+      screen.getByText(
+        "The selected canvases will be permanently deleted. This cannot be undone.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete permanently" }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.deleteDrawing).toHaveBeenCalledWith("slide-1"),
+    );
+    expect(mocks.updateDrawing).not.toHaveBeenCalled();
   });
 });

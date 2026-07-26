@@ -1,6 +1,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   Copy,
   FolderInput,
   MoreHorizontal,
@@ -16,6 +17,8 @@ export const ProjectSlideCard = ({
   index,
   projects,
   canOrganize,
+  isSelected,
+  onToggleSelection,
   onOpen,
   onRename,
   onDelete,
@@ -28,6 +31,8 @@ export const ProjectSlideCard = ({
   index: number;
   projects: Collection[];
   canOrganize: boolean;
+  isSelected: boolean;
+  onToggleSelection: () => void;
   onOpen: () => void;
   onRename: () => void;
   onDelete: () => void;
@@ -46,13 +51,30 @@ export const ProjectSlideCard = ({
       const id = event.dataTransfer.getData("application/x-excalidash-slide");
       if (id && id !== slide.id) onDropAt(id, index);
     }}
-    className="group relative z-0 flex flex-col overflow-visible rounded-2xl border border-zinc-200 bg-white transition focus-within:z-30 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+    className={`group relative z-0 flex flex-col overflow-visible rounded-2xl border bg-white transition focus-within:z-30 hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:bg-zinc-900 ${
+      isSelected
+        ? "border-violet-500 ring-2 ring-violet-500/30 dark:border-violet-400"
+        : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700"
+    }`}
   >
     <button type="button" onClick={onOpen} className="workspace-focus relative h-40 w-full overflow-hidden rounded-t-[15px]">
       <SlideThumbnail drawing={slide} className="h-full w-full" />
       <span className="absolute left-3 top-3 flex h-7 min-w-7 items-center justify-center rounded-lg bg-white px-2 text-xs font-bold text-zinc-700 shadow-sm dark:bg-zinc-900 dark:text-zinc-200">
         {index + 1}
       </span>
+    </button>
+    <button
+      type="button"
+      onClick={onToggleSelection}
+      aria-label={`${isSelected ? "Deselect" : "Select"} ${slide.name}`}
+      aria-pressed={isSelected}
+      className={`workspace-focus absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg border transition duration-150 motion-reduce:transition-none ${
+        isSelected
+          ? "border-violet-600 bg-violet-600 text-white opacity-100"
+          : "border-zinc-200 bg-white text-zinc-700 opacity-0 shadow-sm hover:border-violet-300 hover:text-violet-700 focus-visible:opacity-100 group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+      }`}
+    >
+      <Check size={16} strokeWidth={2.5} aria-hidden="true" />
     </button>
     <div className="flex items-start gap-2 p-4">
       <button type="button" onClick={onOpen} className="workspace-focus min-w-0 flex-1 rounded text-left">
