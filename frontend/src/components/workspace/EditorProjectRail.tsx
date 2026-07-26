@@ -25,14 +25,16 @@ const slideRowTone = (active: boolean) =>
 export const EditorProjectRail = ({
   drawingId,
   drawingName,
+  drawingNameSourceId,
   canEdit,
   onSelectDrawing,
   onNavigate,
 }: {
   drawingId?: string;
   drawingName: string;
+  drawingNameSourceId: string | null;
   canEdit: boolean;
-  onSelectDrawing: (drawingId: string) => Promise<boolean>;
+  onSelectDrawing: (drawingId: string, drawingName: string) => Promise<boolean>;
   onNavigate?: () => void;
 }) => {
   const navigate = useNavigate();
@@ -70,15 +72,15 @@ export const EditorProjectRail = ({
 
   useEffect(() => void load(), [load]);
   useEffect(() => {
-    if (!drawingId) return;
+    if (!drawingId || drawingNameSourceId !== drawingId) return;
     setSlides((current) =>
       current.map((slide) =>
         slide.id === drawingId ? { ...slide, name: drawingName } : slide,
       ),
     );
-  }, [drawingId, drawingName]);
-  const go = async (id: string) => {
-    const switched = await onSelectDrawing(id);
+  }, [drawingId, drawingName, drawingNameSourceId]);
+  const go = async (id: string, name: string) => {
+    const switched = await onSelectDrawing(id, name);
     if (switched) onNavigate?.();
   };
 
@@ -96,11 +98,12 @@ export const EditorProjectRail = ({
   };
 
   const createSlide = async () => {
+    const name = `Slide ${slides.length + 1}`;
     const created = await api.createDrawing(
-      `Slide ${slides.length + 1}`,
+      name,
       activeCollectionId,
     );
-    await go(created.id);
+    await go(created.id, name);
   };
 
   const duplicateSlide = async (slideId: string) => {
@@ -121,7 +124,7 @@ export const EditorProjectRail = ({
       }
       const nextSlide = slides[index + 1] ?? slides[index - 1];
       if (nextSlide) {
-        await go(nextSlide.id);
+        await go(nextSlide.id, nextSlide.name);
       } else if (activeCollectionId) {
         navigate(`/projects/${activeCollectionId}`);
         onNavigate?.();
@@ -182,7 +185,7 @@ export const EditorProjectRail = ({
                           }}
                           className={`group flex items-center gap-1 rounded-lg ${slideRowTone(slide.id === drawingId)}`}
                         >
-                          <button type="button" onClick={() => void go(slide.id)} className="workspace-focus flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium"><span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">{index + 1}.</span><span className="truncate">{slide.name}</span></button>
+                          <button type="button" onClick={() => void go(slide.id, slide.name)} className="workspace-focus flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium"><span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">{index + 1}.</span><span className="truncate">{slide.name}</span></button>
                           {canEdit && slide.id === drawingId && <span className="mr-1 hidden gap-0.5 group-hover:flex"><button type="button" disabled={index === 0} onClick={() => void place(slide.id, activeCollectionId, index - 1)} className="workspace-focus rounded p-1 hover:bg-white disabled:opacity-30 dark:hover:bg-zinc-700" aria-label="Move slide earlier"><ArrowUp size={11} /></button><button type="button" onClick={() => void place(slide.id, activeCollectionId, index + 1)} className="workspace-focus rounded p-1 hover:bg-white dark:hover:bg-zinc-700" aria-label="Move slide later"><ArrowDown size={11} /></button></span>}
                           {canEdit && (
                             <EditorRailActions
@@ -200,7 +203,7 @@ export const EditorProjectRail = ({
               );
             })}
             {!activeCollectionId && (
-              <div className="rounded-xl bg-white p-2 dark:bg-zinc-900"><div className="flex items-center gap-2 px-1 pb-1 text-xs font-semibold"><Folder size={14} /> Unfiled</div>{slides.map((slide) => <button key={slide.id} type="button" onClick={() => void go(slide.id)} className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}>{slide.name}</button>)}</div>
+              <div className="rounded-xl bg-white p-2 dark:bg-zinc-900"><div className="flex items-center gap-2 px-1 pb-1 text-xs font-semibold"><Folder size={14} /> Unfiled</div>{slides.map((slide) => <button key={slide.id} type="button" onClick={() => void go(slide.id, slide.name)} className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}>{slide.name}</button>)}</div>
             )}
           </div>
         )}

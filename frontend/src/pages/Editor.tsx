@@ -20,17 +20,16 @@ import { useEditorCommands } from "./editor/useEditorCommands";
 import { useEditorElementTracking } from "./editor/useEditorElementTracking";
 import { useEditorBroadcast } from "./editor/useEditorBroadcast";
 import { usePersistentExcalidrawScene } from "./editor/usePersistentExcalidrawScene";
+import { useEditorTitle } from "./editor/useEditorTitle";
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useTheme();
   const { user } = useAuth();
-  const [accessLevel, setAccessLevel] = useState<
-    "none" | "view" | "edit" | "owner"
-  >("none");
+  const [accessLevel, setAccessLevel] = useState<"none" | "view" | "edit" | "owner">("none");
   const canEdit = accessLevel === "edit" || accessLevel === "owner";
-  const [drawingName, setDrawingName] = useState("Drawing Editor");
+  const { drawingName, drawingNameSourceId, setDrawingName, setDrawingTitle } = useEditorTitle();
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState("");
   const [initialData, setInitialData] = useState<any>(null);
@@ -39,9 +38,7 @@ export const Editor: React.FC = () => {
   const [isSceneLoading, setIsSceneLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSavingOnLeave, setIsSavingOnLeave] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const { autoHideEnabled, setAutoHideEnabled } = useEditorAutoHide();
   const [langCode, setLangCode] = useState(getInitialLangCode);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -276,7 +273,7 @@ export const Editor: React.FC = () => {
     navigate,
     refs: sceneLoaderRefs,
     setAccessLevel,
-    setDrawingName,
+    setDrawingTitle,
     setInitialData,
     setLoadedDrawingId,
     setIsReady,
@@ -346,6 +343,7 @@ export const Editor: React.FC = () => {
     resolveSafeSnapshot,
     setAutoHideEnabled,
     setDrawingName,
+    setDrawingTitle,
     setIsHeaderVisible,
     setIsRenaming,
     setIsSavingOnLeave,
@@ -361,6 +359,7 @@ export const Editor: React.FC = () => {
         drawingName={drawingName}
         editorContainerRef={editorContainerRef}
         initialData={initialData}
+        drawingNameSourceId={drawingNameSourceId}
         isHeaderVisible={isHeaderVisible}
         isRenaming={isRenaming}
         isSavingOnLeave={isSavingOnLeave}

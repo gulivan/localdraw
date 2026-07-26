@@ -20,6 +20,7 @@ describe("useEditorCommands canvas switching", () => {
     const enqueueSceneSave = vi.fn(() => pendingSave);
     const cancelPendingSceneSaves = vi.fn();
     const setIsSavingOnLeave = vi.fn();
+    const setDrawingTitle = vi.fn();
     const elements = [{ id: "shape-1", type: "rectangle" }];
     const appState = { viewBackgroundColor: "#ffffff" };
     const files = {};
@@ -57,6 +58,7 @@ describe("useEditorCommands canvas switching", () => {
         }),
         setAutoHideEnabled: vi.fn(),
         setDrawingName: vi.fn(),
+        setDrawingTitle,
         setIsHeaderVisible: vi.fn(),
         setIsRenaming: vi.fn(),
         setIsSavingOnLeave,
@@ -67,12 +69,13 @@ describe("useEditorCommands canvas switching", () => {
 
     let switchPromise!: Promise<boolean>;
     act(() => {
-      switchPromise = result.current.handleDrawingSwitch("canvas-2");
+      switchPromise = result.current.handleDrawingSwitch("canvas-2", "Canvas 2");
     });
 
     await waitFor(() => expect(enqueueSceneSave).toHaveBeenCalledOnce());
     expect(cancelPendingSceneSaves).toHaveBeenCalledOnce();
     expect(navigate).not.toHaveBeenCalled();
+    expect(setDrawingTitle).not.toHaveBeenCalled();
 
     await act(async () => {
       finishSave();
@@ -80,6 +83,7 @@ describe("useEditorCommands canvas switching", () => {
     });
 
     expect(navigate).toHaveBeenCalledWith("/editor/canvas-2");
+    expect(setDrawingTitle).toHaveBeenCalledWith("canvas-2", "Canvas 2");
     expect(setIsSavingOnLeave).toHaveBeenNthCalledWith(1, true);
     expect(setIsSavingOnLeave).toHaveBeenLastCalledWith(false);
   });

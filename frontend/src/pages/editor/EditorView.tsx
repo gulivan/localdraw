@@ -22,6 +22,7 @@ type EditorViewProps = {
   autoHideEnabled: boolean;
   canEdit: boolean;
   drawingName: string;
+  drawingNameSourceId: string | null;
   editorContainerRef: React.RefObject<HTMLDivElement>;
   initialData: any;
   isHeaderVisible: boolean;
@@ -36,7 +37,7 @@ type EditorViewProps = {
   onBackClick: () => void;
   onCanvasChange: (elements: readonly any[], appState: any, files?: Record<string, any>) => void;
   onCanvasDropCapture: (event: React.DragEvent<HTMLDivElement>) => void;
-  onDrawingSwitch: (drawingId: string) => Promise<boolean>;
+  onDrawingSwitch: (drawingId: string, drawingName: string) => Promise<boolean>;
   onExportClick: () => void;
   onLibraryChange: (items: readonly any[]) => void;
   onNavigateHome: () => void;
@@ -56,6 +57,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   autoHideEnabled,
   canEdit,
   drawingName,
+  drawingNameSourceId,
   editorContainerRef,
   initialData,
   isHeaderVisible,
@@ -111,6 +113,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
       <EditorProjectRail
         drawingId={id}
         drawingName={drawingName}
+        drawingNameSourceId={drawingNameSourceId}
         canEdit={canEdit}
         onSelectDrawing={onDrawingSwitch}
         onNavigate={() => window.innerWidth < 768 && setRailOpen(false)}

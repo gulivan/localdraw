@@ -56,6 +56,7 @@ type UseEditorCommandsParams = {
   ) => Promise<void>;
   setAutoHideEnabled: (enabled: boolean) => void;
   setDrawingName: (name: string) => void;
+  setDrawingTitle: (drawingId: string, name: string) => void;
   setIsHeaderVisible: (visible: boolean) => void;
   setIsRenaming: (isRenaming: boolean) => void;
   setIsSavingOnLeave: (isSaving: boolean) => void;
@@ -77,6 +78,7 @@ export const useEditorCommands = ({
   resolveSafeSnapshot,
   setAutoHideEnabled,
   setDrawingName,
+  setDrawingTitle,
   setIsHeaderVisible,
   setIsRenaming,
   setIsSavingOnLeave,
@@ -210,11 +212,13 @@ export const useEditorCommands = ({
   }, [navigateAfterSave]);
 
   const handleDrawingSwitch = useCallback(
-    async (nextDrawingId: string) => {
+    async (nextDrawingId: string, nextDrawingName: string) => {
       if (!nextDrawingId || nextDrawingId === drawingId) return true;
-      return navigateAfterSave(`/editor/${nextDrawingId}`);
+      const switched = await navigateAfterSave(`/editor/${nextDrawingId}`);
+      if (switched) setDrawingTitle(nextDrawingId, nextDrawingName);
+      return switched;
     },
-    [drawingId, navigateAfterSave],
+    [drawingId, navigateAfterSave, setDrawingTitle],
   );
 
   const handleExportClick = useCallback(() => {

@@ -34,7 +34,7 @@ type SceneLoaderParams = {
     hasHydratedInitialScene: MutableRefObject<boolean>;
   };
   setAccessLevel: (accessLevel: AccessLevel) => void;
-  setDrawingName: (name: string) => void;
+  setDrawingTitle: (drawingId: string, name: string) => void;
   setInitialData: (data: any) => void;
   setLoadedDrawingId: (drawingId: string | null) => void;
   setIsReady: (ready: boolean) => void;
@@ -61,7 +61,7 @@ export const useEditorSceneLoader = ({
   navigate,
   refs,
   setAccessLevel,
-  setDrawingName,
+  setDrawingTitle,
   setInitialData,
   setLoadedDrawingId,
   setIsReady,
@@ -110,7 +110,7 @@ export const useEditorSceneLoader = ({
           api.getDrawing(id),
           libraryItemsPromise,
         ]);
-        setDrawingName(data.name);
+        setDrawingTitle(id, data.name);
         setAccessLevel(
           data.accessLevel === "view" ||
             data.accessLevel === "edit" ||
@@ -202,7 +202,7 @@ export const useEditorSceneLoader = ({
     refs,
     resetRefs,
     setAccessLevel,
-    setDrawingName,
+    setDrawingTitle,
     setInitialData,
     setLoadedDrawingId,
     setIsReady,
