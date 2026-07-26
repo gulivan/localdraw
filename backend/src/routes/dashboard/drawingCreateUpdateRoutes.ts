@@ -5,7 +5,7 @@ import {
   canEditDrawing,
   getDrawingAccess,
   isOwnerAccess,
-} from "../../authz/sharing";
+} from "../../authz/drawingAccess";
 import { rewritePreviewForS3 } from "../../fileProcessing";
 import {
   getUserTrashCollectionId,
@@ -23,7 +23,6 @@ export const registerDrawingCreateUpdateRoutes = (
   const {
     prisma,
     requireAuth,
-    optionalAuth,
     asyncHandler,
     validateImportedDrawing,
     drawingCreateSchema,
@@ -132,7 +131,7 @@ export const registerDrawingCreateUpdateRoutes = (
 
   app.put(
     "/drawings/:id",
-    optionalAuth,
+    requireAuth,
     asyncHandler(async (req, res) => {
       const principal = await getRequestPrincipal(req);
 

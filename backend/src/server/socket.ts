@@ -9,7 +9,7 @@ import {
   canEditDrawing,
   canViewDrawing,
   type DrawingPrincipal,
-} from "../authz/sharing";
+} from "../authz/drawingAccess";
 
 interface User {
   id: string;
@@ -109,11 +109,8 @@ export const registerSocketHandlers = ({
         return next();
       }
 
-      // Google-Docs-style "anyone with the link": allow anonymous sockets and enforce access on join-room
-      // using getDrawingAccess (which consults active link-share policies).
-      if (authEnabled) return next();
-
-      return next(new Error("Authentication required"));
+      if (authEnabled) return next(new Error("Authentication required"));
+      return next(new Error("Authentication failed"));
     } catch {
       next(new Error("Authentication failed"));
     }
@@ -123,13 +120,13 @@ export const registerSocketHandlers = ({
     const principal = socketPrincipalMap.get(socket.id) || null;
     const authorizedDrawingAccess = new Map<
       string,
-      { access: "view" | "edit" | "owner"; checkedAtMs: number }
+      { access: "owner"; checkedAtMs: number }
     >();
     const ACCESS_CACHE_TTL_MS = 1500;
 
     const getCachedOrFreshAccess = async (
       drawingId: string
-    ): Promise<"view" | "edit" | "owner" | null> => {
+    ): Promise<"owner" | null> => {
       const cached = authorizedDrawingAccess.get(drawingId);
       const now = Date.now();
       if (cached && now - cached.checkedAtMs < ACCESS_CACHE_TTL_MS) {
@@ -144,9 +141,8 @@ export const registerSocketHandlers = ({
         authorizedDrawingAccess.delete(drawingId);
         return null;
       }
-      const normalized = access === "owner" ? "owner" : access;
-      authorizedDrawingAccess.set(drawingId, { access: normalized, checkedAtMs: now });
-      return normalized;
+      authorizedDrawingAccess.set(drawingId, { access: "owner", checkedAtMs: now });
+      return "owner";
     };
 
     socket.on(
@@ -177,10 +173,7 @@ export const registerSocketHandlers = ({
               : socket.id;
           let trustedName = toPresenceName(user?.name);
 
-          if (!principal) {
-            // Never trust client-provided ids for anonymous/share-link sessions; prevent spoofing/collisions.
-            trustedUserId = `anon:${socket.id}`.slice(0, 200);
-          } else if (principal?.kind === "user" && principal.userId !== BOOTSTRAP_USER_ID) {
+          if (principal?.kind === "user" && principal.userId !== BOOTSTRAP_USER_ID) {
             const account = await prisma.user.findUnique({
               where: { id: principal.userId },
               select: { id: true, name: true },

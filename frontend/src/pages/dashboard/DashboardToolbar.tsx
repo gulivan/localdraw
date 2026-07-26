@@ -35,7 +35,6 @@ type DashboardToolbarProps = {
   allSelected: boolean;
   hasSelection: boolean;
   isTrashView: boolean;
-  isSharedView: boolean;
   showBulkMoveMenu: boolean;
   selectedCount: number;
   collections: Collection[];
@@ -63,7 +62,6 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   allSelected,
   hasSelection,
   isTrashView,
-  isSharedView,
   showBulkMoveMenu,
   selectedCount,
   collections,
@@ -79,8 +77,6 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   onImportDrawings,
   onCreateDrawing,
 }) => {
-  const canModifySelection = !isSharedView;
-
   return (
     <div className="mb-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
       <div className="flex flex-1 w-full lg:w-auto gap-3 items-center flex-wrap">
@@ -197,10 +193,10 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
           </button>
           <button
             onClick={onBulkDeleteClick}
-            disabled={!hasSelection || !canModifySelection}
+            disabled={!hasSelection}
             className={clsx(
               "h-[42px] w-[42px] flex items-center justify-center rounded-xl border-2 transition-all",
-              hasSelection && canModifySelection
+              hasSelection
                 ? "bg-white dark:bg-neutral-800 border-black dark:border-neutral-700 text-rose-600 dark:text-rose-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:-translate-y-1 hover:bg-rose-50 dark:hover:bg-rose-900/30"
                 : "bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-neutral-800 text-slate-300 dark:text-neutral-700 cursor-not-allowed",
             )}
@@ -210,10 +206,10 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
           </button>
           <button
             onClick={onBulkDuplicate}
-            disabled={!hasSelection || isTrashView || !canModifySelection}
+            disabled={!hasSelection || isTrashView}
             className={clsx(
               "h-[42px] w-[42px] flex items-center justify-center rounded-xl border-2 transition-all",
-              hasSelection && !isTrashView && canModifySelection
+              hasSelection && !isTrashView
                 ? "bg-white dark:bg-neutral-800 border-black dark:border-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:-translate-y-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
                 : "bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-neutral-800 text-slate-300 dark:text-neutral-700 cursor-not-allowed",
             )}
@@ -226,10 +222,10 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
               onClick={() =>
                 hasSelection && onShowBulkMoveMenuChange(!showBulkMoveMenu)
               }
-              disabled={!hasSelection || !canModifySelection}
+              disabled={!hasSelection}
               className={clsx(
                 "h-[42px] w-[42px] flex items-center justify-center rounded-xl border-2 transition-all",
-                hasSelection && canModifySelection
+                hasSelection
                   ? "bg-white dark:bg-neutral-800 border-black dark:border-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:-translate-y-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
                   : "bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-neutral-800 text-slate-300 dark:text-neutral-700 cursor-not-allowed",
               )}
@@ -290,10 +286,10 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
         />
         <button
           onClick={() => document.getElementById("dashboard-import")?.click()}
-          disabled={isTrashView || isSharedView}
+          disabled={isTrashView}
           className={clsx(
             "h-[42px] w-full sm:w-auto flex items-center justify-center gap-2 px-6 rounded-xl border-2 border-black dark:border-neutral-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] transition-all font-bold text-sm whitespace-nowrap",
-            isTrashView || isSharedView
+            isTrashView
               ? "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-300 dark:border-slate-700 shadow-none cursor-not-allowed"
               : "bg-emerald-600 dark:bg-neutral-800 text-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:-translate-y-1 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:active:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)]",
           )}
@@ -302,10 +298,10 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
         </button>
         <button
           onClick={onCreateDrawing}
-          disabled={isTrashView || isSharedView}
+          disabled={isTrashView}
           className={clsx(
             "h-[42px] w-full sm:w-auto flex items-center justify-center gap-2 px-6 rounded-xl border-2 border-black dark:border-neutral-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] transition-all font-bold text-sm whitespace-nowrap",
-            isTrashView || isSharedView
+            isTrashView
               ? "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-300 dark:border-slate-700 shadow-none cursor-not-allowed"
               : "bg-indigo-600 dark:bg-neutral-800 text-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] hover:-translate-y-1 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:active:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)]",
           )}

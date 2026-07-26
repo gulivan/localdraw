@@ -5,7 +5,6 @@ import {
   Plus,
   Archive,
   FolderOpen,
-  Shield,
 } from "lucide-react";
 import type { Collection } from "../types";
 import clsx from "clsx";
@@ -38,7 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteCollection,
   onDrop,
 }) => {
-  const sharingEnabled = import.meta.env.VITE_DESKTOP_MINIMAL !== "true";
   const { logout, user, authEnabled } = useAuth();
   const [isCreating, setIsCreating] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
@@ -113,15 +111,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="min-w-0 flex-1 text-left">All Drawings</span>
               </button>
             </div>
-            {sharingEnabled ? (
-              <SidebarItem
-                id={"shared"}
-                icon={<Shield size={18} />}
-                label="Shared with me"
-                isActive={selectedCollectionId === "shared"}
-                onClick={() => onSelectCollection("shared")}
-              />
-            ) : null}
             <SidebarItem
               id={null}
               icon={<Archive size={18} />}

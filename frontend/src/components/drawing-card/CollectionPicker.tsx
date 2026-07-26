@@ -1,12 +1,10 @@
 import React from "react";
-import clsx from "clsx";
 import type { Collection, DrawingSummary } from "../../types";
 import { CollectionMoveOptions } from "./CollectionMoveOptions";
 
 interface CollectionPickerProps {
   drawing: DrawingSummary;
   collections: Collection[];
-  isShared: boolean;
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
@@ -16,7 +14,6 @@ interface CollectionPickerProps {
 export const CollectionPicker: React.FC<CollectionPickerProps> = ({
   drawing,
   collections,
-  isShared,
   isOpen,
   onToggle,
   onClose,
@@ -31,22 +28,13 @@ export const CollectionPicker: React.FC<CollectionPickerProps> = ({
     <div className="relative" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center gap-1 flex-wrap justify-start xs:justify-end">
         <button
-          onClick={() => {
-            if (isShared) return;
-            onToggle();
-          }}
+          onClick={onToggle}
           data-testid={`collection-picker-${drawing.id}`}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
-          disabled={isShared}
-          className={clsx(
-            "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide max-w-[120px] truncate transition-all border",
-            isShared
-              ? "bg-slate-50 dark:bg-neutral-800/40 text-slate-400 dark:text-neutral-500 border-neutral-100 dark:border-neutral-800 cursor-not-allowed"
-              : "bg-slate-50 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 cursor-pointer border-neutral-200/60 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700/50",
-          )}
+          className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide max-w-[120px] truncate transition-all border bg-slate-50 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 cursor-pointer border-neutral-200/60 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
         >
-          {isShared ? "Shared" : collectionName}
+          {collectionName}
         </button>
 
         {drawing.creatorName && (
@@ -60,7 +48,7 @@ export const CollectionPicker: React.FC<CollectionPickerProps> = ({
 
       </div>
 
-      {!isShared && isOpen && (
+      {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={onClose} />
           <div className="absolute right-0 bottom-full mb-1.5 w-48 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-lg z-20 py-1 max-h-56 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-bottom-2 duration-150">

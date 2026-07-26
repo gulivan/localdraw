@@ -10,7 +10,7 @@ import {
   isS3Enabled,
   generatePresignedDownloadUrl,
 } from "../s3";
-import { canViewDrawing, getDrawingAccess } from "../authz/sharing";
+import { canViewDrawing, getDrawingAccess } from "../authz/drawingAccess";
 
 const DOWNLOAD_EXPIRES_IN = 3600; // 1 hour   – cached by browser
 
@@ -21,7 +21,6 @@ const isValidIdSegment = (value: unknown): value is string =>
 export type FileRouteDeps = {
   prisma: PrismaClient;
   requireAuth: express.RequestHandler;
-  optionalAuth: express.RequestHandler;
   asyncHandler: <T = void>(
     fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<T>
   ) => express.RequestHandler;
@@ -31,7 +30,7 @@ export const registerFileRoutes = (
   app: express.Express,
   deps: FileRouteDeps
 ): void => {
-  const { prisma, requireAuth, optionalAuth, asyncHandler } = deps;
+  const { prisma, requireAuth, asyncHandler } = deps;
 
   // ------------------------------------------------------------------
   // GET /files/config
@@ -55,7 +54,7 @@ export const registerFileRoutes = (
   // ------------------------------------------------------------------
   app.get(
     "/files/:drawingId/:fileId",
-    optionalAuth,
+    requireAuth,
     asyncHandler(async (req, res) => {
       if (!isS3Enabled()) {
         return res.status(501).json({ error: "S3 storage is not configured" });

@@ -20,7 +20,6 @@ type UseEditorCollaborationInput = {
   latestFilesRef: MutableRefObject<any>;
   computeElementOrderSig: (elements: readonly any[]) => string;
   recordElementVersion: (element: any) => void;
-  onAccessDenied: () => void;
 };
 
 const getSocketUrl = () =>
@@ -41,7 +40,6 @@ export const useEditorCollaboration = ({
   latestFilesRef,
   computeElementOrderSig,
   recordElementVersion,
-  onAccessDenied,
 }: UseEditorCollaborationInput) => {
   const [socketMe, setSocketMe] = useState<UserIdentity>(me);
   const socketMeRef = useRef<UserIdentity>(socketMe);
@@ -144,10 +142,6 @@ export const useEditorCollaboration = ({
       const message =
         typeof payload?.message === "string" ? payload.message : null;
       console.warn("[Editor] Socket error:", payload);
-      if (message === "You do not have access to this drawing") {
-        onAccessDenied();
-        return;
-      }
       if (message) toast.error(message);
     });
     socket.on("cursor-move", (data: any) => {
@@ -321,7 +315,6 @@ export const useEditorCollaboration = ({
     latestFilesRef,
     computeElementOrderSig,
     recordElementVersion,
-    onAccessDenied,
   ]);
 
   const onPointerUpdate = useCallback(

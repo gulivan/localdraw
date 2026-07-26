@@ -54,8 +54,6 @@ function buildApp() {
       findFirst: vi.fn(),
       count: vi.fn(),
     },
-    drawingPermission: { findMany: vi.fn().mockResolvedValue([]) },
-    drawingLinkShare: { findMany: vi.fn().mockResolvedValue([]) },
     collection: { findFirst: vi.fn() },
   } as any;
 

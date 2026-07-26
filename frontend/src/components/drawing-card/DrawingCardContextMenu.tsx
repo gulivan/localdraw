@@ -18,7 +18,6 @@ interface DrawingCardContextMenuProps {
   collections: Collection[];
   position: { x: number; y: number };
   isTrash: boolean;
-  isShared: boolean;
   storageAvailable: boolean;
   isExporting: boolean;
   exportError: string | null;
@@ -38,7 +37,6 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
   collections,
   position,
   isTrash,
-  isShared,
   storageAvailable,
   isExporting,
   exportError,
@@ -66,10 +64,7 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
         style={{ top: position.y, left: position.x }}
         onClick={(e) => e.stopPropagation()}
       >
-        {!isTrash &&
-        (!isShared ||
-          drawing.accessLevel === "edit" ||
-          drawing.accessLevel === "owner") ? (
+        {!isTrash ? (
           <button
             onClick={onRename}
             className="w-full px-3 py-2 text-sm text-left text-slate-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white flex items-center gap-2"
@@ -77,50 +72,44 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
             <PenTool size={14} /> Rename
           </button>
         ) : null}
-        {!isShared ? (
-          <div
-            className="relative group/move"
-            onMouseEnter={() => onShowMoveSubmenu(true)}
-            onMouseLeave={() => onShowMoveSubmenu(false)}
-          >
-            <button className="w-full px-3 py-2 text-sm text-left text-slate-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <FolderInput size={14} /> Move to...
-              </span>
-              <ArrowRight size={12} />
-            </button>
-            {showMoveSubmenu && (
-              <div className="absolute left-full top-0 ml-1 w-40 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-lg py-1 max-h-64 overflow-y-auto">
-                <CollectionMoveOptions
-                  collections={collections}
-                  currentCollectionId={drawing.collectionId}
-                  drawingId={drawing.id}
-                  onMoveToCollection={onMoveToCollection}
-                  onDone={onClose}
-                  optionClassName="w-full px-3 py-1.5 text-xs text-left flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-800 truncate"
-                  selectedClassName="text-neutral-900 dark:text-white font-medium"
-                  unselectedClassName="text-slate-600 dark:text-neutral-400"
-                  checkSize={10}
-                />
-              </div>
-            )}
-          </div>
-        ) : null}
-        {!isShared ? (
-          <>
-            <div className="border-t border-slate-50 dark:border-slate-800 my-1"></div>
-            <button
-              onClick={() => {
-                onDuplicate(drawing.id);
-                onClose();
-              }}
-              className="w-full px-3 py-2 text-sm text-left text-slate-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white flex items-center gap-2"
-            >
-              <Copy size={14} /> Duplicate
-            </button>
-          </>
-        ) : null}
-        {!isShared && storageAvailable ? (
+        <div
+          className="relative group/move"
+          onMouseEnter={() => onShowMoveSubmenu(true)}
+          onMouseLeave={() => onShowMoveSubmenu(false)}
+        >
+          <button className="w-full px-3 py-2 text-sm text-left text-slate-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <FolderInput size={14} /> Move to...
+            </span>
+            <ArrowRight size={12} />
+          </button>
+          {showMoveSubmenu && (
+            <div className="absolute left-full top-0 ml-1 w-40 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-lg py-1 max-h-64 overflow-y-auto">
+              <CollectionMoveOptions
+                collections={collections}
+                currentCollectionId={drawing.collectionId}
+                drawingId={drawing.id}
+                onMoveToCollection={onMoveToCollection}
+                onDone={onClose}
+                optionClassName="w-full px-3 py-1.5 text-xs text-left flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-neutral-800 truncate"
+                selectedClassName="text-neutral-900 dark:text-white font-medium"
+                unselectedClassName="text-slate-600 dark:text-neutral-400"
+                checkSize={10}
+              />
+            </div>
+          )}
+        </div>
+        <div className="border-t border-slate-50 dark:border-slate-800 my-1"></div>
+        <button
+          onClick={() => {
+            onDuplicate(drawing.id);
+            onClose();
+          }}
+          className="w-full px-3 py-2 text-sm text-left text-slate-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white flex items-center gap-2"
+        >
+          <Copy size={14} /> Duplicate
+        </button>
+        {storageAvailable ? (
           <>
             <button
               onClick={onManageStorage}
@@ -148,20 +137,16 @@ export const DrawingCardContextMenu: React.FC<DrawingCardContextMenuProps> = ({
             {exportError}
           </div>
         )}
-        {!isShared ? (
-          <>
-            <div className="border-t border-slate-50 dark:border-slate-800 my-1"></div>
-            <button
-              onClick={() => {
-                onDelete(drawing.id);
-                onClose();
-              }}
-              className="w-full px-3 py-2 text-sm text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 flex items-center gap-2"
-            >
-              <Trash2 size={14} /> Delete
-            </button>
-          </>
-        ) : null}
+        <div className="border-t border-slate-50 dark:border-slate-800 my-1"></div>
+        <button
+          onClick={() => {
+            onDelete(drawing.id);
+            onClose();
+          }}
+          className="w-full px-3 py-2 text-sm text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 flex items-center gap-2"
+        >
+          <Trash2 size={14} /> Delete
+        </button>
       </div>
     </div>,
     document.body,

@@ -129,7 +129,6 @@ export const Dashboard: React.FC = () => {
   const viewTitle = React.useMemo(() => {
     if (selectedCollectionId === undefined) return "All Drawings";
     if (selectedCollectionId === null) return "Unorganized";
-    if (selectedCollectionId === "shared") return "Shared with me";
     if (selectedCollectionId === "trash") return "Trash";
     const collection = collections.find((c) => c.id === selectedCollectionId);
     return collection ? collection.name : "Collection";
@@ -170,7 +169,6 @@ export const Dashboard: React.FC = () => {
         allSelected={selection.allSelected}
         hasSelection={selection.hasSelection}
         isTrashView={actions.isTrashView}
-        isSharedView={actions.isSharedView}
         showBulkMoveMenu={showBulkMoveMenu}
         selectedCount={selectedIds.size}
         collections={collections}
@@ -203,7 +201,6 @@ export const Dashboard: React.FC = () => {
           dragCounter.current = 0;
           const target =
             selectedCollectionId === undefined ? null : selectedCollectionId;
-          if (actions.isSharedView) return;
           actions.handleDrop(e, target);
         }}
       >
@@ -217,7 +214,6 @@ export const Dashboard: React.FC = () => {
           isLoading={isLoading}
           isDraggingFile={isDraggingFile}
           isTrashView={actions.isTrashView}
-          isSharedView={actions.isSharedView}
           onClearSearch={() => setSearch("")}
           onToggleSelection={selection.handleToggleSelection}
           onRename={actions.handleRenameDrawing}

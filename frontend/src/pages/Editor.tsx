@@ -40,7 +40,6 @@ export const Editor: React.FC = () => {
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const { autoHideEnabled, setAutoHideEnabled } = useEditorAutoHide(id);
-  const [isShareOpen, setIsShareOpen] = useState(false);
   const [langCode, setLangCode] = useState(getInitialLangCode);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const previewBackup = useRef<{
@@ -101,12 +100,6 @@ export const Editor: React.FC = () => {
       isUnmounting.current = true;
     };
   }, []);
-  const handleSocketAccessDenied = useCallback(() => {
-    if (!id || !location.pathname.startsWith("/editor/")) return;
-    navigate(`/shared/${id}${location.search}${location.hash}`, {
-      replace: true,
-    });
-  }, [id, location.hash, location.pathname, location.search, navigate]);
   const { peers, socketMeRef, socketRef, isSyncing, onPointerUpdate } =
     useEditorCollaboration({
       drawingId: id,
@@ -119,7 +112,6 @@ export const Editor: React.FC = () => {
       latestFilesRef,
       computeElementOrderSig,
       recordElementVersion,
-      onAccessDenied: handleSocketAccessDenied,
     });
   const emitFilesDeltaIfNeeded = useCallback(
     (nextFiles: Record<string, any>) => {
@@ -343,7 +335,6 @@ export const Editor: React.FC = () => {
     <>
       <EditorView
         id={id}
-        accessLevel={accessLevel}
         autoHideEnabled={autoHideEnabled}
         canEdit={canEdit}
         drawingName={drawingName}
@@ -373,19 +364,15 @@ export const Editor: React.FC = () => {
         onRenameSubmit={handleRenameSubmit}
         onSetExcalidrawAPI={setExcalidrawAPI}
         onSetLangCode={setLangCode}
-        onShareOpen={() => setIsShareOpen(true)}
         onHistoryOpen={() => setIsHistoryOpen(true)}
         onToggleAutoHide={handleToggleAutoHide}
       />
       <EditorDialogs
         drawingId={id}
-        drawingName={drawingName}
         excalidrawAPIRef={excalidrawAPI}
         isHistoryOpen={isHistoryOpen}
-        isShareOpen={isShareOpen}
         previewBackupRef={previewBackup}
         onCloseHistory={() => setIsHistoryOpen(false)}
-        onCloseShare={() => setIsShareOpen(false)}
       />
     </>
   );

@@ -8,7 +8,6 @@ import {
   History,
   Loader2,
   PanelLeft,
-  Share2,
 } from "lucide-react";
 import clsx from "clsx";
 import { Toaster } from "sonner";
@@ -26,7 +25,6 @@ interface Peer extends UserIdentity {
 
 type EditorViewProps = {
   id?: string;
-  accessLevel: "none" | "view" | "edit" | "owner";
   autoHideEnabled: boolean;
   canEdit: boolean;
   drawingName: string;
@@ -56,7 +54,6 @@ type EditorViewProps = {
   onRenameSubmit: (event: React.FormEvent) => void;
   onSetExcalidrawAPI: (api: any) => void;
   onSetLangCode: (langCode: string) => void;
-  onShareOpen: () => void;
   onHistoryOpen: () => void;
   onToggleAutoHide: () => void;
 };
@@ -88,7 +85,6 @@ const UserAvatar = ({
 
 export const EditorView: React.FC<EditorViewProps> = ({
   id,
-  accessLevel,
   autoHideEnabled,
   canEdit,
   drawingName,
@@ -118,7 +114,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onRenameSubmit,
   onSetExcalidrawAPI,
   onSetLangCode,
-  onShareOpen,
   onHistoryOpen,
   onToggleAutoHide,
 }) => {
@@ -232,17 +227,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
             title="Version History"
           >
             <History size={20} />
-          </button>
-        ) : null}
-        {accessLevel === "owner" &&
-        id &&
-        import.meta.env.VITE_DESKTOP_MINIMAL !== "true" ? (
-          <button
-            onClick={onShareOpen}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg text-gray-600 dark:text-gray-300 transition-colors"
-            title="Share"
-          >
-            <Share2 size={20} />
           </button>
         ) : null}
         <button

@@ -22,7 +22,6 @@ model User {
   authIdentities      AuthIdentity[]
   drawings            Drawing[]
   collections         Collection[]
-  drawingPermissions  DrawingPermission[]
   passwordResetTokens PasswordResetToken[]
   refreshTokens       RefreshToken[]
   apiKeys             ApiKey[]
@@ -74,8 +73,6 @@ model Drawing {
   collectionId String?
   collection   Collection? @relation(fields: [collectionId], references: [id])
   sortOrder    Int         @default(0)
-  permissions  DrawingPermission[]
-  linkShares   DrawingLinkShare[]
   snapshots    DrawingSnapshot[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -97,42 +94,6 @@ model DrawingSnapshot {
 
   @@index([drawingId, createdAt])
   @@index([createdAt])
-}
-
-model DrawingPermission {
-  id              String   @id @default(uuid())
-  drawingId       String
-  drawing         Drawing  @relation(fields: [drawingId], references: [id], onDelete: Cascade)
-  granteeUserId   String
-  granteeUser     User     @relation(fields: [granteeUserId], references: [id], onDelete: Cascade)
-  permission      String
-  createdByUserId String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@unique([drawingId, granteeUserId], name: "drawingId_granteeUserId")
-  @@index([granteeUserId])
-  @@index([drawingId])
-}
-
-model DrawingLinkShare {
-  id              String    @id @default(uuid())
-  drawingId       String
-  drawing         Drawing   @relation(fields: [drawingId], references: [id], onDelete: Cascade)
-  permission      String
-  tokenHash       String    @unique
-  passphraseHash  String?
-  expiresAt       DateTime?
-  revokedAt       DateTime?
-  failedAttempts  Int       @default(0)
-  lockedUntil     DateTime?
-  lastUsedAt      DateTime?
-  lastUsedIp      String?
-  createdByUserId String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([drawingId])
 }
 
 model Library {

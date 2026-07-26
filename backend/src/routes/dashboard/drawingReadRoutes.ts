@@ -1,5 +1,5 @@
 import express from "express";
-import { canViewDrawing, getDrawingAccess } from "../../authz/sharing";
+import { canViewDrawing, getDrawingAccess } from "../../authz/drawingAccess";
 import { toPublicTrashCollectionId } from "./trash";
 import type { DrawingRouteContext } from "./drawingRouteContext";
 
@@ -9,7 +9,7 @@ export const registerDrawingReadRoutes = (
 ) => {
   const {
     prisma,
-    optionalAuth,
+    requireAuth,
     asyncHandler,
     parseJsonField,
     getRequestPrincipal,
@@ -17,7 +17,7 @@ export const registerDrawingReadRoutes = (
   } = context;
   app.get(
     "/drawings/:id",
-    optionalAuth,
+    requireAuth,
     asyncHandler(async (req, res) => {
       const principal = await getRequestPrincipal(req);
 
@@ -43,15 +43,9 @@ export const registerDrawingReadRoutes = (
         });
       }
 
-      const isOwner =
-        principal?.kind === "user" && principal.userId === drawing.userId;
       return res.json({
         ...drawing,
-        // Collections (and trash mapping) are owner-scoped. For shared/public access, avoid leaking
-        // owner collection ids like `trash:<ownerId>` and avoid implying the viewer can organize it.
-        collectionId: isOwner
-          ? toPublicTrashCollectionId(drawing.collectionId, drawing.userId)
-          : null,
+        collectionId: toPublicTrashCollectionId(drawing.collectionId, drawing.userId),
         elements: parseJsonField(drawing.elements, []),
         appState: parseJsonField(drawing.appState, {}),
         files: parseJsonField(drawing.files, {}),

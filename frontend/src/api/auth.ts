@@ -260,9 +260,6 @@ const getAuthEnabledStatus = async (): Promise<boolean | null> => {
 };
 
 const redirectToLogin = async () => {
-  const isShareFlow = window.location.pathname.startsWith("/shared/");
-  if (isShareFlow) return;
-
   try {
     const status = await authStatus();
     if (status?.oidcEnforced) {
@@ -325,10 +322,8 @@ api.interceptors.response.use(
       const originalRequest = (error.config || {}) as RetriableRequestConfig;
       const url = String(originalRequest.url || "");
       const isAuthRoute = url.includes("/auth/");
-      const isShareFlow = window.location.pathname.startsWith("/shared/");
       const authEnabled = !isAuthRoute ? await getAuthEnabledStatus() : true;
 
-      if (isShareFlow && !isAuthRoute) return Promise.reject(error);
       if (!isAuthRoute && authEnabled === false) {
         if (!originalRequest._authModeRetry) {
           originalRequest._authModeRetry = true;
@@ -344,14 +339,14 @@ api.interceptors.response.use(
           return api(originalRequest as any);
         } catch {
           clearStoredAuth();
-          if (!isShareFlow) await redirectToLogin();
+          await redirectToLogin();
           return Promise.reject(error);
         }
       }
 
       if (!isAuthRoute) {
         clearStoredAuth();
-        if (!isShareFlow) await redirectToLogin();
+        await redirectToLogin();
       }
     }
 

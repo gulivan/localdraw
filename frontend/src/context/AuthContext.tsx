@@ -63,8 +63,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const loadUser = useCallback(async () => {
     setLoading(true);
     try {
-      const isShareFlow = window.location.pathname.startsWith("/shared/");
-
       try {
         const statusResponse = await authStatus();
         setAuthStatusError(null);
@@ -132,19 +130,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      // For share-link flows we treat authentication as strictly server-derived.
-      // Loading a stale localStorage user causes "logged-in" UI while the server returns 401s,
-      // which in turn triggers noisy refresh attempts and failing library saves.
-      if (!isShareFlow) {
-        const storedUser = localStorage.getItem(USER_KEY);
-        if (storedUser) {
-          try {
-            const userData = JSON.parse(storedUser);
-            setUser(userData);
-          } catch {
-            localStorage.removeItem(USER_KEY);
-            setUser(null);
-          }
+      const storedUser = localStorage.getItem(USER_KEY);
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+        } catch {
+          localStorage.removeItem(USER_KEY);
+          setUser(null);
         }
       }
 
@@ -153,11 +146,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(response.user);
         localStorage.setItem(USER_KEY, JSON.stringify(response.user));
       } catch {
-        if (isShareFlow) {
-          localStorage.removeItem(USER_KEY);
-          setUser(null);
-          return;
-        }
         try {
           await authRefresh();
           const userResponse = await authMe();

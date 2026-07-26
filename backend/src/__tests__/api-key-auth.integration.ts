@@ -130,6 +130,45 @@ describe("API key authentication", () => {
     expect(drawingsResponse.status).toBe(200);
   });
 
+  it("searches typed canvas text without matching non-text element metadata", async () => {
+    const typedMatch = await prisma.drawing.create({
+      data: {
+        name: "Untitled canvas",
+        elements: JSON.stringify([
+          { type: "text", text: "CanvasSearchNeedle", isDeleted: false },
+        ]),
+        appState: "{}",
+        files: "{}",
+        userId,
+      },
+    });
+    const metadataOnly = await prisma.drawing.create({
+      data: {
+        name: "Another canvas",
+        elements: JSON.stringify([
+          { type: "rectangle", id: "CanvasSearchNeedle" },
+        ]),
+        appState: "{}",
+        files: "{}",
+        userId,
+      },
+    });
+
+    const response = await request(app)
+      .get("/drawings?search=canvassearchneedle")
+      .set("Authorization", `Bearer ${apiKeyToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.totalCount).toBe(1);
+    expect(response.body.drawings.map((drawing: any) => drawing.id)).toEqual([
+      typedMatch.id,
+    ]);
+    expect(response.body.drawings[0].elements).toBeUndefined();
+    expect(response.body.drawings.map((drawing: any) => drawing.id)).not.toContain(
+      metadataOnly.id,
+    );
+  });
+
   it("creates an initial slide and returns project overview metadata", async () => {
     const createResponse = await request(app)
       .post("/collections")
@@ -204,9 +243,9 @@ describe("API key authentication", () => {
     ]);
   });
 
-  it("does not let a project owner reorder another user's legacy drawing", async () => {
+  it("does not let a project owner reorder another user's drawing", async () => {
     const project = await prisma.collection.create({
-      data: { name: "Legacy shared project", userId },
+      data: { name: "Cross-owner project", userId },
     });
     const foreignDrawing = await prisma.drawing.create({
       data: {
@@ -246,15 +285,6 @@ describe("API key authentication", () => {
       .get("/auth/users")
       .set("Authorization", `Bearer ${adminApiKeyToken}`)
       .send();
-
-    expect(response.status).toBe(403);
-  });
-
-  it("rejects API key access to drawing permission subroutes", async () => {
-    const response = await request(app)
-      .post("/drawings/drawing-1/permissions")
-      .set("Authorization", `Bearer ${apiKeyToken}`)
-      .send({ granteeUserId: "user-2", permission: "view" });
 
     expect(response.status).toBe(403);
   });

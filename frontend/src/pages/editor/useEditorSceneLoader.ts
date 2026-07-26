@@ -172,16 +172,6 @@ export const useEditorSceneLoader = ({
           } else if (err.response?.status === 404) {
             message = "Drawing not found";
           }
-          if (
-            err.response?.status === 403 &&
-            id &&
-            location.pathname.startsWith("/editor/")
-          ) {
-            navigate(`/shared/${id}${location.search}${location.hash}`, {
-              replace: true,
-            });
-            return;
-          }
         }
         toast.error(message);
         refs.latestElements.current = [];

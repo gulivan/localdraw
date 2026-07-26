@@ -35,9 +35,8 @@ export const useDashboardDrawingActions = ({
   const [potentialDragId, setPotentialDragId] = useState<string | null>(null);
 
   const isTrashView = selectedCollectionId === "trash";
-  const isSharedView = selectedCollectionId === "shared";
   const handleCreateDrawing = async () => {
-    if (isTrashView || isSharedView) return;
+    if (isTrashView) return;
     try {
       const targetCollectionId =
         selectedCollectionId === undefined ? null : selectedCollectionId;
@@ -52,7 +51,7 @@ export const useDashboardDrawingActions = ({
   };
 
   const handleImportDrawings = async (files: FileList | null) => {
-    if (!files || isTrashView || isSharedView) return;
+    if (!files || isTrashView) return;
     const targetCollectionId =
       selectedCollectionId === undefined ? null : selectedCollectionId;
     uploadFiles(Array.from(files), targetCollectionId).finally(refreshData);
@@ -240,7 +239,6 @@ export const useDashboardDrawingActions = ({
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    if (isSharedView) return;
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       const files = Array.from(event.dataTransfer.files);
       const libFiles = files.filter((file) =>
@@ -321,7 +319,6 @@ export const useDashboardDrawingActions = ({
     showBulkDeleteConfirm,
     showImportError,
     isTrashView,
-    isSharedView,
     dragPreviewDrawings,
     setDrawingToDelete,
     setShowBulkDeleteConfirm,
