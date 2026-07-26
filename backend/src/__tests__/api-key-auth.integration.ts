@@ -243,6 +243,52 @@ describe("API key authentication", () => {
     ]);
   });
 
+  it("places a duplicate immediately after its source slide", async () => {
+    const project = await prisma.collection.create({
+      data: { name: "Duplicate order project", userId },
+    });
+    const first = await prisma.drawing.create({
+      data: {
+        name: "First",
+        elements: "[]",
+        appState: "{}",
+        files: "{}",
+        userId,
+        collectionId: project.id,
+        sortOrder: 0,
+      },
+    });
+    const second = await prisma.drawing.create({
+      data: {
+        name: "Second",
+        elements: "[]",
+        appState: "{}",
+        files: "{}",
+        userId,
+        collectionId: project.id,
+        sortOrder: 1,
+      },
+    });
+
+    const response = await agent
+      .post(`/drawings/${first.id}/duplicate`)
+      .set("User-Agent", userAgent)
+      .set("Authorization", `Bearer ${userAccessToken}`)
+      .set(csrfHeaderName, csrfToken);
+
+    expect(response.status).toBe(200);
+    const ordered = await prisma.drawing.findMany({
+      where: { collectionId: project.id, userId },
+      select: { id: true, sortOrder: true },
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    });
+    expect(ordered).toEqual([
+      { id: first.id, sortOrder: 0 },
+      { id: response.body.id, sortOrder: 1 },
+      { id: second.id, sortOrder: 2 },
+    ]);
+  });
+
   it("does not let a project owner reorder another user's drawing", async () => {
     const project = await prisma.collection.create({
       data: { name: "Cross-owner project", userId },

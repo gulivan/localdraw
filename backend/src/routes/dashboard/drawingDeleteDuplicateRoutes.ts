@@ -7,7 +7,11 @@ import {
   toPublicTrashCollectionId,
 } from "./trash";
 import type { DrawingRouteContext } from "./drawingRouteContext";
-import { getNextSortOrder, normalizeDrawingOrder } from "./drawingOrdering";
+import {
+  getNextSortOrder,
+  normalizeDrawingOrder,
+  placeDrawing,
+} from "./drawingOrdering";
 
 export const registerDrawingDeleteDuplicateRoutes = (
   app: express.Express,
@@ -88,11 +92,6 @@ export const registerDrawingDeleteDuplicateRoutes = (
       }
 
       const newDrawingId = uuidv4();
-      const sortOrder = await getNextSortOrder(
-        prisma,
-        duplicatedCollectionId,
-        req.user.id,
-      );
       const originalFiles = parseJsonField<Record<string, any>>(original.files, {});
       const duplicatedFiles = await cloneS3FileReferences(
         original.id,
@@ -106,19 +105,39 @@ export const registerDrawingDeleteDuplicateRoutes = (
         duplicatedFiles,
       );
 
-      const newDrawing = await prisma.drawing.create({
-        data: {
-          id: newDrawingId,
-          name: `${original.name} (Copy)`,
-          elements: original.elements,
-          appState: original.appState,
-          files: JSON.stringify(duplicatedFiles),
-          preview: typeof duplicatedPreview === "string" ? duplicatedPreview : original.preview,
-          userId: req.user.id,
-          collectionId: duplicatedCollectionId,
-          sortOrder,
-          version: 1,
-        },
+      const newDrawing = await prisma.$transaction(async (tx) => {
+        const siblings = await tx.drawing.findMany({
+          where: { collectionId: duplicatedCollectionId, userId: req.user!.id },
+          select: { id: true },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+        });
+        const sourceIndex = siblings.findIndex((drawing) => drawing.id === original.id);
+        const sortOrder = await getNextSortOrder(
+          tx,
+          duplicatedCollectionId,
+          req.user!.id,
+        );
+        const created = await tx.drawing.create({
+          data: {
+            id: newDrawingId,
+            name: `${original.name} (Copy)`,
+            elements: original.elements,
+            appState: original.appState,
+            files: JSON.stringify(duplicatedFiles),
+            preview: typeof duplicatedPreview === "string" ? duplicatedPreview : original.preview,
+            userId: req.user!.id,
+            collectionId: duplicatedCollectionId,
+            sortOrder,
+            version: 1,
+          },
+        });
+        await placeDrawing(
+          tx,
+          created,
+          duplicatedCollectionId,
+          sourceIndex >= 0 ? sourceIndex + 1 : siblings.length,
+        );
+        return tx.drawing.findUniqueOrThrow({ where: { id: created.id } });
       });
       invalidateDrawingsCache();
 

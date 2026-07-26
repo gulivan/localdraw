@@ -100,7 +100,7 @@ export const Editor: React.FC = () => {
       isUnmounting.current = true;
     };
   }, []);
-  const { peers, socketMeRef, socketRef, isSyncing, onPointerUpdate } =
+  const { socketMeRef, socketRef, isSyncing, onPointerUpdate } =
     useEditorCollaboration({
       drawingId: id,
       me,
@@ -347,9 +347,7 @@ export const Editor: React.FC = () => {
         saveStatus={saveStatus}
         langCode={langCode}
         loadError={loadError}
-        me={me}
         newName={newName}
-        peers={peers}
         theme={theme}
         onBackClick={handleBackClick}
         onCanvasChange={handleCanvasChange}

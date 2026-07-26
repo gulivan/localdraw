@@ -14,14 +14,8 @@ import { Toaster } from "sonner";
 import {
   LanguageSelector,
 } from "../../components/LanguageSelector";
-import type { UserIdentity } from "../../utils/identity";
 import { UIOptions } from "./shared";
 import { EditorProjectRail } from "../../components/workspace/EditorProjectRail";
-import { savedLocationLabel } from "../../utils/productBrand";
-
-interface Peer extends UserIdentity {
-  isActive: boolean;
-}
 
 type EditorViewProps = {
   id?: string;
@@ -37,9 +31,7 @@ type EditorViewProps = {
   saveStatus: "idle" | "saving" | "saved" | "error";
   langCode: string;
   loadError: string | null;
-  me: UserIdentity;
   newName: string;
-  peers: Peer[];
   theme: string;
   onBackClick: () => void;
   onCanvasChange: (elements: readonly any[], appState: any, files?: Record<string, any>) => void;
@@ -58,31 +50,6 @@ type EditorViewProps = {
   onToggleAutoHide: () => void;
 };
 
-const UserAvatar = ({
-  user,
-  label,
-  inactive = false,
-}: {
-  user: UserIdentity;
-  label: string;
-  inactive?: boolean;
-}) => (
-  <div className="relative group">
-    <div
-      className={clsx(
-        "w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white shadow-sm transition-all duration-300",
-        inactive && "opacity-30 grayscale",
-      )}
-      style={{ backgroundColor: user.color }}
-    >
-      {user.initials}
-    </div>
-    <div className="absolute top-full mt-2 right-0 bg-gray-900 text-white text-xs py-1 px-2 rounded whitespace-nowrap z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-      {label}
-    </div>
-  </div>
-);
-
 export const EditorView: React.FC<EditorViewProps> = ({
   id,
   autoHideEnabled,
@@ -97,9 +64,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   saveStatus,
   langCode,
   loadError,
-  me,
   newName,
-  peers,
   theme,
   onBackClick,
   onCanvasChange,
@@ -143,6 +108,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
     )}>
       <EditorProjectRail
         drawingId={id}
+        drawingName={drawingName}
         canEdit={canEdit}
         onNavigate={() => window.innerWidth < 768 && setRailOpen(false)}
       />
@@ -211,7 +177,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
             ? "Saving…"
             : saveStatus === "error"
               ? "Save failed"
-              : savedLocationLabel}
+              : "Saved"}
         </span>
       </div>
       <div className="flex items-center gap-3">
@@ -244,21 +210,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
         >
           <Download size={20} />
         </button>
-        <div className="h-6 w-px bg-gray-300 dark:bg-gray-700" />
-        <div className="flex items-center">
-          <UserAvatar user={me} label={`${me.name} (You)`} />
-          <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-2" />
-          <div className="flex items-center gap-2">
-            {peers.map((peer) => (
-              <UserAvatar
-                key={peer.id}
-                user={peer}
-                label={peer.name}
-                inactive={!peer.isActive}
-              />
-            ))}
-          </div>
-        </div>
       </div>
     </header>
     <div

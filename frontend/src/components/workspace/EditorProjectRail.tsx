@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowDown,
   ArrowUp,
+  Copy,
   FilePlus2,
   Folder,
-  FolderPlus,
   Home,
   Loader2,
+  MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as api from "../../api";
@@ -21,10 +24,12 @@ const slideRowTone = (active: boolean) =>
 
 export const EditorProjectRail = ({
   drawingId,
+  drawingName,
   canEdit,
   onNavigate,
 }: {
   drawingId?: string;
+  drawingName: string;
   canEdit: boolean;
   onNavigate?: () => void;
 }) => {
@@ -60,6 +65,14 @@ export const EditorProjectRail = ({
   }, [drawingId]);
 
   useEffect(() => void load(), [load]);
+  useEffect(() => {
+    if (!drawingId) return;
+    setSlides((current) =>
+      current.map((slide) =>
+        slide.id === drawingId ? { ...slide, name: drawingName } : slide,
+      ),
+    );
+  }, [drawingId, drawingName]);
   const go = (id: string) => {
     navigate(`/editor/${id}`);
     onNavigate?.();
@@ -86,13 +99,35 @@ export const EditorProjectRail = ({
     go(created.id);
   };
 
-  const createProject = async () => {
-    const name = window.prompt("Project name");
-    if (!name?.trim()) return;
-    const project = await api.createCollection(name.trim(), {
-      createInitialDrawing: true,
-    });
-    if (project.initialDrawingId) go(project.initialDrawingId);
+  const duplicateSlide = async (slideId: string) => {
+    try {
+      await api.duplicateDrawing(slideId);
+      await load();
+    } catch (error) {
+      console.error("Failed to duplicate slide", error);
+    }
+  };
+
+  const deleteSlide = async (slideId: string, index: number) => {
+    try {
+      await api.updateDrawing(slideId, { collectionId: "trash" });
+      if (slideId !== drawingId) {
+        await load();
+        return;
+      }
+      const nextSlide = slides[index + 1] ?? slides[index - 1];
+      if (nextSlide) {
+        go(nextSlide.id);
+      } else if (activeCollectionId) {
+        navigate(`/projects/${activeCollectionId}`);
+        onNavigate?.();
+      } else {
+        navigate("/collections?id=unorganized");
+        onNavigate?.();
+      }
+    } catch (error) {
+      console.error("Failed to delete slide", error);
+    }
   };
 
   return (
@@ -102,7 +137,6 @@ export const EditorProjectRail = ({
           <Logo className="h-7 w-7" />
           <span className="truncate text-sm font-semibold">{productName}</span>
         </button>
-        {canEdit && <button type="button" onClick={() => void createProject()} className="workspace-focus flex h-8 w-8 items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800" aria-label="New project"><FolderPlus size={16} /></button>}
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="Projects and slides">
@@ -146,6 +180,13 @@ export const EditorProjectRail = ({
                         >
                           <button type="button" onClick={() => go(slide.id)} className="workspace-focus flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium"><span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">{index + 1}.</span><span className="truncate">{slide.name}</span></button>
                           {canEdit && slide.id === drawingId && <span className="mr-1 hidden gap-0.5 group-hover:flex"><button type="button" disabled={index === 0} onClick={() => void place(slide.id, activeCollectionId, index - 1)} className="workspace-focus rounded p-1 hover:bg-white disabled:opacity-30 dark:hover:bg-zinc-700" aria-label="Move slide earlier"><ArrowUp size={11} /></button><button type="button" onClick={() => void place(slide.id, activeCollectionId, index + 1)} className="workspace-focus rounded p-1 hover:bg-white dark:hover:bg-zinc-700" aria-label="Move slide later"><ArrowDown size={11} /></button></span>}
+                          {canEdit && (
+                            <EditorRailActions
+                              slideName={slide.name}
+                              onDuplicate={() => void duplicateSlide(slide.id)}
+                              onDelete={() => void deleteSlide(slide.id, index)}
+                            />
+                          )}
                         </div>
                       ))}
                       {canEdit && <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300"><FilePlus2 size={13} /> Add slide</button>}
@@ -162,5 +203,81 @@ export const EditorProjectRail = ({
       </nav>
 
     </aside>
+  );
+};
+
+const EditorRailActions = ({
+  slideName,
+  onDuplicate,
+  onDelete,
+}: {
+  slideName: string;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) => {
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!position) return;
+    const close = () => setPosition(null);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [position]);
+
+  const open = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPosition({
+      top: Math.min(rect.bottom + 4, window.innerHeight - 92),
+      left: Math.max(8, rect.right - 144),
+    });
+  };
+
+  const run = (action: () => void) => {
+    setPosition(null);
+    action();
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        draggable={false}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={open}
+        className="workspace-focus mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-white hover:text-zinc-900 dark:hover:bg-zinc-700 dark:hover:text-white"
+        aria-label={`Actions for ${slideName}`}
+      >
+        <MoreHorizontal size={14} />
+      </button>
+      {position
+        ? createPortal(
+            <>
+              <button
+                type="button"
+                className="fixed inset-0 z-[90] cursor-default"
+                onClick={() => setPosition(null)}
+                aria-label="Close canvas actions"
+              />
+              <div
+                className="fixed z-[100] w-36 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-[0_8px_24px_rgba(24,24,27,0.16)] dark:border-zinc-700 dark:bg-zinc-900"
+                style={position}
+              >
+                <button type="button" onClick={() => run(onDuplicate)} className="workspace-focus flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                  <Copy size={14} /> Duplicate
+                </button>
+                <button type="button" onClick={() => run(onDelete)} className="workspace-focus flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-medium text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
+                  <Trash2 size={14} /> Delete
+                </button>
+              </div>
+            </>,
+            document.body,
+          )
+        : null}
+    </>
   );
 };
