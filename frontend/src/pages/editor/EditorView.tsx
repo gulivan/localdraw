@@ -17,6 +17,7 @@ import {
 import { UIOptions } from "./shared";
 import { EditorProjectRail } from "../../components/workspace/EditorProjectRail";
 import type { DisposableDraft } from "./disposableDraft";
+import { readEditorSidebarScope } from "../../utils/editorSidebar";
 
 type EditorViewProps = {
   id?: string;
@@ -94,6 +95,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   const [railOpen, setRailOpen] = useState(() =>
     localStorage.getItem("excalidash-editor-project-rail") !== "closed",
   );
+  const [projectScope] = useState(readEditorSidebarScope);
   useEffect(() => {
     localStorage.setItem(
       "excalidash-editor-project-rail",
@@ -120,6 +122,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
         drawingName={drawingName}
         drawingNameSourceId={drawingNameSourceId}
         canEdit={canEdit}
+        projectScope={projectScope}
         onSelectDrawing={onDrawingSwitch}
         onNavigateTo={onNavigateTo}
         onNavigate={() => window.innerWidth < 768 && setRailOpen(false)}

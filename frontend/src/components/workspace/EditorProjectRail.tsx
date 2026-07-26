@@ -3,10 +3,13 @@ import { createPortal } from "react-dom";
 import {
   ArrowDown,
   ArrowUp,
+  ChevronDown,
+  ChevronRight,
   Copy,
   FilePlus2,
   Folder,
   Home,
+  ExternalLink,
   Loader2,
   MoreHorizontal,
   Trash2,
@@ -16,6 +19,9 @@ import type { Collection, DrawingSummary } from "../../types";
 import { productName } from "../../utils/productBrand";
 import { Logo } from "../Logo";
 import type { DisposableDraft } from "../../pages/editor/disposableDraft";
+import type { EditorSidebarScope } from "../../utils/editorSidebar";
+
+const OTHER_PROJECT_KEY = "__other__";
 
 const slideRowTone = (active: boolean) =>
   active
@@ -27,6 +33,7 @@ export const EditorProjectRail = ({
   drawingName,
   drawingNameSourceId,
   canEdit,
+  projectScope,
   onSelectDrawing,
   onNavigateTo,
   onNavigate,
@@ -35,6 +42,7 @@ export const EditorProjectRail = ({
   drawingName: string;
   drawingNameSourceId: string | null;
   canEdit: boolean;
+  projectScope: EditorSidebarScope;
   onSelectDrawing: (
     drawingId: string,
     drawingName: string,
@@ -45,9 +53,33 @@ export const EditorProjectRail = ({
 }) => {
   const [projects, setProjects] = useState<Collection[]>([]);
   const [slides, setSlides] = useState<DrawingSummary[]>([]);
+  const [slidesByProject, setSlidesByProject] = useState<
+    Record<string, DrawingSummary[]>
+  >({});
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
+    new Set(),
+  );
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const hasLoadedRef = useRef(false);
+
+  const loadProjectSlides = useCallback(
+    async (collectionId: string | null) => {
+      const rows = await api.getDrawings(undefined, collectionId, {
+        includePreview: false,
+        limit: 200,
+        sortField: "sortOrder",
+        sortDirection: "asc",
+      });
+      const key = collectionId ?? OTHER_PROJECT_KEY;
+      setSlidesByProject((current) => ({
+        ...current,
+        [key]: rows.drawings,
+      }));
+      return rows.drawings;
+    },
+    [],
+  );
 
   const load = useCallback(async () => {
     if (!drawingId) return;
@@ -56,7 +88,7 @@ export const EditorProjectRail = ({
       const drawing = await api.getDrawing(drawingId);
       const collectionId = drawing.collectionId;
       setActiveCollectionId(collectionId);
-      const [collectionRows, drawingRows] = await Promise.all([
+      const [collectionRows, drawingRows, otherRows] = await Promise.all([
         api.getCollections({ includeOverview: true }),
         api.getDrawings(undefined, collectionId, {
           includePreview: false,
@@ -64,16 +96,54 @@ export const EditorProjectRail = ({
           sortField: "sortOrder",
           sortDirection: "asc",
         }),
+        projectScope === "all" && collectionId !== null
+          ? api.getDrawings(undefined, null, {
+              includePreview: false,
+              limit: 200,
+              sortField: "sortOrder",
+              sortDirection: "asc",
+            })
+          : Promise.resolve(null),
       ]);
       setProjects(collectionRows.filter((project) => project.id !== "trash"));
       setSlides(drawingRows.drawings);
+      const activeKey = collectionId ?? OTHER_PROJECT_KEY;
+      setSlidesByProject((current) => ({
+        ...current,
+        [activeKey]: drawingRows.drawings,
+        ...(otherRows
+          ? { [OTHER_PROJECT_KEY]: otherRows.drawings }
+          : {}),
+      }));
+      setExpandedProjects((current) => new Set(current).add(activeKey));
     } catch (error) {
       console.error("Failed to load editor project rail", error);
     } finally {
       hasLoadedRef.current = true;
       setLoading(false);
     }
-  }, [drawingId]);
+  }, [drawingId, projectScope]);
+
+  const toggleProject = useCallback(
+    async (collectionId: string | null) => {
+      const key = collectionId ?? OTHER_PROJECT_KEY;
+      const willExpand = !expandedProjects.has(key);
+      setExpandedProjects((current) => {
+        const next = new Set(current);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+      if (willExpand && !slidesByProject[key]) {
+        try {
+          await loadProjectSlides(collectionId);
+        } catch (error) {
+          console.error("Failed to load project slides", error);
+        }
+      }
+    },
+    [expandedProjects, loadProjectSlides, slidesByProject],
+  );
 
   useEffect(() => void load(), [load]);
   useEffect(() => {
@@ -149,6 +219,17 @@ export const EditorProjectRail = ({
     }
   };
 
+  const visibleProjects =
+    projectScope === "all"
+      ? projects
+      : projects.filter((project) => project.id === activeCollectionId);
+  const showOther = projectScope === "all" || activeCollectionId === null;
+  const otherExpanded = expandedProjects.has(OTHER_PROJECT_KEY);
+  const otherSlides =
+    activeCollectionId === null
+      ? slides
+      : (slidesByProject[OTHER_PROJECT_KEY] ?? []);
+
   return (
     <aside className="workspace-shell flex h-full w-64 shrink-0 flex-col border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="flex h-14 items-center gap-2 border-b border-zinc-200 px-3 dark:border-zinc-800">
@@ -164,8 +245,12 @@ export const EditorProjectRail = ({
           <div className="flex justify-center py-8 text-violet-600"><Loader2 size={18} className="animate-spin" /></div>
         ) : (
           <div className="space-y-1">
-            {projects.map((project) => {
+            {visibleProjects.map((project) => {
               const active = project.id === activeCollectionId;
+              const expanded = expandedProjects.has(project.id);
+              const projectSlides = active
+                ? slides
+                : (slidesByProject[project.id] ?? []);
               return (
                 <div
                   key={project.id}
@@ -177,29 +262,48 @@ export const EditorProjectRail = ({
                   }}
                   className={active ? "rounded-xl bg-white dark:bg-zinc-900" : ""}
                 >
-                  <button type="button" onClick={() => void onNavigateTo(`/projects/${project.id}`)} className={`workspace-focus flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-semibold ${active ? "text-zinc-950 dark:text-white" : "text-zinc-700 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"}`}>
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: project.color || "#7c3aed" }} />
-                    <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                    <span className="text-[10px] font-medium text-zinc-500">{project.drawingCount ?? 0}</span>
-                  </button>
-                  {active && (
+                  <div className="group flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => void toggleProject(project.id)}
+                      aria-expanded={expanded}
+                      className={`workspace-focus flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-semibold ${active ? "text-zinc-950 dark:text-white" : "text-zinc-700 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"}`}
+                    >
+                      {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: project.color || "#7c3aed" }} />
+                      <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onNavigateTo(`/projects/${project.id}`)}
+                      aria-label={`Open ${project.name} project page`}
+                      title="Open project page"
+                      className="workspace-focus flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 opacity-0 hover:bg-zinc-200 hover:text-zinc-900 focus-visible:opacity-100 group-hover:opacity-100 dark:hover:bg-zinc-700 dark:hover:text-white"
+                    >
+                      <ExternalLink size={13} />
+                    </button>
+                    <span className="mr-2 w-5 text-right text-[10px] font-medium text-zinc-500">
+                      {project.drawingCount ?? 0}
+                    </span>
+                  </div>
+                  {expanded && (
                     <div className="pb-2 pl-3 pr-1">
-                      {slides.map((slide, index) => (
+                      {projectSlides.map((slide, index) => (
                         <div
                           key={slide.id}
-                          draggable={canEdit}
+                          draggable={canEdit && active}
                           onDragStart={(event) => event.dataTransfer.setData("application/x-excalidash-slide", slide.id)}
                           onDragOver={(event) => canEdit && event.preventDefault()}
                           onDrop={(event) => {
                             event.preventDefault();
                             const dragged = event.dataTransfer.getData("application/x-excalidash-slide");
-                            if (dragged && dragged !== slide.id) void place(dragged, activeCollectionId, index);
+                            if (dragged && dragged !== slide.id) void place(dragged, project.id, index);
                           }}
                           className={`group flex items-center gap-1 rounded-lg ${slideRowTone(slide.id === drawingId)}`}
                         >
                           <button type="button" onClick={() => void go(slide.id, slide.name)} className="workspace-focus flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium"><span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">{index + 1}.</span><span className="truncate">{slide.name}</span></button>
-                          {canEdit && slide.id === drawingId && <span className="mr-1 hidden gap-0.5 group-hover:flex"><button type="button" disabled={index === 0} onClick={() => void place(slide.id, activeCollectionId, index - 1)} className="workspace-focus rounded p-1 hover:bg-white disabled:opacity-30 dark:hover:bg-zinc-700" aria-label="Move slide earlier"><ArrowUp size={11} /></button><button type="button" onClick={() => void place(slide.id, activeCollectionId, index + 1)} className="workspace-focus rounded p-1 hover:bg-white dark:hover:bg-zinc-700" aria-label="Move slide later"><ArrowDown size={11} /></button></span>}
-                          {canEdit && (
+                          {canEdit && active && slide.id === drawingId && <span className="mr-1 hidden gap-0.5 group-hover:flex"><button type="button" disabled={index === 0} onClick={() => void place(slide.id, activeCollectionId, index - 1)} className="workspace-focus rounded p-1 hover:bg-white disabled:opacity-30 dark:hover:bg-zinc-700" aria-label="Move slide earlier"><ArrowUp size={11} /></button><button type="button" onClick={() => void place(slide.id, activeCollectionId, index + 1)} className="workspace-focus rounded p-1 hover:bg-white dark:hover:bg-zinc-700" aria-label="Move slide later"><ArrowDown size={11} /></button></span>}
+                          {canEdit && active && (
                             <EditorRailActions
                               slideName={slide.name}
                               onDuplicate={() => void duplicateSlide(slide.id)}
@@ -208,14 +312,56 @@ export const EditorProjectRail = ({
                           )}
                         </div>
                       ))}
-                      {canEdit && <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300"><FilePlus2 size={13} /> Add slide</button>}
+                      {canEdit && active && <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300"><FilePlus2 size={13} /> Add slide</button>}
                     </div>
                   )}
                 </div>
               );
             })}
-            {!activeCollectionId && (
-              <div className="rounded-xl bg-white p-2 dark:bg-zinc-900"><div className="flex items-center gap-2 px-1 pb-1 text-xs font-semibold"><Folder size={14} /> Other</div>{slides.map((slide) => <button key={slide.id} type="button" onClick={() => void go(slide.id, slide.name)} className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}>{slide.name}</button>)}</div>
+            {showOther && (
+              <div className={activeCollectionId === null ? "rounded-xl bg-white p-1 dark:bg-zinc-900" : ""}>
+                <div className="group flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => void toggleProject(null)}
+                    aria-expanded={otherExpanded}
+                    className="workspace-focus flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-semibold text-zinc-700 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  >
+                    {otherExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                    <Folder size={14} />
+                    <span className="min-w-0 flex-1 truncate">Other</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void onNavigateTo("/collections?id=unorganized")}
+                    aria-label="Open Other project page"
+                    title="Open project page"
+                    className="workspace-focus flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 opacity-0 hover:bg-zinc-200 hover:text-zinc-900 focus-visible:opacity-100 group-hover:opacity-100 dark:hover:bg-zinc-700 dark:hover:text-white"
+                  >
+                    <ExternalLink size={13} />
+                  </button>
+                  <span className="mr-2 w-5 text-right text-[10px] font-medium text-zinc-500">
+                    {otherSlides.length}
+                  </span>
+                </div>
+                {otherExpanded && (
+                  <div className="pb-2 pl-3 pr-1">
+                    {otherSlides.map((slide) => (
+                      <button
+                        key={slide.id}
+                        type="button"
+                        onClick={() => void go(slide.id, slide.name)}
+                        className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}
+                      >
+                        {slide.name}
+                      </button>
+                    ))}
+                    {canEdit && activeCollectionId === null && (
+                      <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300"><FilePlus2 size={13} /> Add slide</button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
