@@ -74,7 +74,7 @@ test.describe("Dashboard Workflows", () => {
     await page.getByTitle("Move to Trash").click();
     await expect(cardLocator).toHaveCount(0);
 
-    await page.getByRole("button", { name: /^Trash$/ }).click();
+    await page.goto("/collections?id=trash");
     const trashCard = await ensureCardVisible(page, createdDrawing.id);
 
     await ensureCardSelected(page, createdDrawing.id);
@@ -94,16 +94,12 @@ test.describe("Dashboard Workflows", () => {
     createdDrawingIds.push(createdDrawing.id);
 
     const collectionName = `Team ${Date.now()}`;
-    await page.goto("/collections");
-    await page.waitForLoadState("networkidle");
-    await applyDashboardSearch(page, drawingName);
-
-    await page.getByTitle("New Collection").click();
-    const collectionInput = page.getByPlaceholder("New Collection...");
+    await page.goto("/");
+    await page.getByRole("button", { name: "New project" }).click();
+    const collectionInput = page.getByRole("textbox", { name: "Project name" });
     await collectionInput.fill(collectionName);
-    await collectionInput.press("Enter");
-
-    await expect(page.getByRole("button", { name: collectionName })).toBeVisible();
+    await page.getByRole("button", { name: "Create project" }).click();
+    await page.waitForURL(/\/projects\//);
 
     const collections = await listCollections(request);
     const createdCollection = collections.find((collection) => collection.name === collectionName);
@@ -112,6 +108,12 @@ test.describe("Dashboard Workflows", () => {
       throw new Error("Failed to locate created collection");
     }
     createdCollectionIds.push(createdCollection.id);
+    const initialDrawings = await listDrawings(request, { collectionId: createdCollection.id });
+    createdDrawingIds.push(...initialDrawings.map((drawing) => drawing.id));
+
+    await page.goto("/collections");
+    await page.waitForLoadState("networkidle");
+    await applyDashboardSearch(page, drawingName);
 
     const cardLocator = await ensureCardVisible(page, createdDrawing.id);
 
@@ -125,10 +127,10 @@ test.describe("Dashboard Workflows", () => {
       return updated.collectionId;
     }).toBe(createdCollection.id);
 
-    await page.getByRole("navigation").getByRole("button", { name: collectionName }).click();
+    await page.goto(`/collections?id=${createdCollection.id}`);
     await expect(cardLocator).toBeVisible();
 
-    await page.getByRole("navigation").getByRole("button", { name: "Unorganized" }).click();
+    await page.goto("/collections?id=unorganized");
     await expect(cardLocator).toHaveCount(0);
   });
 

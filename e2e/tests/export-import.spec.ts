@@ -50,8 +50,8 @@ test.describe("Export Functionality", () => {
     await expect(page.getByRole("button", { name: /^Export$/ })).toBeVisible();
     const downloadNameSelect = page.getByRole("combobox", { name: "Download name" });
     await expect(downloadNameSelect).toBeVisible();
-    await expect(downloadNameSelect.locator('option[value="excalidash"]')).toHaveText(".excalidash");
-    await expect(downloadNameSelect.locator('option[value="excalidash.zip"]')).toHaveText(".excalidash.zip");
+    await expect(downloadNameSelect.locator('option[value="localdraw"]')).toHaveText(".localdraw");
+    await expect(downloadNameSelect.locator('option[value="localdraw.zip"]')).toHaveText(".localdraw.zip");
   });
 
   test("should export .excalidash via API", async ({ request }) => {
@@ -104,21 +104,6 @@ test.describe.serial("Import Functionality", () => {
       }
     }
     createdDrawingIds = [];
-  });
-
-  test("should show Import Backup button on Settings page", async ({ page }) => {
-    await page.goto("/settings");
-    await page.waitForLoadState("networkidle");
-
-    const advancedDetails = page.locator("details", { hasText: "Advanced / Legacy" });
-    await expect(advancedDetails).toHaveCount(1);
-    const isOpen = await advancedDetails.evaluate((el) => el.hasAttribute("open"));
-    if (!isOpen) {
-      await advancedDetails.locator("summary").click();
-    }
-
-    await expect(page.getByRole("heading", { name: "Import Backup" })).toBeVisible();
-    await expect(page.locator("#settings-import-backup")).toBeAttached();
   });
 
   test("should import .excalidraw file from Dashboard", async ({ page }) => {

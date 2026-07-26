@@ -47,7 +47,7 @@ test.describe("Image Persistence - Browser E2E Tests", () => {
   test("should navigate to dashboard and see drawing list", async ({ page }) => {
     await page.goto("/collections");
 
-    await expect(page).toHaveTitle(/ExcaliDash/i);
+    await expect(page).toHaveTitle(/LocalDraw/i);
 
     await expect(page.locator("body")).toBeVisible();
   });

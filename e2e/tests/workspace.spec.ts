@@ -39,10 +39,10 @@ test.describe("Local-first workspace", () => {
 
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Recent" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Your projects" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Folders" })).toBeVisible();
     await expect(page.getByText(project.name, { exact: true })).toBeVisible();
     await expect(page.getByText(slide.name, { exact: true }).first()).toBeVisible();
-    await expect(page.getByPlaceholder("Search projects & slides…")).toBeVisible();
+    await expect(page.getByPlaceholder("Search")).toBeVisible();
   });
 
   test("reorders project slides with the accessible action menu", async ({
@@ -81,8 +81,8 @@ test.describe("Local-first workspace", () => {
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Your projects" })).toBeVisible();
-    await expect(page.getByPlaceholder("Search projects & slides…")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Folders" })).toBeVisible();
+    await expect(page.getByPlaceholder("Search")).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);

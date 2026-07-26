@@ -63,7 +63,7 @@ test.describe("Drag and Drop - Collections", () => {
 
     await expect(collectionPicker).toContainText(collection.name);
 
-    await page.getByRole("navigation").getByRole("button", { name: collection.name }).click();
+    await page.goto(`/collections?id=${collection.id}`);
     await page.waitForLoadState("networkidle");
 
     await expect(card).toBeVisible();
@@ -98,10 +98,10 @@ test.describe("Drag and Drop - Collections", () => {
 
     await expect(card).not.toBeVisible({ timeout: 5000 });
 
-    await page.getByRole("navigation").getByRole("button", { name: "Unorganized" }).click();
+    await page.goto("/collections?id=unorganized");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.locator(`#drawing-card-${drawing.id}`)).toBeVisible();
+    await expect(page.locator(`#slide-card-${drawing.id}`)).toBeVisible();
   });
 
   test("should move multiple selected drawings to collection via bulk menu", async ({ page, request }) => {
@@ -142,7 +142,7 @@ test.describe("Drag and Drop - Collections", () => {
 
     await page.waitForTimeout(500);
 
-    await page.getByRole("navigation").getByRole("button", { name: collection.name }).click();
+    await page.goto(`/collections?id=${collection.id}`);
     await page.waitForLoadState("networkidle");
 
     await expect(page.locator(`#drawing-card-${drawing1.id}`)).toBeVisible();

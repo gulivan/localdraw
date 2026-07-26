@@ -130,7 +130,7 @@ test.describe("Drawing Creation", () => {
     await backButton.click();
 
     await page.waitForURL("/");
-    await expect(page.getByPlaceholder("Search projects & slides…")).toBeVisible();
+    await expect(page.getByPlaceholder("Search")).toBeVisible();
   });
 });
 
@@ -312,7 +312,7 @@ test.describe("Drawing Deletion", () => {
 
     await expect(card).not.toBeVisible();
 
-    await page.getByRole("button", { name: /^Trash$/ }).click();
+    await page.goto("/collections?id=trash");
     await page.waitForLoadState("networkidle");
 
     await expect(page.locator(`#drawing-card-${drawing.id}`)).toBeVisible();
