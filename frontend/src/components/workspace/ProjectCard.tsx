@@ -22,7 +22,7 @@ export const ProjectCard = ({
           <Folder size={12} /> {count} slide{count === 1 ? "" : "s"}
         </span>
       </button>
-      <div className="p-4">
+      <div className="flex h-20 flex-col justify-center p-4">
         <button type="button" onClick={onView} className="workspace-focus block truncate rounded text-left text-base font-semibold">
           {project.name}
         </button>
