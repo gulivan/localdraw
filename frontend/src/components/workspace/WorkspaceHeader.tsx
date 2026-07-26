@@ -35,6 +35,7 @@ export const WorkspaceHeader = ({
   const fileRef = useRef<HTMLInputElement>(null);
   const { user, authEnabled, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const appVersion = import.meta.env.VITE_APP_VERSION || "development";
 
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/95 dark:border-zinc-800 dark:bg-zinc-950/95">
@@ -100,6 +101,10 @@ export const WorkspaceHeader = ({
               {authEnabled && <MenuButton icon={<User size={15} />} label="Profile" onClick={() => navigate("/profile")} />}
               {authEnabled && user?.role === "ADMIN" && <MenuButton icon={<Shield size={15} />} label="Admin" onClick={() => navigate("/admin")} />}
               {authEnabled && <MenuButton danger icon={<LogOut size={15} />} label="Log out" onClick={logout} />}
+              <div className="mt-1 space-y-1 border-t border-zinc-100 px-2.5 pt-2 text-center text-[10px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                <p>based on <FooterLink href="https://excalidraw.com">Excalidraw</FooterLink>.</p>
+                <p>{productName} v{appVersion} <span aria-hidden="true">·</span>{" "}<FooterLink href="https://github.com/gulivan/localdraw">GitHub</FooterLink></p>
+              </div>
             </div>
           </details>
         </div>
@@ -107,6 +112,17 @@ export const WorkspaceHeader = ({
     </header>
   );
 };
+
+const FooterLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="workspace-focus rounded-sm font-semibold text-zinc-700 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-950 dark:text-zinc-300 dark:decoration-zinc-600 dark:hover:text-white"
+  >
+    {children}
+  </a>
+);
 
 const MenuButton = ({
   icon,
