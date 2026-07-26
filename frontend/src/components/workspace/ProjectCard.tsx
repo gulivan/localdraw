@@ -19,7 +19,7 @@ export const ProjectCard = ({
           className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white"
           style={{ backgroundColor: project.color || "#7c3aed" }}
         >
-          <Folder size={12} /> {count} slide{count === 1 ? "" : "s"}
+          <Folder size={12} /> {count} {count === 1 ? "canvas" : "canvases"}
         </span>
       </button>
       <div className="flex h-20 flex-col justify-center p-4">
