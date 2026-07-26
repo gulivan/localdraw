@@ -74,7 +74,7 @@ export const ProjectSlideCard = ({
             <Action icon={<ArrowDown size={14} />} label="Move later" onClick={() => onReorder(index + 1)} />
             <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
             <div className="px-2 py-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">Move to project</div>
-            <Action icon={<FolderInput size={14} />} label="Unfiled" onClick={() => onMove(null)} />
+            <Action icon={<FolderInput size={14} />} label="Other" onClick={() => onMove(null)} />
             {projects.filter((project) => project.id !== slide.collectionId).map((project) => (
               <Action key={project.id} icon={<span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color || "#7c3aed" }} />} label={project.name} onClick={() => onMove(project.id)} />
             ))}

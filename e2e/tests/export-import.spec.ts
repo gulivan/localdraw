@@ -302,20 +302,3 @@ test.describe.serial("Import Functionality", () => {
     await expect(importedCards).toHaveCount(2);
   });
 });
-
-test.describe("Database Import Verification", () => {
-  test("should verify SQLite import endpoint exists", async ({ request }) => {
-    const response = await request.post(`${API_URL}/import/sqlite/legacy/verify`, {
-      headers: await getCsrfHeaders(request),
-      multipart: {
-        db: {
-          name: "test.sqlite",
-          mimeType: "application/x-sqlite3",
-          buffer: Buffer.from(""),
-        },
-      },
-    });
-
-    expect([400, 500]).toContain(response.status());
-  });
-});

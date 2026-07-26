@@ -160,7 +160,7 @@ describe("Project workspace", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Delete project" }));
     expect(screen.getByText("Delete project “Storyboard”?")).toBeInTheDocument();
-    expect(screen.getByText("Its slides will move to Unfiled.")).toBeInTheDocument();
+    expect(screen.getByText("Its slides will move to Other.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Delete slides too." }));
     expect(screen.getByText("Its slides will move to Trash.")).toBeInTheDocument();
