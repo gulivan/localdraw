@@ -3,8 +3,8 @@ import type * as api from "../../api";
 import { UpdateSettingsCard } from "./UpdateSettingsCard";
 
 type SettingsMainGridProps = {
-  backupExportExt: "excalidash" | "excalidash.zip";
-  setBackupExportExt: (ext: "excalidash" | "excalidash.zip") => void;
+  backupExportExt: "localdraw" | "localdraw.zip";
+  setBackupExportExt: (ext: "localdraw" | "localdraw.zip") => void;
   exportBackup: () => void;
   theme: string;
   toggleTheme: () => void;
@@ -52,9 +52,6 @@ export const SettingsMainGrid = ({
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
           Export Backup
         </h3>{" "}
-        <p className="text-xs text-slate-500 dark:text-neutral-400 font-medium max-w-[200px] mx-auto">
-          Exports an `.excalidash` archive organized by collections
-        </p>{" "}
       </div>{" "}
       <div className="w-full flex flex-col items-stretch gap-2 pt-2">
         {" "}
@@ -72,8 +69,8 @@ export const SettingsMainGrid = ({
           title="Download name"
         >
           {" "}
-          <option value="excalidash">.excalidash</option>{" "}
-          <option value="excalidash.zip">.excalidash.zip</option>{" "}
+          <option value="localdraw">.localdraw</option>{" "}
+          <option value="localdraw.zip">.localdraw.zip</option>{" "}
         </select>{" "}
       </div>{" "}
     </div>{" "}

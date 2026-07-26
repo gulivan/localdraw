@@ -40,8 +40,8 @@ export const Settings: React.FC = () => {
   const [authDisableFinalConfirmOpen, setAuthDisableFinalConfirmOpen] =
     useState(false);
   const [backupExportExt, setBackupExportExt] = useState<
-    "excalidash" | "excalidash.zip"
-  >("excalidash");
+    "localdraw" | "localdraw.zip"
+  >("localdraw");
   const [backupImportConfirmation, setBackupImportConfirmation] = useState<{
     isOpen: boolean;
     file: File | null;
@@ -152,7 +152,7 @@ export const Settings: React.FC = () => {
   };
   const exportBackup = async () => {
     try {
-      const extQuery = backupExportExt === "excalidash.zip" ? "?ext=zip" : "";
+      const extQuery = backupExportExt === "localdraw.zip" ? "?ext=zip" : "";
       const response = await api.api.get(`/export/excalidash${extQuery}`, {
         responseType: "blob",
       });
@@ -162,9 +162,9 @@ export const Settings: React.FC = () => {
       link.href = url;
       const date = new Date().toISOString().split("T")[0];
       link.download =
-        backupExportExt === "excalidash.zip"
-          ? `excalidash-backup-${date}.excalidash.zip`
-          : `excalidash-backup-${date}.excalidash`;
+        backupExportExt === "localdraw.zip"
+          ? `localdraw-backup-${date}.localdraw.zip`
+          : `localdraw-backup-${date}.localdraw`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

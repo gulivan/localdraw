@@ -12,7 +12,7 @@ describe("LocalDrawBrand", () => {
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(
-      screen.getByRole("link", { name: "ExcaliDash" }),
+      screen.getByRole("link", { name: "LocalDraw" }),
     ).toHaveAttribute("href", "https://github.com/ZimengXiong/ExcaliDash");
     expect(
       screen.getByRole("link", { name: "Excalidraw" }),

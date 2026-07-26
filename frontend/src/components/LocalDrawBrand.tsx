@@ -92,7 +92,7 @@ export const LocalDrawBrand: React.FC<LocalDrawBrandProps> = ({
           rel="noreferrer"
           className="font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:text-indigo-300 dark:decoration-indigo-600 dark:hover:text-indigo-100"
         >
-          ExcaliDash
+          LocalDraw
         </a>
         ; powered by{" "}
         <a

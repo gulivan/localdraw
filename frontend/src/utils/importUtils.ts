@@ -106,7 +106,7 @@ export const importDrawings = async (
 /**
  * Legacy import helper.
  * - Supports individual `.excalidraw` / Excalidraw `.json` drawings (same as importDrawings)
- * - Supports legacy ExcaliDash export `.json` with `{ drawings: [...] }`
+ * - Supports legacy LocalDraw export `.json` with `{ drawings: [...] }`
  */
 export const importLegacyFiles = async (
   files: File[],

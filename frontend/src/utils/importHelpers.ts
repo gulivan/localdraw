@@ -139,7 +139,7 @@ export const importLegacyZip = async (
       success: 0,
       failed: 1,
       errors: [
-        `${file.name}: This looks like an ExcaliDash backup (.excalidash). Use "Import Backup" instead of Legacy Import.`,
+        `${file.name}: This looks like a LocalDraw backup (.localdraw). Use "Import Backup" instead of Legacy Import.`,
       ],
     };
   }

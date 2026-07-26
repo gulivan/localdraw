@@ -78,7 +78,7 @@ describe("importLegacyFiles", () => {
     exportToSvg.mockClear();
   });
 
-  it("imports a legacy ExcaliDash export JSON ({ drawings: [...] }) and maps collectionName → collectionId", async () => {
+  it("imports a legacy LocalDraw export JSON ({ drawings: [...] }) and maps collectionName → collectionId", async () => {
     apiGet.mockResolvedValueOnce({
       data: [{ id: "col-existing", name: "Existing Collection" }],
     });

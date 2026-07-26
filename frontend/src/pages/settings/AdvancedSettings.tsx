@@ -51,7 +51,7 @@ export const AdvancedSettings = ({
         {" "}
         <input
           type="file"
-          accept=".excalidash,.zip"
+          accept=".localdraw,.zip"
           className="hidden"
           id="settings-import-backup"
           onChange={async (e) => {
@@ -87,7 +87,7 @@ export const AdvancedSettings = ({
               {backupImportLoading ? "Verifying…" : "Import Backup"}{" "}
             </h3>{" "}
             <p className="text-xs text-slate-500 dark:text-neutral-400 font-medium max-w-[200px] mx-auto">
-              Merge-import a `.excalidash` backup into your account
+              Merge-import a `.localdraw` backup into your account
             </p>{" "}
           </div>{" "}
         </button>{" "}
