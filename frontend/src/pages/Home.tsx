@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Clock3,
-  FilePlus2,
   FolderPlus,
   RefreshCw,
   Search,
@@ -165,11 +164,11 @@ export const Home = () => {
                   <FolderPlus size={15} /> New project
                 </button>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project) => (
                   <ProjectCard key={project.id} project={project} onView={() => navigate(`/projects/${project.id}`)} />
                 ))}
-                <UnfiledCard count={unfiled.count} slide={unfiled.slide} onView={() => navigate("/collections?id=unorganized")} onNew={() => void createSlide()} />
+                <UnfiledCard count={unfiled.count} slide={unfiled.slide} onView={() => navigate("/collections?id=unorganized")} />
               </div>
             </section>
 
@@ -185,10 +184,10 @@ export const Home = () => {
   );
 };
 
-const UnfiledCard = ({ count, slide, onView, onNew }: { count: number; slide?: DrawingSummary; onView: () => void; onNew: () => void }) => (
-  <article className="flex min-h-[260px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-    <button type="button" onClick={onView} className="workspace-focus relative h-36"><SlideThumbnail drawing={slide} className="h-full w-full" /><span className="absolute left-3 top-3 rounded-full bg-zinc-700 px-2.5 py-1 text-[11px] font-semibold text-white">{count} slide{count === 1 ? "" : "s"}</span></button>
-    <div className="flex flex-1 flex-col p-4"><h3 className="font-semibold">Unfiled</h3><div className="mt-auto flex gap-2 pt-4"><button type="button" onClick={onView} className="workspace-focus flex-1 rounded-xl border border-zinc-200 py-2 text-xs font-semibold dark:border-zinc-700">View</button><button type="button" onClick={onNew} className="workspace-focus flex flex-1 items-center justify-center gap-1 rounded-xl bg-zinc-900 py-2 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"><FilePlus2 size={13} /> New</button></div></div>
+const UnfiledCard = ({ count, slide, onView }: { count: number; slide?: DrawingSummary; onView: () => void }) => (
+  <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <button type="button" onClick={onView} className="workspace-focus relative h-36"><SlideThumbnail drawing={slide} className="h-full w-full" /><span className="absolute left-3 top-3 rounded-full bg-zinc-700 px-2.5 py-1 text-[11px] font-semibold text-white">{count} {count === 1 ? "canvas" : "canvases"}</span></button>
+    <div className="p-4"><h3 className="font-semibold">Other</h3></div>
   </article>
 );
 
