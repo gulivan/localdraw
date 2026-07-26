@@ -36,6 +36,7 @@ type EditorViewProps = {
   onBackClick: () => void;
   onCanvasChange: (elements: readonly any[], appState: any, files?: Record<string, any>) => void;
   onCanvasDropCapture: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDrawingSwitch: (drawingId: string) => Promise<boolean>;
   onExportClick: () => void;
   onLibraryChange: (items: readonly any[]) => void;
   onNavigateHome: () => void;
@@ -69,6 +70,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onBackClick,
   onCanvasChange,
   onCanvasDropCapture,
+  onDrawingSwitch,
   onExportClick,
   onLibraryChange,
   onNavigateHome,
@@ -110,6 +112,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
         drawingId={id}
         drawingName={drawingName}
         canEdit={canEdit}
+        onSelectDrawing={onDrawingSwitch}
         onNavigate={() => window.innerWidth < 768 && setRailOpen(false)}
       />
     </div>
@@ -240,7 +243,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
         </div>
       ) : initialData ? (
         <Excalidraw
-          key={id}
           theme={theme === "dark" ? "dark" : "light"}
           langCode={langCode}
           initialData={initialData}

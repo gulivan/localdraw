@@ -29,7 +29,6 @@ type SceneLoaderParams = {
     lastPersistedElements: MutableRefObject<readonly any[]>;
     suspiciousBlankLoad: MutableRefObject<boolean>;
     hasSceneChangesSinceLoad: MutableRefObject<boolean>;
-    excalidrawAPI: MutableRefObject<any>;
     latestAppState: MutableRefObject<any>;
     isBootstrappingScene: MutableRefObject<boolean>;
     hasHydratedInitialScene: MutableRefObject<boolean>;
@@ -37,6 +36,7 @@ type SceneLoaderParams = {
   setAccessLevel: (accessLevel: AccessLevel) => void;
   setDrawingName: (name: string) => void;
   setInitialData: (data: any) => void;
+  setLoadedDrawingId: (drawingId: string | null) => void;
   setIsReady: (ready: boolean) => void;
   setIsSceneLoading: (loading: boolean) => void;
   setLoadError: (error: string | null) => void;
@@ -63,6 +63,7 @@ export const useEditorSceneLoader = ({
   setAccessLevel,
   setDrawingName,
   setInitialData,
+  setLoadedDrawingId,
   setIsReady,
   setIsSceneLoading,
   setLoadError,
@@ -83,7 +84,6 @@ export const useEditorSceneLoader = ({
     refs.lastPersistedElements.current = [];
     refs.suspiciousBlankLoad.current = false;
     refs.hasSceneChangesSinceLoad.current = false;
-    refs.excalidrawAPI.current = null;
   }, [refs]);
 
   useEffect(() => {
@@ -91,11 +91,11 @@ export const useEditorSceneLoader = ({
     setIsReady(false);
     setIsSceneLoading(true);
     setLoadError(null);
-    setInitialData(null);
 
     const loadData = async () => {
       if (!id) {
         setInitialData(buildEmptyScene());
+        setLoadedDrawingId(null);
         setIsSceneLoading(false);
         return;
       }
@@ -157,6 +157,7 @@ export const useEditorSceneLoader = ({
           scrollToContent: true,
           libraryItems,
         });
+        setLoadedDrawingId(id);
       } catch (err) {
         console.error("Failed to load drawing", err);
         let message = "Failed to load drawing";
@@ -185,7 +186,6 @@ export const useEditorSceneLoader = ({
         refs.suspiciousBlankLoad.current = false;
         refs.hasSceneChangesSinceLoad.current = false;
         setLoadError(message);
-        setInitialData(null);
       } finally {
         setIsSceneLoading(false);
       }
@@ -204,6 +204,7 @@ export const useEditorSceneLoader = ({
     setAccessLevel,
     setDrawingName,
     setInitialData,
+    setLoadedDrawingId,
     setIsReady,
     setIsSceneLoading,
     setLoadError,

@@ -1,42 +1,32 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
-export const useEditorAutoHide = (drawingId: string | undefined) => {
-  const storageKey = useMemo(
-    () => (drawingId ? `excalidash:editor:${drawingId}:autoHideEnabled` : null),
-    [drawingId],
-  );
+const STORAGE_KEY = "localdraw:editor:autoHideEnabled";
 
+export const useEditorAutoHide = () => {
   const getStoredAutoHideEnabled = useCallback((): boolean => {
-    if (!storageKey) return true;
     try {
-      const raw = window.localStorage.getItem(storageKey);
+      const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw === null) return true;
       return raw === "1" || raw === "true";
     } catch {
       return true;
     }
-  }, [storageKey]);
+  }, []);
 
   const [autoHideEnabled, setAutoHideEnabled] = useState(
     getStoredAutoHideEnabled,
   );
 
-  useEffect(() => {
-    setAutoHideEnabled(getStoredAutoHideEnabled());
-  }, [getStoredAutoHideEnabled]);
-
   const setAndStoreAutoHideEnabled = useCallback(
     (next: boolean) => {
       setAutoHideEnabled(next);
-      if (storageKey) {
-        try {
-          window.localStorage.setItem(storageKey, next ? "1" : "0");
-        } catch {
-          // Ignore storage errors in restricted browser contexts.
-        }
+      try {
+        window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // Ignore storage errors in restricted browser contexts.
       }
     },
-    [storageKey],
+    [],
   );
 
   return {

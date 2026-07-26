@@ -26,11 +26,13 @@ export const EditorProjectRail = ({
   drawingId,
   drawingName,
   canEdit,
+  onSelectDrawing,
   onNavigate,
 }: {
   drawingId?: string;
   drawingName: string;
   canEdit: boolean;
+  onSelectDrawing: (drawingId: string) => Promise<boolean>;
   onNavigate?: () => void;
 }) => {
   const navigate = useNavigate();
@@ -75,9 +77,9 @@ export const EditorProjectRail = ({
       ),
     );
   }, [drawingId, drawingName]);
-  const go = (id: string) => {
-    navigate(`/editor/${id}`);
-    onNavigate?.();
+  const go = async (id: string) => {
+    const switched = await onSelectDrawing(id);
+    if (switched) onNavigate?.();
   };
 
   const place = async (slideId: string, collectionId: string | null, targetIndex: number) => {
@@ -98,7 +100,7 @@ export const EditorProjectRail = ({
       `Slide ${slides.length + 1}`,
       activeCollectionId,
     );
-    go(created.id);
+    await go(created.id);
   };
 
   const duplicateSlide = async (slideId: string) => {
@@ -119,7 +121,7 @@ export const EditorProjectRail = ({
       }
       const nextSlide = slides[index + 1] ?? slides[index - 1];
       if (nextSlide) {
-        go(nextSlide.id);
+        await go(nextSlide.id);
       } else if (activeCollectionId) {
         navigate(`/projects/${activeCollectionId}`);
         onNavigate?.();
@@ -180,7 +182,7 @@ export const EditorProjectRail = ({
                           }}
                           className={`group flex items-center gap-1 rounded-lg ${slideRowTone(slide.id === drawingId)}`}
                         >
-                          <button type="button" onClick={() => go(slide.id)} className="workspace-focus flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium"><span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">{index + 1}.</span><span className="truncate">{slide.name}</span></button>
+                          <button type="button" onClick={() => void go(slide.id)} className="workspace-focus flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium"><span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">{index + 1}.</span><span className="truncate">{slide.name}</span></button>
                           {canEdit && slide.id === drawingId && <span className="mr-1 hidden gap-0.5 group-hover:flex"><button type="button" disabled={index === 0} onClick={() => void place(slide.id, activeCollectionId, index - 1)} className="workspace-focus rounded p-1 hover:bg-white disabled:opacity-30 dark:hover:bg-zinc-700" aria-label="Move slide earlier"><ArrowUp size={11} /></button><button type="button" onClick={() => void place(slide.id, activeCollectionId, index + 1)} className="workspace-focus rounded p-1 hover:bg-white dark:hover:bg-zinc-700" aria-label="Move slide later"><ArrowDown size={11} /></button></span>}
                           {canEdit && (
                             <EditorRailActions
@@ -198,7 +200,7 @@ export const EditorProjectRail = ({
               );
             })}
             {!activeCollectionId && (
-              <div className="rounded-xl bg-white p-2 dark:bg-zinc-900"><div className="flex items-center gap-2 px-1 pb-1 text-xs font-semibold"><Folder size={14} /> Unfiled</div>{slides.map((slide) => <button key={slide.id} type="button" onClick={() => go(slide.id)} className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}>{slide.name}</button>)}</div>
+              <div className="rounded-xl bg-white p-2 dark:bg-zinc-900"><div className="flex items-center gap-2 px-1 pb-1 text-xs font-semibold"><Folder size={14} /> Unfiled</div>{slides.map((slide) => <button key={slide.id} type="button" onClick={() => void go(slide.id)} className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}>{slide.name}</button>)}</div>
             )}
           </div>
         )}

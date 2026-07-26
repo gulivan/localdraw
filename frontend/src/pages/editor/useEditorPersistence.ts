@@ -342,7 +342,13 @@ export const useEditorPersistence = ({
     };
   }, [debouncedSave, debouncedSavePreview]);
 
+  const cancelPendingSceneSaves = useCallback(() => {
+    debouncedSave.cancel();
+    debouncedSavePreview.cancel();
+  }, [debouncedSave, debouncedSavePreview]);
+
   return {
+    cancelPendingSceneSaves,
     debouncedSave,
     debouncedSaveLibrary,
     debouncedSavePreview,

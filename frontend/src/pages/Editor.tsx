@@ -19,6 +19,7 @@ import { useEditorCanvasHandlers } from "./editor/useEditorCanvasHandlers";
 import { useEditorCommands } from "./editor/useEditorCommands";
 import { useEditorElementTracking } from "./editor/useEditorElementTracking";
 import { useEditorBroadcast } from "./editor/useEditorBroadcast";
+import { usePersistentExcalidrawScene } from "./editor/usePersistentExcalidrawScene";
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -33,13 +34,15 @@ export const Editor: React.FC = () => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState("");
   const [initialData, setInitialData] = useState<any>(null);
+  const [loadedDrawingId, setLoadedDrawingId] = useState<string | null>(null);
+  const sceneDrawingId = loadedDrawingId ?? id;
   const [isSceneLoading, setIsSceneLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSavingOnLeave, setIsSavingOnLeave] = useState(false);
   const [saveStatus, setSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
-  const { autoHideEnabled, setAutoHideEnabled } = useEditorAutoHide(id);
+  const { autoHideEnabled, setAutoHideEnabled } = useEditorAutoHide();
   const [langCode, setLangCode] = useState(getInitialLangCode);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const previewBackup = useRef<{
@@ -54,6 +57,7 @@ export const Editor: React.FC = () => {
   });
   const me: UserIdentity = useEditorIdentity(user);
   const [isReady, setIsReady] = useState(false);
+  const [hasCanvasApi, setHasCanvasApi] = useState(false);
   const {
     computeElementOrderSig,
     elementVersionMap,
@@ -88,6 +92,8 @@ export const Editor: React.FC = () => {
   const lastLocalChangeAtRef = useRef<number>(0);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const excalidrawAPI = useRef<any>(null);
+  const currentDrawingIdRef = useRef(id);
+  currentDrawingIdRef.current = sceneDrawingId;
   const { resolveSafeSnapshot, normalizeImageElementStatus } =
     useEditorSnapshotGuards({
       lastPersistedElementsRef,
@@ -102,7 +108,7 @@ export const Editor: React.FC = () => {
   }, []);
   const { socketMeRef, socketRef, isSyncing, onPointerUpdate } =
     useEditorCollaboration({
-      drawingId: id,
+      drawingId: loadedDrawingId === id ? id : undefined,
       me,
       isReady,
       excalidrawAPI,
@@ -115,7 +121,7 @@ export const Editor: React.FC = () => {
     });
   const emitFilesDeltaIfNeeded = useCallback(
     (nextFiles: Record<string, any>) => {
-      if (!socketRef.current || !id) return false;
+      if (!socketRef.current || !sceneDrawingId) return false;
       const filesDelta = getFilesDelta(
         lastSyncedFilesRef.current,
         nextFiles || {},
@@ -124,15 +130,17 @@ export const Editor: React.FC = () => {
       latestFilesRef.current = nextFiles;
       lastSyncedFilesRef.current = nextFiles;
       socketRef.current.emit("element-update", {
-        drawingId: id,
+        drawingId: sceneDrawingId,
         elements: [],
         files: filesDelta,
         userId: socketMeRef.current.id,
       });
       return true;
     },
-    [id, socketMeRef, socketRef],
+    [sceneDrawingId, socketMeRef, socketRef],
   );
+  const emitFilesDeltaIfNeededRef = useRef(emitFilesDeltaIfNeeded);
+  emitFilesDeltaIfNeededRef.current = emitFilesDeltaIfNeeded;
   const setExcalidrawAPI = useCallback(
     (api: any) => {
       excalidrawAPI.current = api;
@@ -153,16 +161,17 @@ export const Editor: React.FC = () => {
           originalAddFiles(normalizedFiles);
           if (isSyncing.current) return;
           const nextFiles = api.getFiles?.() || {};
-          const didEmit = emitFilesDeltaIfNeeded(nextFiles);
+          const didEmit = emitFilesDeltaIfNeededRef.current(nextFiles);
+          const currentDrawingId = currentDrawingIdRef.current;
           if (
             didEmit &&
-            id &&
+            currentDrawingId &&
             latestAppStateRef.current &&
             debouncedSaveRef.current
           ) {
             hasSceneChangesSinceLoadRef.current = true;
             debouncedSaveRef.current(
-              id,
+              currentDrawingId,
               latestElementsRef.current,
               latestAppStateRef.current,
               latestFilesRef.current || {},
@@ -170,10 +179,20 @@ export const Editor: React.FC = () => {
           }
         };
       }
-      setIsReady(true);
+      setHasCanvasApi(Boolean(api));
     },
-    [emitFilesDeltaIfNeeded, id, isSyncing],
+    [isSyncing],
   );
+  const handleSceneHydrated = useCallback(() => setIsReady(true), []);
+  usePersistentExcalidrawScene({
+    drawingId: id,
+    loadedDrawingId,
+    initialData,
+    hasCanvasApi,
+    excalidrawAPI,
+    isSyncing,
+    onHydrated: handleSceneHydrated,
+  });
   useLibraryImportFromUrl({ excalidrawAPIRef: excalidrawAPI, isReady, user });
   const persistenceRefs = React.useMemo(
     () => ({
@@ -195,6 +214,7 @@ export const Editor: React.FC = () => {
     [isSyncing],
   );
   const {
+    cancelPendingSceneSaves,
     debouncedSave,
     debouncedSaveLibrary,
     debouncedSavePreview,
@@ -212,7 +232,7 @@ export const Editor: React.FC = () => {
     hasSceneChangesSinceLoadRef.current = true;
   }, []);
   const broadcastChanges = useEditorBroadcast({
-    drawingId: id,
+    drawingId: sceneDrawingId,
     excalidrawAPI,
     lastLocalChangeAtRef,
     lastSyncedElementOrderSigRef,
@@ -243,7 +263,6 @@ export const Editor: React.FC = () => {
       lastPersistedElements: lastPersistedElementsRef,
       suspiciousBlankLoad: suspiciousBlankLoadRef,
       hasSceneChangesSinceLoad: hasSceneChangesSinceLoadRef,
-      excalidrawAPI,
       latestAppState: latestAppStateRef,
       isBootstrappingScene,
       hasHydratedInitialScene,
@@ -259,6 +278,7 @@ export const Editor: React.FC = () => {
     setAccessLevel,
     setDrawingName,
     setInitialData,
+    setLoadedDrawingId,
     setIsReady,
     setIsSceneLoading,
     setLoadError,
@@ -286,7 +306,7 @@ export const Editor: React.FC = () => {
     useEditorCanvasHandlers({
       canEdit,
       debouncedSavePreview,
-      drawingId: id,
+      drawingId: sceneDrawingId,
       emitFilesDeltaIfNeeded,
       isReady,
       refs: canvasHandlerRefs,
@@ -306,6 +326,7 @@ export const Editor: React.FC = () => {
   );
   const {
     handleBackClick,
+    handleDrawingSwitch,
     handleExportClick,
     handleLibraryChange,
     handleRenameStart,
@@ -314,6 +335,7 @@ export const Editor: React.FC = () => {
   } = useEditorCommands({
     autoHideEnabled,
     canEdit,
+    cancelPendingSceneSaves,
     debouncedSaveLibrary,
     drawingId: id,
     drawingName,
@@ -330,7 +352,6 @@ export const Editor: React.FC = () => {
     setNewName,
     user,
   });
-
   return (
     <>
       <EditorView
@@ -352,6 +373,7 @@ export const Editor: React.FC = () => {
         onBackClick={handleBackClick}
         onCanvasChange={handleCanvasChange}
         onCanvasDropCapture={handleCanvasDropCapture}
+        onDrawingSwitch={handleDrawingSwitch}
         onExportClick={handleExportClick}
         onLibraryChange={handleLibraryChange}
         onNavigateHome={() => navigate("/")}

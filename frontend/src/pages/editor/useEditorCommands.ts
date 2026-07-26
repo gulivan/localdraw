@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { FormEvent, MutableRefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -34,6 +34,7 @@ type EditorCommandRefs = {
 type UseEditorCommandsParams = {
   autoHideEnabled: boolean;
   canEdit: boolean;
+  cancelPendingSceneSaves: () => void;
   debouncedSaveLibrary: (items: any[]) => void;
   drawingId: string | undefined;
   drawingName: string;
@@ -65,6 +66,7 @@ type UseEditorCommandsParams = {
 export const useEditorCommands = ({
   autoHideEnabled,
   canEdit,
+  cancelPendingSceneSaves,
   debouncedSaveLibrary,
   drawingId,
   drawingName,
@@ -82,6 +84,7 @@ export const useEditorCommands = ({
   user,
 }: UseEditorCommandsParams) => {
   const navigate = useNavigate();
+  const navigationInFlightRef = useRef(false);
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -138,65 +141,81 @@ export const useEditorCommands = ({
     [canEdit, debouncedSaveLibrary, user],
   );
 
-  const handleBackClick = useCallback(async () => {
-    if (isSavingOnLeave) return;
-    setIsSavingOnLeave(true);
-    let shouldNavigate = false;
-    try {
-      if (
-        !(
-          refs.excalidrawAPI.current &&
-          refs.saveData.current &&
-          refs.savePreview.current
-        )
-      ) {
-        shouldNavigate = true;
-      } else if (!canEdit || !refs.hasSceneChangesSinceLoad.current) {
-        shouldNavigate = true;
-      } else if (!drawingId) {
-        shouldNavigate = true;
-      } else {
-        const elements =
-          refs.excalidrawAPI.current.getSceneElementsIncludingDeleted();
-        const { snapshot: safeElements } = resolveSafeSnapshot(elements);
-        const appState = refs.excalidrawAPI.current.getAppState();
-        const files = refs.excalidrawAPI.current.getFiles() || {};
-        refs.latestFiles.current = files;
-        if (
-          refs.suspiciousBlankLoad.current &&
-          !hasRenderableElements(safeElements)
-        ) {
-          toast.warning(
-            "Blank scene detected on load. Skipping save to protect existing data.",
-          );
-          shouldNavigate = true;
-        } else {
-          await Promise.all([
-            enqueueSceneSave(drawingId, safeElements, appState, files, {
-              suppressErrors: false,
-            }),
-            refs.savePreview.current(drawingId, safeElements, appState, files),
-          ]);
-          shouldNavigate = true;
-        }
-      }
-    } catch (err) {
-      console.error("Failed to save on back navigation", err);
-      toast.error("Failed to save changes. Please retry before leaving.");
-    } finally {
-      setIsSavingOnLeave(false);
+  const saveBeforeNavigation = useCallback(async () => {
+    if (
+      !refs.excalidrawAPI.current ||
+      !refs.saveData.current ||
+      !refs.savePreview.current ||
+      !canEdit ||
+      !refs.hasSceneChangesSinceLoad.current ||
+      !drawingId
+    ) {
+      return true;
     }
-    if (shouldNavigate) navigate("/");
+    cancelPendingSceneSaves();
+    const elements =
+      refs.excalidrawAPI.current.getSceneElementsIncludingDeleted();
+    const { snapshot: safeElements } = resolveSafeSnapshot(elements);
+    const appState = refs.excalidrawAPI.current.getAppState();
+    const files = refs.excalidrawAPI.current.getFiles() || {};
+    refs.latestFiles.current = files;
+    if (
+      refs.suspiciousBlankLoad.current &&
+      !hasRenderableElements(safeElements)
+    ) {
+      toast.warning(
+        "Blank scene detected on load. Skipping save to protect existing data.",
+      );
+      return true;
+    }
+    await Promise.all([
+      enqueueSceneSave(drawingId, safeElements, appState, files, {
+        suppressErrors: false,
+      }),
+      refs.savePreview.current(drawingId, safeElements, appState, files),
+    ]);
+    return true;
   }, [
     canEdit,
+    cancelPendingSceneSaves,
     drawingId,
     enqueueSceneSave,
-    isSavingOnLeave,
-    navigate,
     refs,
     resolveSafeSnapshot,
-    setIsSavingOnLeave,
   ]);
+
+  const navigateAfterSave = useCallback(
+    async (destination: string) => {
+      if (navigationInFlightRef.current || isSavingOnLeave) return false;
+      navigationInFlightRef.current = true;
+      setIsSavingOnLeave(true);
+      try {
+        await saveBeforeNavigation();
+        navigate(destination);
+        return true;
+      } catch (err) {
+        console.error("Failed to save before navigation", err);
+        toast.error("Failed to save changes. Please retry before leaving.");
+        return false;
+      } finally {
+        navigationInFlightRef.current = false;
+        setIsSavingOnLeave(false);
+      }
+    },
+    [isSavingOnLeave, navigate, saveBeforeNavigation, setIsSavingOnLeave],
+  );
+
+  const handleBackClick = useCallback(async () => {
+    await navigateAfterSave("/");
+  }, [navigateAfterSave]);
+
+  const handleDrawingSwitch = useCallback(
+    async (nextDrawingId: string) => {
+      if (!nextDrawingId || nextDrawingId === drawingId) return true;
+      return navigateAfterSave(`/editor/${nextDrawingId}`);
+    },
+    [drawingId, navigateAfterSave],
+  );
 
   const handleExportClick = useCallback(() => {
     if (!refs.excalidrawAPI.current) return;
@@ -221,6 +240,7 @@ export const useEditorCommands = ({
 
   return {
     handleBackClick,
+    handleDrawingSwitch,
     handleExportClick,
     handleLibraryChange,
     handleRenameStart,
