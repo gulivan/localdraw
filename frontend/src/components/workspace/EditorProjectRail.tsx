@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowDown,
@@ -38,10 +38,11 @@ export const EditorProjectRail = ({
   const [slides, setSlides] = useState<DrawingSummary[]>([]);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!drawingId) return;
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const drawing = await api.getDrawing(drawingId);
       const collectionId = drawing.collectionId;
@@ -60,6 +61,7 @@ export const EditorProjectRail = ({
     } catch (error) {
       console.error("Failed to load editor project rail", error);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, [drawingId]);
