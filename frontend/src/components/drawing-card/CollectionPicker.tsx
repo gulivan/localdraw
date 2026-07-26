@@ -7,7 +7,6 @@ interface CollectionPickerProps {
   drawing: DrawingSummary;
   collections: Collection[];
   isShared: boolean;
-  isSharedCollection: boolean;
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
@@ -18,7 +17,6 @@ export const CollectionPicker: React.FC<CollectionPickerProps> = ({
   drawing,
   collections,
   isShared,
-  isSharedCollection,
   isOpen,
   onToggle,
   onClose,
@@ -34,16 +32,16 @@ export const CollectionPicker: React.FC<CollectionPickerProps> = ({
       <div className="flex items-center gap-1 flex-wrap justify-start xs:justify-end">
         <button
           onClick={() => {
-            if (isShared || isSharedCollection) return;
+            if (isShared) return;
             onToggle();
           }}
           data-testid={`collection-picker-${drawing.id}`}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
-          disabled={isShared || isSharedCollection}
+          disabled={isShared}
           className={clsx(
             "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide max-w-[120px] truncate transition-all border",
-            isShared || isSharedCollection
+            isShared
               ? "bg-slate-50 dark:bg-neutral-800/40 text-slate-400 dark:text-neutral-500 border-neutral-100 dark:border-neutral-800 cursor-not-allowed"
               : "bg-slate-50 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 cursor-pointer border-neutral-200/60 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700/50",
           )}
@@ -60,20 +58,6 @@ export const CollectionPicker: React.FC<CollectionPickerProps> = ({
           </span>
         )}
 
-        {isSharedCollection &&
-          drawing.accessLevel &&
-          drawing.accessLevel !== "owner" && (
-            <span
-              className={clsx(
-                "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide border",
-                drawing.accessLevel === "edit"
-                  ? "bg-emerald-50/50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30"
-                  : "bg-amber-50/50 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30",
-              )}
-            >
-              {drawing.accessLevel === "edit" ? "Editor" : "Viewer"}
-            </span>
-          )}
       </div>
 
       {!isShared && isOpen && (

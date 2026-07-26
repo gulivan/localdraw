@@ -7,6 +7,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Loader2 } from 'lucide-react';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
+const Project = lazy(() => import('./pages/Project').then(m => ({ default: m.Project })));
 const Editor = lazy(() => import('./pages/Editor').then(m => ({ default: m.Editor })));
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
 const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
@@ -40,7 +42,15 @@ function App() {
                   path="/"
                   element={
                     <ProtectedRoute>
-                      <Dashboard />
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projects/:id"
+                  element={
+                    <ProtectedRoute>
+                      <Project />
                     </ProtectedRoute>
                   }
                 />

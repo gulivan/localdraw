@@ -2,7 +2,7 @@ import express from "express";
 import { z } from "zod";
 import { Prisma, PrismaClient } from "../../generated/client";
 
-export type SortField = "name" | "createdAt" | "updatedAt";
+export type SortField = "name" | "createdAt" | "updatedAt" | "sortOrder";
 export type SortDirection = "asc" | "desc";
 
 type BuildDrawingsCacheKey = (keyParts: {

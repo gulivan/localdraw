@@ -37,7 +37,7 @@ test.describe("Drawing Creation", () => {
   });
 
   test("should create a new drawing via UI", async ({ page, request }) => {
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const newDrawingButton = page.getByRole("button", { name: /New Drawing/i });
@@ -62,7 +62,7 @@ test.describe("Drawing Creation", () => {
     const drawing = await createDrawing(request, { name: `Open_Test_${Date.now()}` });
     createdDrawingIds.push(drawing.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     await page.getByPlaceholder("Search drawings...").fill(drawing.name);
@@ -84,7 +84,7 @@ test.describe("Drawing Creation", () => {
     await page.goto(`/editor/${drawing.id}`);
     await page.waitForSelector("[class*='excalidraw'], canvas", { timeout: 15000 });
 
-    await expect(page.getByText(drawingName)).toBeVisible();
+    await expect(page.getByRole("heading", { name: drawingName })).toBeVisible();
   });
 
   test("should rename drawing via editor header", async ({ page, request }) => {
@@ -99,13 +99,13 @@ test.describe("Drawing Creation", () => {
 
     await revealEditorHeader(page);
 
-    const nameElement = page.getByText(originalName);
+    const nameElement = page.getByRole("heading", { name: originalName });
     await expect(nameElement).toBeInViewport();
     await nameElement.dblclick();
 
     await page.waitForTimeout(300);
 
-    const nameInput = page.locator("input").filter({ hasText: "" }).first();
+    const nameInput = page.getByRole("textbox", { name: "Drawing name" });
     await nameInput.clear();
     await nameInput.fill(newName);
     await nameInput.press("Enter");
@@ -125,12 +125,12 @@ test.describe("Drawing Creation", () => {
 
     await revealEditorHeader(page);
 
-    const backButton = page.locator("header button").first();
+    const backButton = page.getByRole("button", { name: "Back to Home" });
     await expect(backButton).toBeInViewport();
     await backButton.click();
 
     await page.waitForURL("/");
-    await expect(page.getByPlaceholder("Search drawings...")).toBeVisible();
+    await expect(page.getByPlaceholder("Search projects & slides…")).toBeVisible();
   });
 });
 
@@ -296,7 +296,7 @@ test.describe("Drawing Deletion", () => {
     const drawing = await createDrawing(request, { name: `Delete_Card_${Date.now()}` });
     createdDrawingIds.push(drawing.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     await page.getByPlaceholder("Search drawings...").fill(drawing.name);
@@ -325,8 +325,7 @@ test.describe("Drawing Deletion", () => {
     });
     createdDrawingIds.push(drawing.id);
 
-    await page.goto("/?view=trash");
-    await page.getByRole("button", { name: /^Trash$/ }).click();
+    await page.goto("/collections?id=trash");
     await page.waitForLoadState("networkidle");
 
     const card = page.locator(`#drawing-card-${drawing.id}`);
@@ -352,7 +351,7 @@ test.describe("Drawing Deletion", () => {
     const drawing = await createDrawing(request, { name: baseName });
     createdDrawingIds.push(drawing.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     await page.getByPlaceholder("Search drawings...").fill(baseName);

@@ -36,8 +36,6 @@ type DashboardToolbarProps = {
   hasSelection: boolean;
   isTrashView: boolean;
   isSharedView: boolean;
-  isSharedCollection: boolean;
-  currentCollection?: Collection;
   showBulkMoveMenu: boolean;
   selectedCount: number;
   collections: Collection[];
@@ -52,7 +50,6 @@ type DashboardToolbarProps = {
   onBulkMove: (collectionId: string | null) => void;
   onImportDrawings: (files: FileList | null) => void;
   onCreateDrawing: () => void;
-  onViewerActionError: (message: string) => void;
 };
 
 export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
@@ -67,8 +64,6 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   hasSelection,
   isTrashView,
   isSharedView,
-  isSharedCollection,
-  currentCollection,
   showBulkMoveMenu,
   selectedCount,
   collections,
@@ -83,11 +78,8 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   onBulkMove,
   onImportDrawings,
   onCreateDrawing,
-  onViewerActionError,
 }) => {
-  const canModifySelection =
-    !isSharedView &&
-    (!isSharedCollection || currentCollection?.sharedRole === "edit");
+  const canModifySelection = !isSharedView;
 
   return (
     <div className="mb-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
@@ -297,16 +289,7 @@ export const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
           }}
         />
         <button
-          onClick={() => {
-            if (
-              isSharedCollection &&
-              currentCollection?.sharedRole !== "edit"
-            ) {
-              onViewerActionError("Viewers can't import drawings");
-              return;
-            }
-            document.getElementById("dashboard-import")?.click();
-          }}
+          onClick={() => document.getElementById("dashboard-import")?.click()}
           disabled={isTrashView || isSharedView}
           className={clsx(
             "h-[42px] w-full sm:w-auto flex items-center justify-center gap-2 px-6 rounded-xl border-2 border-black dark:border-neutral-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] transition-all font-bold text-sm whitespace-nowrap",

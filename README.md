@@ -23,6 +23,14 @@ A self-hosted dashboard and organizer for [Excalidraw](https://github.com/excali
 ## Features
 
 <details>
+<summary>Projects with ordered slides and a resume-first home</summary>
+
+Group drawings into color-coded projects, keep their slides in a deliberate
+order, and jump back into recent work from the workspace home.
+
+</details>
+
+<details>
 <summary>Persistent storage for all your drawings</summary>
 
 ![](readme-assets/dashboard.png)
@@ -78,7 +86,7 @@ Automatically retain recent drawing snapshots, preview past versions from the ed
 </details>
 
 <details>
-<summary>Drag and drop drawings into collections</summary>
+<summary>Drag and drop slides into projects</summary>
 
 ![](readme-assets/collections.gif)
 
@@ -96,6 +104,11 @@ Automatically retain recent drawing snapshots, preview past versions from the ed
 # Upgrading
 
 See [release notes](https://github.com/ZimengXiong/ExcaliDash/releases) for a specific release.
+
+The projects-and-slides migration replaces collection-level sharing with
+drawing-level permissions. Existing collection shares are converted into
+permissions on each drawing, and drawings created by a collaborator are moved
+to that drawing owner's Unfiled area. No drawing content is deleted.
 
 ExcaliDash includes an in-app update notifier that checks GitHub Releases. If your deployment must not make outbound network calls, disable it on the backend:
 

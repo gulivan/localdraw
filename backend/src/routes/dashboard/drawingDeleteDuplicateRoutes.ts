@@ -7,6 +7,7 @@ import {
   toPublicTrashCollectionId,
 } from "./trash";
 import type { DrawingRouteContext } from "./drawingRouteContext";
+import { getNextSortOrder, normalizeDrawingOrder } from "./drawingOrdering";
 
 export const registerDrawingDeleteDuplicateRoutes = (
   app: express.Express,
@@ -36,8 +37,12 @@ export const registerDrawingDeleteDuplicateRoutes = (
       });
       if (!drawing) return res.status(404).json({ error: "Drawing not found" });
 
-      const deleteResult = await prisma.drawing.deleteMany({
-        where: { id, userId: req.user.id },
+      const deleteResult = await prisma.$transaction(async (tx) => {
+        const result = await tx.drawing.deleteMany({
+          where: { id, userId: req.user!.id },
+        });
+        await normalizeDrawingOrder(tx, drawing.collectionId, req.user!.id);
+        return result;
       });
       if (deleteResult.count === 0) {
         return res.status(404).json({ error: "Drawing not found" });
@@ -83,6 +88,11 @@ export const registerDrawingDeleteDuplicateRoutes = (
       }
 
       const newDrawingId = uuidv4();
+      const sortOrder = await getNextSortOrder(
+        prisma,
+        duplicatedCollectionId,
+        req.user.id,
+      );
       const originalFiles = parseJsonField<Record<string, any>>(original.files, {});
       const duplicatedFiles = await cloneS3FileReferences(
         original.id,
@@ -106,6 +116,7 @@ export const registerDrawingDeleteDuplicateRoutes = (
           preview: typeof duplicatedPreview === "string" ? duplicatedPreview : original.preview,
           userId: req.user.id,
           collectionId: duplicatedCollectionId,
+          sortOrder,
           version: 1,
         },
       });

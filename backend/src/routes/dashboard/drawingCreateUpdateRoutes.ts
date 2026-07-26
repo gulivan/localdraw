@@ -14,6 +14,7 @@ import {
   toPublicTrashCollectionId,
 } from "./trash";
 import type { DrawingRouteContext } from "./drawingRouteContext";
+import { getNextSortOrder, normalizeDrawingOrder } from "./drawingOrdering";
 
 export const registerDrawingCreateUpdateRoutes = (
   app: express.Express,
@@ -75,30 +76,20 @@ export const registerDrawingCreateUpdateRoutes = (
         !isTrashCollectionId(targetCollectionId, req.user.id)
       ) {
         const collection = await prisma.collection.findFirst({
-          where: { id: targetCollectionId },
+          where: { id: targetCollectionId, userId: req.user.id },
         });
         if (!collection)
           return res.status(404).json({ error: "Collection not found" });
-
-        // If the collection belongs to someone else, check the user has editor access
-        if (collection.userId !== req.user.id) {
-          const share = await prisma.collectionShare.findFirst({
-            where: {
-              collectionId: targetCollectionId,
-              granteeUserId: req.user.id,
-              role: "edit",
-            },
-          });
-          if (!share)
-            return res
-              .status(403)
-              .json({ error: "No edit access to this collection" });
-        }
       } else if (targetCollectionIdRaw === "trash") {
         await ensureTrashCollection(prisma, req.user.id);
       }
 
       const newDrawingId = uuidv4();
+      const sortOrder = await getNextSortOrder(
+        prisma,
+        targetCollectionId,
+        req.user.id,
+      );
       const originalFiles = payload.files ?? {};
       const processedFiles = await processFilesForS3(
         originalFiles,
@@ -119,6 +110,7 @@ export const registerDrawingCreateUpdateRoutes = (
           appState: JSON.stringify(payload.appState),
           userId: req.user.id,
           collectionId: targetCollectionId,
+          sortOrder,
           preview: typeof processedPreview === "string" ? processedPreview : null,
           files: JSON.stringify(processedFiles),
         },
@@ -224,6 +216,7 @@ export const registerDrawingCreateUpdateRoutes = (
         data.preview = typeof processedPreview === "string" ? processedPreview : null;
       }
 
+      let placementTarget: string | null | undefined;
       if (payload.collectionId !== undefined) {
         if (!isOwnerAccess(access)) {
           return res.status(403).json({
@@ -235,6 +228,7 @@ export const registerDrawingCreateUpdateRoutes = (
           await ensureTrashCollection(prisma, ownerUserId);
           (data as Prisma.DrawingUncheckedUpdateInput).collectionId =
             trashCollectionId;
+          placementTarget = trashCollectionId;
         } else if (payload.collectionId) {
           const collection = await prisma.collection.findFirst({
             where: { id: payload.collectionId, userId: ownerUserId },
@@ -243,9 +237,13 @@ export const registerDrawingCreateUpdateRoutes = (
             return res.status(404).json({ error: "Collection not found" });
           (data as Prisma.DrawingUncheckedUpdateInput).collectionId =
             payload.collectionId;
+          placementTarget = payload.collectionId;
         } else {
           (data as Prisma.DrawingUncheckedUpdateInput).collectionId = null;
+          placementTarget = null;
         }
+        (data as Prisma.DrawingUncheckedUpdateInput).sortOrder =
+          await getNextSortOrder(prisma, placementTarget, ownerUserId);
       }
 
       const updateWhere: Prisma.DrawingWhereInput = { id };
@@ -315,6 +313,16 @@ export const registerDrawingCreateUpdateRoutes = (
       }
       if (!updatedDrawing) {
         return res.status(404).json({ error: "Drawing not found" });
+      }
+      if (
+        placementTarget !== undefined &&
+        existingDrawing.collectionId !== updatedDrawing.collectionId
+      ) {
+        await normalizeDrawingOrder(
+          prisma,
+          existingDrawing.collectionId,
+          ownerUserId,
+        );
       }
       invalidateDrawingsCache();
 

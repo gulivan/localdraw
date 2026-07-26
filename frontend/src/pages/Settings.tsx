@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Layout } from "../components/Layout";
-import { useNavigate } from "react-router-dom";
 import * as api from "../api";
-import type { Collection } from "../types";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 import { SettingsMainGrid } from "./settings/SettingsMainGrid";
@@ -10,8 +8,6 @@ import { AdvancedSettings } from "./settings/AdvancedSettings";
 import { SettingsConfirmModals } from "./settings/SettingsConfirmModals";
 import { displayFontFamily } from "../utils/displayFont";
 export const Settings: React.FC = () => {
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { authEnabled, user, authMode } = useAuth();
   const [legacyDbImportConfirmation, setLegacyDbImportConfirmation] = useState<{
@@ -76,17 +72,6 @@ export const Settings: React.FC = () => {
   const [updateInfo, setUpdateInfo] = useState<api.UpdateInfo | null>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
-  useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        const data = await api.getCollections();
-        setCollections(data);
-      } catch (err) {
-        console.error("Failed to fetch collections:", err);
-      }
-    };
-    fetchCollections();
-  }, []);
   const COMPRESSION_ENABLED_KEY = "excalidash-image-compression";
   const [imageCompression, setImageCompression] = useState<boolean>(() => {
     const raw =
@@ -265,35 +250,8 @@ export const Settings: React.FC = () => {
       setLegacyDbImportLoading(false);
     }
   };
-  const handleCreateCollection = async (name: string) => {
-    await api.createCollection(name);
-    const newCollections = await api.getCollections();
-    setCollections(newCollections);
-  };
-  const handleEditCollection = async (id: string, name: string) => {
-    setCollections((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, name } : c)),
-    );
-    await api.updateCollection(id, name);
-  };
-  const handleDeleteCollection = async (id: string) => {
-    setCollections((prev) => prev.filter((c) => c.id !== id));
-    await api.deleteCollection(id);
-  };
-  const handleSelectCollection = (id: string | null | undefined) => {
-    if (id === undefined) navigate("/");
-    else if (id === null) navigate("/collections?id=unorganized");
-    else navigate(`/collections?id=${id}`);
-  };
   return (
-    <Layout
-      collections={collections}
-      selectedCollectionId="SETTINGS"
-      onSelectCollection={handleSelectCollection}
-      onCreateCollection={handleCreateCollection}
-      onEditCollection={handleEditCollection}
-      onDeleteCollection={handleDeleteCollection}
-    >
+    <Layout>
       {" "}
       <h1
         className="text-3xl sm:text-4xl lg:text-5xl mb-6 lg:mb-8 text-slate-900 dark:text-white pl-1"

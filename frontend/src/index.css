@@ -4,6 +4,49 @@
 
 :root {
   --excalidash-display-font: Excalifont;
+  --workspace-canvas: #fafafa;
+  --workspace-surface: #ffffff;
+  --workspace-inset: #f4f4f5;
+  --workspace-ink: #18181b;
+  --workspace-secondary: #52525b;
+  --workspace-muted: #71717a;
+  --workspace-border: #e4e4e7;
+  --workspace-accent: #7c3aed;
+  --workspace-accent-hover: #6d28d9;
+}
+
+html.dark {
+  --workspace-canvas: #09090b;
+  --workspace-surface: #18181b;
+  --workspace-inset: #27272a;
+  --workspace-ink: #fafafa;
+  --workspace-secondary: #d4d4d8;
+  --workspace-muted: #a1a1aa;
+  --workspace-border: #3f3f46;
+  --workspace-accent: #8b5cf6;
+  --workspace-accent-hover: #a78bfa;
+}
+
+.workspace-shell {
+  color: var(--workspace-ink);
+  background: var(--workspace-canvas);
+  font-family: "DM Sans Variable", "DM Sans", "Segoe UI", system-ui, sans-serif;
+  font-synthesis: none;
+}
+
+.workspace-focus {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-shell *,
+  .workspace-shell *::before,
+  .workspace-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 html.dark body {

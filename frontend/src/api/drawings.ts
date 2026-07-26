@@ -55,7 +55,7 @@ export interface PaginatedDrawings<T> {
   offset?: number;
 }
 
-export type DrawingSortField = "name" | "createdAt" | "updatedAt";
+export type DrawingSortField = "name" | "createdAt" | "updatedAt" | "sortOrder";
 export type SortDirection = "asc" | "desc";
 
 type DrawingQueryOptions = {
@@ -214,6 +214,18 @@ export const createDrawing = async (name?: string, collectionId?: string | null)
     elements: [],
     appState: {},
   });
+  return response.data;
+};
+
+export const placeDrawing = async (
+  id: string,
+  collectionId: string | null,
+  targetIndex: number,
+) => {
+  const response = await api.patch<{
+    drawing: { id: string; collectionId: string | null; sortOrder: number };
+    orders: import("../types").DrawingPlacementOrder[];
+  }>(`/drawings/${id}/placement`, { collectionId, targetIndex });
   return response.data;
 };
 

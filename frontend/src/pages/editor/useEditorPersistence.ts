@@ -56,6 +56,7 @@ type UseEditorPersistenceParams = {
     staleEmptySnapshot: boolean;
     staleNonRenderableSnapshot: boolean;
   };
+  onSaveStateChange?: (state: "idle" | "saving" | "saved" | "error") => void;
 };
 
 export const useEditorPersistence = ({
@@ -63,6 +64,7 @@ export const useEditorPersistence = ({
   user,
   normalizeImageElementStatus,
   resolveSafeSnapshot,
+  onSaveStateChange,
 }: UseEditorPersistenceParams) => {
   const saveDataRef = useRef<
     | ((
@@ -185,8 +187,11 @@ export const useEditorPersistence = ({
           throw err;
         }
       };
+      onSaveStateChange?.("saving");
       await persistScene(0);
+      onSaveStateChange?.("saved");
     } catch (err) {
+      onSaveStateChange?.("error");
       if (err instanceof DrawingSaveConflictError) {
         toast.error("Drawing changed in another tab. Refresh to load latest.");
         throw err;

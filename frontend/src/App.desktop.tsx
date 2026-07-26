@@ -7,6 +7,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { UploadProvider } from './context/UploadContext';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })));
+const Home = lazy(() => import('./pages/Home').then((module) => ({ default: module.Home })));
+const Project = lazy(() => import('./pages/Project').then((module) => ({ default: module.Project })));
 const Editor = lazy(() => import('./pages/Editor').then((module) => ({ default: module.Editor })));
 const Settings = lazy(() => import('./pages/Settings').then((module) => ({ default: module.Settings })));
 
@@ -28,7 +30,8 @@ export default function DesktopApp() {
           <UploadProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={protectedPage(<Dashboard />)} />
+                <Route path="/" element={protectedPage(<Home />)} />
+                <Route path="/projects/:id" element={protectedPage(<Project />)} />
                 <Route path="/collections" element={protectedPage(<Dashboard />)} />
                 <Route path="/settings" element={protectedPage(<Settings />)} />
                 <Route path="/editor/:id" element={protectedPage(<Editor />)} />

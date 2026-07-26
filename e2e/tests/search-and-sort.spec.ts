@@ -35,7 +35,7 @@ test.describe("Search Drawings", () => {
     ]);
     createdDrawingIds.push(drawing1.id, drawing2.id, drawing3.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.getByPlaceholder("Search drawings...");
@@ -60,7 +60,7 @@ test.describe("Search Drawings", () => {
     const drawing = await createDrawing(request, { name: `ExistingDrawing_${Date.now()}` });
     createdDrawingIds.push(drawing.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.getByPlaceholder("Search drawings...");
@@ -79,7 +79,7 @@ test.describe("Search Drawings", () => {
     ]);
     createdDrawingIds.push(drawing1.id, drawing2.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.getByPlaceholder("Search drawings...");
@@ -102,7 +102,7 @@ test.describe("Search Drawings", () => {
     const drawing = await createDrawing(request, { name: `KeyboardTest_${Date.now()}` });
     createdDrawingIds.push(drawing.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.getByPlaceholder("Search drawings...");
@@ -148,7 +148,7 @@ test.describe("Sort Drawings", () => {
     ]);
     createdDrawingIds.push(drawingC.id, drawingA.id, drawingB.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.getByPlaceholder("Search drawings...");
@@ -173,7 +173,7 @@ test.describe("Sort Drawings", () => {
     ]);
     createdDrawingIds.push(drawingA.id, drawingZ.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.getByPlaceholder("Search drawings...");
@@ -204,7 +204,7 @@ test.describe("Sort Drawings", () => {
     const drawing2 = await createDrawing(request, { name: `${prefix}_Second` });
     createdDrawingIds.push(drawing2.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.getByPlaceholder("Search drawings...");
@@ -227,7 +227,7 @@ test.describe("Sort Drawings", () => {
     ]);
     createdDrawingIds.push(drawing1.id, drawing2.id);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.getByPlaceholder("Search drawings...");

@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { PrismaClient } from "../generated/client";
+import { config } from "../config";
 import { generateApiKey, serializeApiKeyScopes } from "../auth/apiKeys";
 import { getTestPrisma, setupTestDb } from "./testUtils";
 
@@ -38,6 +40,12 @@ describe("API key authentication", () => {
   let apiKeyId: string;
   let apiKeyToken: string;
   let adminApiKeyToken: string;
+  let adminUserId: string;
+  let userAccessToken: string;
+  let agent: ReturnType<typeof request.agent>;
+  let csrfHeaderName: string;
+  let csrfToken: string;
+  const userAgent = "api-key-integration-test";
 
   beforeAll(async () => {
     setupTestDb();
@@ -62,6 +70,16 @@ describe("API key authentication", () => {
       select: { id: true },
     });
     userId = user.id;
+    userAccessToken = jwt.sign(
+      { userId, email: "api-key-user@test.local", type: "access" },
+      config.jwtSecret,
+    );
+    agent = request.agent(app);
+    const csrfResponse = await agent
+      .get("/csrf-token")
+      .set("User-Agent", userAgent);
+    csrfHeaderName = csrfResponse.body.header;
+    csrfToken = csrfResponse.body.token;
 
     const apiKeyFixture = await createApiKeyFixture(prisma, userId, "Obsidian automation");
     apiKeyToken = apiKeyFixture.token;
@@ -77,6 +95,7 @@ describe("API key authentication", () => {
       },
       select: { id: true },
     });
+    adminUserId = adminUser.id;
     const adminApiKeyFixture = await createApiKeyFixture(prisma, adminUser.id, "Admin automation");
     adminApiKeyToken = adminApiKeyFixture.token;
   });
@@ -109,6 +128,109 @@ describe("API key authentication", () => {
 
     expect(collectionsResponse.status).toBe(200);
     expect(drawingsResponse.status).toBe(200);
+  });
+
+  it("creates an initial slide and returns project overview metadata", async () => {
+    const createResponse = await request(app)
+      .post("/collections")
+      .set("Authorization", `Bearer ${apiKeyToken}`)
+      .send({
+        name: "Launch story",
+        color: "#0ea5e9",
+        createInitialDrawing: true,
+      });
+
+    expect(createResponse.status).toBe(200);
+    expect(createResponse.body?.color).toBe("#0ea5e9");
+    expect(createResponse.body?.initialDrawingId).toEqual(expect.any(String));
+
+    const overviewResponse = await request(app)
+      .get("/collections?includeOverview=true")
+      .set("Authorization", `Bearer ${apiKeyToken}`);
+    const project = overviewResponse.body.find(
+      (collection: { id: string }) => collection.id === createResponse.body.id,
+    );
+
+    expect(overviewResponse.status).toBe(200);
+    expect(project).toMatchObject({
+      drawingCount: 1,
+      latestDrawing: {
+        id: createResponse.body.initialDrawingId,
+        name: "Slide 1",
+        sortOrder: 0,
+      },
+    });
+    expect(new Date(project.lastActivityAt).getTime()).not.toBeNaN();
+  });
+
+  it("orders owned slides through the placement route", async () => {
+    const project = await prisma.collection.create({
+      data: { name: "Ordered project", userId },
+    });
+    const first = await prisma.drawing.create({
+      data: {
+        name: "First",
+        elements: "[]",
+        appState: "{}",
+        files: "{}",
+        userId,
+        collectionId: project.id,
+        sortOrder: 0,
+      },
+    });
+    const second = await prisma.drawing.create({
+      data: {
+        name: "Second",
+        elements: "[]",
+        appState: "{}",
+        files: "{}",
+        userId,
+        collectionId: project.id,
+        sortOrder: 1,
+      },
+    });
+
+    const response = await agent
+      .patch(`/drawings/${second.id}/placement`)
+      .set("User-Agent", userAgent)
+      .set("Authorization", `Bearer ${userAccessToken}`)
+      .set(csrfHeaderName, csrfToken)
+      .send({ collectionId: project.id, targetIndex: 0 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.orders[0].items).toEqual([
+      { id: second.id, sortOrder: 0 },
+      { id: first.id, sortOrder: 1 },
+    ]);
+  });
+
+  it("does not let a project owner reorder another user's legacy drawing", async () => {
+    const project = await prisma.collection.create({
+      data: { name: "Legacy shared project", userId },
+    });
+    const foreignDrawing = await prisma.drawing.create({
+      data: {
+        name: "Foreign drawing",
+        elements: "[]",
+        appState: "{}",
+        files: "{}",
+        userId: adminUserId,
+        collectionId: project.id,
+        sortOrder: 7,
+      },
+    });
+
+    const response = await agent
+      .patch(`/drawings/${foreignDrawing.id}/placement`)
+      .set("User-Agent", userAgent)
+      .set("Authorization", `Bearer ${userAccessToken}`)
+      .set(csrfHeaderName, csrfToken)
+      .send({ collectionId: project.id, targetIndex: 0 });
+
+    expect(response.status).toBe(404);
+    await expect(
+      prisma.drawing.findUnique({ where: { id: foreignDrawing.id } }),
+    ).resolves.toMatchObject({ collectionId: project.id, sortOrder: 7 });
   });
 
   it("rejects API key management with API key auth", async () => {

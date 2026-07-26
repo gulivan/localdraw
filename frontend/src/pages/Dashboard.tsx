@@ -11,10 +11,8 @@ import {
   DragPreview,
   DrawingsGrid,
   FileDropOverlay,
-  ViewerActionToast,
 } from "./dashboard/DashboardPanels";
 import { useDashboardData } from "./dashboard/useDashboardData";
-import { useDashboardCollectionActions } from "./dashboard/useDashboardCollectionActions";
 import { useDashboardDrawingActions } from "./dashboard/useDashboardDrawingActions";
 import { useDashboardSelection } from "./dashboard/useDashboardSelection";
 import { useDashboardSort } from "./dashboard/useDashboardSort";
@@ -33,15 +31,6 @@ export const Dashboard: React.FC = () => {
     }
     return undefined;
   }, [location.pathname, searchParams]);
-  const setSelectedCollectionId = (id: string | null | undefined) => {
-    if (id === undefined) {
-      navigate("/");
-    } else if (id === null) {
-      navigate("/collections?id=unorganized");
-    } else {
-      navigate(`/collections?id=${id}`);
-    }
-  };
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -65,7 +54,6 @@ export const Dashboard: React.FC = () => {
     drawings,
     setDrawings,
     collections,
-    setCollections,
     setTotalCount,
     isFetchingMore,
     isLoading,
@@ -130,7 +118,6 @@ export const Dashboard: React.FC = () => {
   const actions = useDashboardDrawingActions({
     drawings,
     setDrawings,
-    collections,
     selectedCollectionId,
     selectedIds,
     setSelectedIds,
@@ -138,12 +125,6 @@ export const Dashboard: React.FC = () => {
     uploadFiles,
     refreshData,
     navigate,
-  });
-  const collectionActions = useDashboardCollectionActions({
-    selectedCollectionId,
-    setSelectedCollectionId,
-    setCollections,
-    refreshData,
   });
   const viewTitle = React.useMemo(() => {
     if (selectedCollectionId === undefined) return "All Drawings";
@@ -153,20 +134,8 @@ export const Dashboard: React.FC = () => {
     const collection = collections.find((c) => c.id === selectedCollectionId);
     return collection ? collection.name : "Collection";
   }, [selectedCollectionId, collections]);
-  const visibleCollections = React.useMemo(
-    () => collections.filter((c) => c.id !== "trash"),
-    [collections],
-  );
   return (
-    <Layout
-      collections={visibleCollections}
-      selectedCollectionId={selectedCollectionId}
-      onSelectCollection={setSelectedCollectionId}
-      onCreateCollection={collectionActions.handleCreateCollection}
-      onEditCollection={collectionActions.handleEditCollection}
-      onDeleteCollection={collectionActions.handleDeleteCollection}
-      onDrop={actions.isSharedView ? undefined : actions.handleDrop}
-    >
+    <Layout>
       {" "}
       <DragPreview drawings={actions.dragPreviewDrawings} />{" "}
       {selection.isDragSelecting && selection.selectionBounds && (
@@ -190,7 +159,6 @@ export const Dashboard: React.FC = () => {
         {" "}
         {viewTitle}{" "}
       </h1>{" "}
-      <ViewerActionToast message={actions.viewerActionError} />{" "}
       <DashboardToolbar
         search={search}
         searchInputRef={searchInputRef}
@@ -203,8 +171,6 @@ export const Dashboard: React.FC = () => {
         hasSelection={selection.hasSelection}
         isTrashView={actions.isTrashView}
         isSharedView={actions.isSharedView}
-        isSharedCollection={actions.isSharedCollection}
-        currentCollection={actions.currentCollection}
         showBulkMoveMenu={showBulkMoveMenu}
         selectedCount={selectedIds.size}
         collections={collections}
@@ -219,7 +185,6 @@ export const Dashboard: React.FC = () => {
         onBulkMove={actions.handleBulkMove}
         onImportDrawings={actions.handleImportDrawings}
         onCreateDrawing={actions.handleCreateDrawing}
-        onViewerActionError={actions.handleViewerActionError}
       />{" "}
       <div
         className="min-h-full select-none relative"
@@ -253,8 +218,6 @@ export const Dashboard: React.FC = () => {
           isDraggingFile={isDraggingFile}
           isTrashView={actions.isTrashView}
           isSharedView={actions.isSharedView}
-          isSharedCollection={actions.isSharedCollection}
-          currentCollection={actions.currentCollection}
           onClearSearch={() => setSearch("")}
           onToggleSelection={selection.handleToggleSelection}
           onRename={actions.handleRenameDrawing}

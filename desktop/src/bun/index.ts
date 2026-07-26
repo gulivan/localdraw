@@ -12,6 +12,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { createXiaolaiFontServer } from "./xiaolai";
+import { ensureWorkspaceSchema } from "./schema";
 
 const HOST = "127.0.0.1";
 const FRONTEND_PORT = 32144;
@@ -35,6 +36,7 @@ mkdirSync(uploadsDir, { recursive: true });
 if (!existsSync(databasePath)) {
   copyFileSync(join(resourcesDir, "template.db"), databasePath);
 }
+ensureWorkspaceSchema(databasePath);
 
 Object.assign(process.env, {
   AUTH_MODE: "local",

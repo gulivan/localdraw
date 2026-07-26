@@ -148,42 +148,6 @@ export const getDrawingAccess = async (params: {
     });
     baseAccess = normalizeDrawingPermission(perm?.permission) ?? baseAccess;
 
-    // Check collection-level share if no direct drawing permission found
-    // Check collection-level access if no direct drawing permission found
-    if (baseAccess === "none") {
-      const drawing = await params.prisma.drawing.findUnique({
-        where: { id: params.drawingId },
-        select: { collectionId: true, userId: true },
-      });
-      if (drawing?.collectionId) {
-        // Check if user owns the collection (guest created drawing in owner's collection)
-        const ownedCollection = await params.prisma.collection.findFirst({
-          where: {
-            id: drawing.collectionId,
-            userId: params.principal.userId,
-          },
-          select: { id: true },
-        });
-        if (ownedCollection) {
-          baseAccess = "owner";
-        } else {
-          // Check if user has a collection share entry
-          const collectionShare = await params.prisma.collectionShare.findFirst(
-            {
-              where: {
-                collectionId: drawing.collectionId,
-                granteeUserId: params.principal.userId,
-              },
-              select: { role: true },
-            },
-          );
-          if (collectionShare) {
-            baseAccess =
-              normalizeDrawingPermission(collectionShare.role) ?? baseAccess;
-          }
-        }
-      }
-    }
   }
 
   // Google Docs-style link policy: applies regardless of whether the visitor is signed in.

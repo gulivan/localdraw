@@ -36,6 +36,9 @@ export const Editor: React.FC = () => {
   const [isSceneLoading, setIsSceneLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSavingOnLeave, setIsSavingOnLeave] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const { autoHideEnabled, setAutoHideEnabled } = useEditorAutoHide(id);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [langCode, setLangCode] = useState(getInitialLangCode);
@@ -211,6 +214,7 @@ export const Editor: React.FC = () => {
     user,
     normalizeImageElementStatus,
     resolveSafeSnapshot,
+    onSaveStateChange: setSaveStatus,
   });
   const markSceneChangedSinceLoad = useCallback(() => {
     hasSceneChangesSinceLoadRef.current = true;
@@ -349,6 +353,7 @@ export const Editor: React.FC = () => {
         isRenaming={isRenaming}
         isSavingOnLeave={isSavingOnLeave}
         isSceneLoading={isSceneLoading}
+        saveStatus={saveStatus}
         langCode={langCode}
         loadError={loadError}
         me={me}

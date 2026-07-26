@@ -55,7 +55,7 @@ test.describe("Theme Toggle", () => {
     const html = page.locator("html");
     await ensureDarkTheme(page);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     await expect(html).toHaveClass(/dark/);
@@ -86,7 +86,7 @@ test.describe("Theme Toggle", () => {
 
     await ensureDarkTheme(page);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     const body = page.locator("body");
@@ -104,7 +104,7 @@ test.describe("Theme Toggle", () => {
     const html = page.locator("html");
     await ensureLightTheme(page);
 
-    await page.goto("/");
+    await page.goto("/collections");
     await page.waitForLoadState("networkidle");
 
     await expect(html).not.toHaveClass(/dark/);

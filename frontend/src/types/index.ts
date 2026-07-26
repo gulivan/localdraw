@@ -5,6 +5,7 @@ export interface DrawingSummary {
   updatedAt: number;
   createdAt: number;
   version: number;
+  sortOrder?: number;
   preview?: string | null;
   accessLevel?: "none" | "view" | "edit" | "owner";
   creatorName?: string | null;
@@ -17,26 +18,19 @@ export interface Drawing extends DrawingSummary {
 export interface Collection {
   id: string;
   name: string;
+  color?: string;
   createdAt: number;
-  sharedRole?: "view" | "edit" | null;
-  isOwner?: boolean;
-  isShared?: boolean;
+  updatedAt?: number;
+  drawingCount?: number;
+  lastActivityAt?: number;
+  latestDrawing?: Pick<
+    DrawingSummary,
+    "id" | "name" | "preview" | "sortOrder" | "updatedAt"
+  > | null;
+  initialDrawingId?: string;
 }
 
-export type CollectionShareRole = "view" | "edit";
-
-export interface CollectionShareUser {
-  id: string;
-  name: string;
-  email: string;
-}
-
-export interface CollectionShareRow {
-  id: string;
-  collectionId: string;
-  granteeUserId: string;
-  granteeUser: CollectionShareUser;
-  role: CollectionShareRole;
-  createdAt: string;
-  updatedAt: string;
+export interface DrawingPlacementOrder {
+  collectionId: string | null;
+  items: Array<{ id: string; sortOrder: number }>;
 }

@@ -19,27 +19,15 @@ describe("file routes", () => {
     );
   });
 
-  it("allows private S3 redirects for users with collection share access", async () => {
+  it("allows private S3 redirects for users with drawing access", async () => {
     const prisma = {
       drawing: {
         findUnique: vi
           .fn()
-          .mockResolvedValueOnce({
-            userId: "owner-user",
-          })
-          .mockResolvedValueOnce({
-            collectionId: "shared-collection",
-            userId: "owner-user",
-          }),
+          .mockResolvedValueOnce({ userId: "owner-user" }),
       },
       drawingPermission: {
-        findUnique: vi.fn().mockResolvedValue(null),
-      },
-      collection: {
-        findFirst: vi.fn().mockResolvedValue(null),
-      },
-      collectionShare: {
-        findFirst: vi.fn().mockResolvedValue({ role: "view" }),
+        findUnique: vi.fn().mockResolvedValue({ permission: "view" }),
       },
       drawingLinkShare: {
         findFirst: vi.fn().mockResolvedValue(null),
@@ -72,12 +60,6 @@ describe("file routes", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.location).toBe("https://signed.example/file");
-    expect(prisma.collectionShare.findFirst).toHaveBeenCalledWith({
-      where: {
-        collectionId: "shared-collection",
-        granteeUserId: "viewer-user",
-      },
-      select: { role: true },
-    });
+    expect(prisma.drawingPermission.findUnique).toHaveBeenCalled();
   });
 });

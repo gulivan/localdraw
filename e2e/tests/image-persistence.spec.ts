@@ -45,7 +45,7 @@ test.describe("Image Persistence - Browser E2E Tests", () => {
   });
 
   test("should navigate to dashboard and see drawing list", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/collections");
 
     await expect(page).toHaveTitle(/ExcaliDash/i);
 
@@ -53,7 +53,7 @@ test.describe("Image Persistence - Browser E2E Tests", () => {
   });
 
   test("should create a new drawing via UI", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/collections");
 
     const newDrawingBtn = page.getByRole("button", { name: /new|create/i }).first();
 

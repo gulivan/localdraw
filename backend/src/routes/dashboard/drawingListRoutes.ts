@@ -59,27 +59,11 @@ export const registerDrawingListRoutes = (
           collectionFilterKey = "trash";
         } else {
           const collection = await prisma.collection.findFirst({
-            where: { id: normalizedCollectionId },
+            where: { id: normalizedCollectionId, userId: req.user.id },
           });
           if (!collection) {
             return res.status(404).json({ error: "Collection not found" });
           }
-
-          // Check if user is owner or has a share entry
-          const isOwner = collection.userId === req.user.id;
-          if (!isOwner) {
-            const share = await prisma.collectionShare.findFirst({
-              where: {
-                collectionId: normalizedCollectionId,
-                granteeUserId: req.user.id,
-              },
-            });
-            if (!share) {
-              return res.status(404).json({ error: "Collection not found" });
-            }
-          }
-          // Always fetch all drawings in the collection regardless of who created them
-          delete (where as any).userId;
 
           where.collectionId = normalizedCollectionId;
           collectionFilterKey = `id:${normalizedCollectionId}`;
@@ -102,7 +86,8 @@ export const registerDrawingListRoutes = (
       const parsedSortField: SortField =
         sortField === "name" ||
         sortField === "createdAt" ||
-        sortField === "updatedAt"
+        sortField === "updatedAt" ||
+        sortField === "sortOrder"
           ? sortField
           : "updatedAt";
       const parsedSortDirection: SortDirection =
@@ -146,6 +131,7 @@ export const registerDrawingListRoutes = (
         id: true,
         name: true,
         collectionId: true,
+        sortOrder: true,
         ...(shouldIncludePreview ? { preview: true } : {}),
         version: true,
         createdAt: true,
@@ -153,12 +139,14 @@ export const registerDrawingListRoutes = (
         user: { select: { id: true, name: true } },
       };
 
-      const orderBy: Prisma.DrawingOrderByWithRelationInput =
+      const orderBy: Prisma.DrawingOrderByWithRelationInput | Prisma.DrawingOrderByWithRelationInput[] =
         parsedSortField === "name"
           ? { name: parsedSortDirection }
           : parsedSortField === "createdAt"
             ? { createdAt: parsedSortDirection }
-            : { updatedAt: parsedSortDirection };
+            : parsedSortField === "sortOrder"
+              ? [{ sortOrder: parsedSortDirection }, { id: "asc" }]
+              : { updatedAt: parsedSortDirection };
 
       const queryOptions: Prisma.DrawingFindManyArgs = { where, orderBy };
       if (parsedLimit !== undefined) queryOptions.take = parsedLimit;
@@ -230,7 +218,8 @@ export const registerDrawingListRoutes = (
       const parsedSortField: SortField =
         sortField === "name" ||
         sortField === "createdAt" ||
-        sortField === "updatedAt"
+        sortField === "updatedAt" ||
+        sortField === "sortOrder"
           ? sortField
           : "updatedAt";
       const parsedSortDirection: SortDirection =
@@ -253,19 +242,14 @@ export const registerDrawingListRoutes = (
           ? Math.max(rawOffset, 0)
           : undefined;
 
-      const orderBy: Prisma.DrawingOrderByWithRelationInput =
+      const orderBy: Prisma.DrawingOrderByWithRelationInput | Prisma.DrawingOrderByWithRelationInput[] =
         parsedSortField === "name"
           ? { name: parsedSortDirection }
           : parsedSortField === "createdAt"
             ? { createdAt: parsedSortDirection }
-            : { updatedAt: parsedSortDirection };
-
-      // Get collection IDs shared with this user to exclude drawings already visible via collection sharing
-      const sharedCollectionIds = await prisma.collectionShare.findMany({
-        where: { granteeUserId: req.user.id },
-        select: { collectionId: true },
-      });
-      const sharedColIds = sharedCollectionIds.map((s) => s.collectionId);
+            : parsedSortField === "sortOrder"
+              ? [{ sortOrder: parsedSortDirection }, { id: "asc" }]
+              : { updatedAt: parsedSortDirection };
 
       const whereDrawing: Prisma.DrawingWhereInput = {
         // "Shared with me" should only include drawings owned by someone else.
@@ -276,12 +260,6 @@ export const registerDrawingListRoutes = (
             granteeUserId: req.user.id,
           },
         },
-        // Exclude drawings already accessible via a shared collection
-        ...(sharedColIds.length > 0 && {
-          NOT: {
-            collectionId: { in: sharedColIds },
-          },
-        }),
       };
       if (searchTerm) {
         whereDrawing.name = { contains: searchTerm };
@@ -291,6 +269,7 @@ export const registerDrawingListRoutes = (
         id: true,
         name: true,
         collectionId: true,
+        sortOrder: true,
         ...(shouldIncludePreview ? { preview: true } : {}),
         version: true,
         createdAt: true,

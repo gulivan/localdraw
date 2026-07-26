@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Excalidraw, MainMenu } from "@excalidraw/excalidraw";
 import {
   ArrowLeft,
@@ -7,6 +7,7 @@ import {
   Download,
   History,
   Loader2,
+  PanelLeft,
   Share2,
 } from "lucide-react";
 import clsx from "clsx";
@@ -16,6 +17,8 @@ import {
 } from "../../components/LanguageSelector";
 import type { UserIdentity } from "../../utils/identity";
 import { UIOptions } from "./shared";
+import { EditorProjectRail } from "../../components/workspace/EditorProjectRail";
+import { savedLocationLabel } from "../../utils/productBrand";
 
 interface Peer extends UserIdentity {
   isActive: boolean;
@@ -33,6 +36,7 @@ type EditorViewProps = {
   isRenaming: boolean;
   isSavingOnLeave: boolean;
   isSceneLoading: boolean;
+  saveStatus: "idle" | "saving" | "saved" | "error";
   langCode: string;
   loadError: string | null;
   me: UserIdentity;
@@ -94,6 +98,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   isRenaming,
   isSavingOnLeave,
   isSceneLoading,
+  saveStatus,
   langCode,
   loadError,
   me,
@@ -116,19 +121,58 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onShareOpen,
   onHistoryOpen,
   onToggleAutoHide,
-}) => (
-  <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 overflow-hidden">
+}) => {
+  const [railOpen, setRailOpen] = useState(() =>
+    localStorage.getItem("excalidash-editor-project-rail") !== "closed",
+  );
+  useEffect(() => {
+    localStorage.setItem(
+      "excalidash-editor-project-rail",
+      railOpen ? "open" : "closed",
+    );
+  }, [railOpen]);
+
+  return (
+  <div className="workspace-shell flex h-screen overflow-hidden bg-white dark:bg-neutral-950">
+    {railOpen && (
+      <button
+        type="button"
+        className="fixed inset-0 z-40 bg-zinc-950/30 md:hidden"
+        onClick={() => setRailOpen(false)}
+        aria-label="Close project rail"
+      />
+    )}
+    <div className={clsx(
+      "fixed inset-y-0 left-0 z-50 md:static md:z-auto",
+      railOpen ? "block" : "hidden",
+    )}>
+      <EditorProjectRail
+        drawingId={id}
+        canEdit={canEdit}
+        onNavigate={() => window.innerWidth < 768 && setRailOpen(false)}
+      />
+    </div>
+    <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
     <header
       className={clsx(
-        "h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 justify-between z-10 fixed top-0 left-0 right-0 transition-transform duration-300",
+        "absolute left-0 right-0 top-0 z-10 flex h-16 items-center justify-between border-b border-zinc-200 bg-white px-3 transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-900 sm:px-4",
         isHeaderVisible ? "translate-y-0" : "-translate-y-full",
       )}
     >
       <div className="flex items-center gap-4">
         <button
+          type="button"
+          onClick={() => setRailOpen((open) => !open)}
+          className="workspace-focus flex h-9 w-9 items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          aria-label={railOpen ? "Hide project rail" : "Show project rail"}
+        >
+          <PanelLeft size={19} />
+        </button>
+        <button
           onClick={onBackClick}
           disabled={isSavingOnLeave}
-          className={`flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-wait transition-all duration-200 ${isSavingOnLeave ? "pr-4" : ""}`}
+          aria-label={isSavingOnLeave ? "Saving changes before returning Home" : "Back to Home"}
+          className={`workspace-focus flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-full text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-wait transition-all duration-200 ${isSavingOnLeave ? "pr-4" : ""}`}
         >
           {isSavingOnLeave ? (
             <>
@@ -144,6 +188,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
             <input
               autoFocus
               type="text"
+              aria-label="Drawing name"
               value={newName}
               onChange={(e) => onNewNameChange(e.target.value)}
               onBlur={onRenameBlur}
@@ -159,6 +204,20 @@ export const EditorView: React.FC<EditorViewProps> = ({
             {drawingName}
           </h1>
         )}
+        <span
+          className={clsx(
+            "hidden rounded-full px-2 py-1 text-[11px] font-semibold sm:inline-flex",
+            saveStatus === "error"
+              ? "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300"
+              : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+          )}
+        >
+          {saveStatus === "saving"
+            ? "Saving…"
+            : saveStatus === "error"
+              ? "Save failed"
+              : savedLocationLabel}
+        </span>
       </div>
       <div className="flex items-center gap-3">
         {!canEdit ? (
@@ -285,4 +344,6 @@ export const EditorView: React.FC<EditorViewProps> = ({
       <Toaster position="bottom-center" />
     </div>
   </div>
-);
+  </div>
+  );
+};

@@ -9,6 +9,8 @@ export type HydratedDrawingData = {
   files: Record<string, any>;
 };
 
+export type DrawingPreviewSource = Pick<DrawingSummary, "id" | "preview">;
+
 const normalizeImageElementsForPreview = (
   elements: any[] = [],
   files: Record<string, any> = {},
@@ -36,7 +38,7 @@ const normalizeImageElementsForPreview = (
   });
 
 export const useDrawingPreview = (
-  drawing: DrawingSummary,
+  drawing: DrawingPreviewSource,
   onPreviewGenerated?: (id: string, preview: string) => void,
 ) => {
   const [previewSvg, setPreviewSvg] = useState<string | null>(
@@ -129,15 +131,10 @@ export const useDrawingPreview = (
     };
   }, [drawing.id, drawing.preview, ensureFullData, onPreviewGenerated]);
 
-  const buildExportDrawing = useCallback(async (): Promise<Drawing> => {
-    const data = await ensureFullData();
-    return {
-      ...drawing,
-      elements: data.elements || [],
-      appState: data.appState || {},
-      files: data.files || {},
-    };
-  }, [drawing, ensureFullData]);
+  const buildExportDrawing = useCallback(
+    async (): Promise<Drawing> => api.getDrawing(drawing.id),
+    [drawing.id],
+  );
 
   return {
     previewSvg,

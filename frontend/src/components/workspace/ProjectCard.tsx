@@ -1,0 +1,37 @@
+import { Folder } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import type { Collection } from "../../types";
+import { SlideThumbnail } from "./SlideThumbnail";
+
+export const ProjectCard = ({
+  project,
+  onView,
+}: {
+  project: Collection;
+  onView: () => void;
+}) => {
+  const count = project.drawingCount ?? 0;
+  return (
+    <article className="group flex min-h-[260px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white transition duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
+      <button type="button" onClick={onView} className="workspace-focus relative h-36 w-full overflow-hidden text-left">
+        <SlideThumbnail drawing={project.latestDrawing} className="h-full w-full" />
+        <span
+          className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white"
+          style={{ backgroundColor: project.color || "#7c3aed" }}
+        >
+          <Folder size={12} /> {count} slide{count === 1 ? "" : "s"}
+        </span>
+      </button>
+      <div className="flex flex-1 flex-col p-4">
+        <button type="button" onClick={onView} className="workspace-focus block truncate rounded text-left text-base font-semibold">
+          {project.name}
+        </button>
+        <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+          {project.lastActivityAt
+            ? `Updated ${formatDistanceToNow(project.lastActivityAt)} ago`
+            : "Ready for your first slide"}
+        </p>
+      </div>
+    </article>
+  );
+};

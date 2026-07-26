@@ -10,7 +10,6 @@ import {
 import type { Collection } from "../types";
 import clsx from "clsx";
 import { ConfirmModal } from "./ConfirmModal";
-import { ShareCollectionModal } from "./ShareCollectionModal";
 import { useAuth } from "../context/AuthContext";
 import { LocalDrawBrand } from "./LocalDrawBrand";
 import { SidebarItem } from "./sidebar/SidebarItem";
@@ -50,9 +49,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [collectionToDelete, setCollectionToDelete] = useState<string | null>(
     null,
   );
-  const [collectionToShare, setCollectionToShare] = useState<string | null>(
-    null,
-  );
   useEffect(() => {
     const handleClickOutside = () => setContextMenu(null);
     document.addEventListener("click", handleClickOutside);
@@ -76,8 +72,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleItemContextMenu = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const collection = collections.find((c) => c.id === id);
-    if (!collection?.isOwner && collection?.isOwner !== undefined) return;
     setContextMenu({ x: e.clientX, y: e.clientY, type: "item", id });
   };
   const handleBackgroundContextMenu = (e: React.MouseEvent) => {
@@ -197,33 +191,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onEditSubmit={handleEditSubmit}
                   onEditBlur={() => setEditingId(null)}
                   onDrop={onDrop}
-                  extraAction={
-                    <div className="flex items-center gap-1">
-                      {/* Shared indicator — only for owned collections that have been shared */}
-                      {collection.isOwner !== false && collection.isShared && (
-                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
-                          Shared
-                        </span>
-                      )}
-                      {/* Role badge */}
-                      <span
-                        className={clsx(
-                          "text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0",
-                          collection.isOwner === false
-                            ? collection.sharedRole === "edit"
-                              ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                              : "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
-                            : "bg-slate-100 dark:bg-neutral-800 text-slate-400 dark:text-neutral-500 border-slate-200 dark:border-neutral-700",
-                        )}
-                      >
-                        {collection.isOwner === false
-                          ? collection.sharedRole === "edit"
-                            ? "Editor"
-                            : "Viewer"
-                          : "Owner"}
-                      </span>
-                    </div>
-                  }
                 />
               ))}
           </div>
@@ -246,7 +213,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             setEditingId(collection.id);
             setEditName(collection.name);
           }}
-          onShareCollection={sharingEnabled ? setCollectionToShare : undefined}
           onDeleteCollection={setCollectionToDelete}
         />
       )}
@@ -263,16 +229,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }}
         onCancel={() => setCollectionToDelete(null)}
       />
-      {sharingEnabled ? (
-        <ShareCollectionModal
-          isOpen={!!collectionToShare}
-          collectionId={collectionToShare ?? ""}
-          collectionName={
-            collections.find((c) => c.id === collectionToShare)?.name ?? ""
-          }
-          onClose={() => setCollectionToShare(null)}
-        />
-      ) : null}
     </>
   );
 };

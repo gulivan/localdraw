@@ -3,7 +3,6 @@ import { Layout } from '../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../api';
-import type { Collection } from '../types';
 import { User, Save, X } from 'lucide-react';
 import { USER_KEY } from '../utils/impersonation';
 import { displayFontFamily } from "../utils/displayFont";
@@ -14,7 +13,6 @@ export const Profile: React.FC = () => {
     const { user: authUser, logout, authEnabled } = useAuth();
     const navigate = useNavigate();
     const mustResetPassword = Boolean(authUser?.mustResetPassword);
-    const [collections, setCollections] = useState<Collection[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -32,47 +30,15 @@ export const Profile: React.FC = () => {
             navigate('/settings', { replace: true });
             return;
         }
-        const fetchData = async () => {
-            try {
-                const collectionsData = await api.getCollections();
-                setCollections(collectionsData);
-                
-                if (authUser) {
-                    setName(authUser.name);
-                    setEmail(authUser.email);
-                }
-            } catch (err) {
-                console.error('Failed to fetch data:', err);
-            }
-        };
-        fetchData();
+        if (authUser) {
+            setName(authUser.name);
+            setEmail(authUser.email);
+        }
     }, [authEnabled, authUser, navigate]);
 
 
 
 
-
-    const handleSelectCollection = (id: string | null | undefined) => {
-        if (id === undefined) navigate('/');
-        else if (id === null) navigate('/collections?id=unorganized');
-        else navigate(`/collections?id=${id}`);
-    };
-
-    const handleCreateCollection = async (name: string) => {
-        await api.createCollection(name);
-        const newCollections = await api.getCollections();
-        setCollections(newCollections);
-    };
-
-    const handleEditCollection = async (id: string, name: string) => {
-        setCollections(prev => prev.map(c => c.id === id ? { ...c, name } : c));
-        await api.updateCollection(id, name);
-    };
-
-    const handleDeleteCollection = async (id: string) => {
-        setCollections(prev => prev.filter(c => c.id !== id));
-        await api.deleteCollection(id);
-    };
 
     const handleUpdateName = async () => {
         if (mustResetPassword) {
@@ -161,14 +127,7 @@ export const Profile: React.FC = () => {
     };
 
     return (
-        <Layout
-            collections={collections}
-            selectedCollectionId="PROFILE"
-            onSelectCollection={handleSelectCollection}
-            onCreateCollection={handleCreateCollection}
-            onEditCollection={handleEditCollection}
-            onDeleteCollection={handleDeleteCollection}
-        >
+        <Layout>
             <h1 className="text-3xl sm:text-5xl mb-6 sm:mb-8 text-slate-900 dark:text-white pl-1" style={{ fontFamily: displayFontFamily }}>
                 Profile
             </h1>

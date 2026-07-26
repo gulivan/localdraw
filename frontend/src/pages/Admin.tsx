@@ -13,7 +13,6 @@ import { UserActionModals } from "./admin/UserActionModals";
 import { UsersTable } from "./admin/UsersTable";
 import type { AdminUser } from "./admin/types";
 import { useAccessControlSettings } from "./admin/useAccessControlSettings";
-import { useAdminCollections } from "./admin/useAdminCollections";
 import { useLoginRateLimitSettings } from "./admin/useLoginRateLimitSettings";
 import {
   IMPERSONATION_KEY,
@@ -26,14 +25,6 @@ export const Admin: React.FC = () => {
   const { user: authUser, authEnabled } = useAuth();
   const isAdmin = authUser?.role === "ADMIN";
   const passwordPolicy = getPasswordPolicy();
-  const {
-    collections,
-    loadCollections,
-    handleSelectCollection,
-    handleCreateCollection,
-    handleEditCollection,
-    handleDeleteCollection,
-  } = useAdminCollections(navigate);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [error, setError] = useState("");
@@ -119,7 +110,6 @@ export const Admin: React.FC = () => {
   };
   useEffect(() => {
     if (!authEnabled || !isAdmin) return;
-    void loadCollections();
     void loadUsers();
     void accessControl.load();
   }, [authEnabled, isAdmin]);
@@ -253,14 +243,7 @@ export const Admin: React.FC = () => {
     );
   }
   return (
-    <Layout
-      collections={collections}
-      selectedCollectionId="ADMIN"
-      onSelectCollection={handleSelectCollection}
-      onCreateCollection={handleCreateCollection}
-      onEditCollection={handleEditCollection}
-      onDeleteCollection={handleDeleteCollection}
-    >
+    <Layout>
       {" "}
       <AdminHeader
         loadingUsers={loadingUsers}
