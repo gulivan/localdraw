@@ -7,6 +7,8 @@ import { SettingsMainGrid } from "./settings/SettingsMainGrid";
 import { AdvancedSettings } from "./settings/AdvancedSettings";
 import { SettingsConfirmModals } from "./settings/SettingsConfirmModals";
 import { displayFontFamily } from "../utils/displayFont";
+import { isDesktopApp } from "../utils/productBrand";
+import { WorkspaceSettingsCard } from "./settings/WorkspaceSettingsCard";
 export const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { authEnabled, user, authMode } = useAuth();
@@ -268,6 +270,7 @@ export const Settings: React.FC = () => {
           </p>{" "}
         </div>
       )}{" "}
+      {isDesktopApp && <WorkspaceSettingsCard />}
       <SettingsMainGrid
         backupExportExt={backupExportExt}
         setBackupExportExt={setBackupExportExt}
@@ -306,6 +309,7 @@ export const Settings: React.FC = () => {
         confirmToggleAuthEnabled={confirmToggleAuthEnabled}
         setImportError={setImportError}
         setImportSuccess={setImportSuccess}
+        showAuthentication={!isDesktopApp}
       />{" "}
       <SettingsConfirmModals
         legacyDbImportConfirmation={legacyDbImportConfirmation}

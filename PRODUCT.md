@@ -31,6 +31,7 @@ Calm, personal, immediate. The workspace should feel dependable and close to the
 4. Storage language stays honest: desktop and hosted persistence are described differently.
 5. Familiar controls earn trust: standard navigation, menus, focus behavior, and reversible organization actions beat novelty.
 6. Projects have one owner: project membership and slide order stay private to that owner's workspace, while collaboration is granted explicitly per drawing.
+7. Files remain yours: LocalDraw uses readable `.excalidraw` files as its durable desktop format, with disposable indexes and hidden metadata only where ordering and version restoration require them.
 
 ## Accessibility & Inclusion
 

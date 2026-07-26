@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { createXiaolaiFontServer } from "./xiaolai";
 import { ensureWorkspaceSchema } from "./schema";
+import { FilesystemWorkspace } from "./filesystemWorkspace";
 
 const HOST = "127.0.0.1";
 const FRONTEND_PORT = 32144;
@@ -76,6 +77,14 @@ await backend.prisma.systemConfig.upsert({
   },
 });
 
+const workspace = new FilesystemWorkspace(backend.prisma, dataDir);
+await workspace.initialize();
+const workspaceSyncTimer = setInterval(() => {
+  void workspace.rescan().catch((error) => {
+    console.error("[workspace] Failed to sync drawing files", error);
+  });
+}, 2_000);
+
 await new Promise<void>((resolve, reject) => {
   backend.httpServer.once("error", reject);
   backend.httpServer.listen(BACKEND_PORT, HOST, () => resolve());
@@ -95,10 +104,12 @@ let shutdownPromise: Promise<void> | null = null;
 
 const shutdown = () => {
   shutdownPromise ??= (async () => {
+    clearInterval(workspaceSyncTimer);
     if (browserQuitTimer) clearTimeout(browserQuitTimer);
     frontendServer?.stop(true);
     backend.httpServer.close();
     try {
+      await workspace.flush();
       await backend.prisma.$disconnect();
     } finally {
       Utils.quit();
@@ -147,6 +158,42 @@ frontendServer = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     const pathname = decodeURIComponent(url.pathname);
+    if (pathname === "/__localdraw/workspace" && request.method === "GET") {
+      return Response.json(workspace.getStatus(), {
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+    if (pathname.startsWith("/__localdraw/workspace/") && request.method === "POST") {
+      if (request.headers.get("origin") !== appUrl) {
+        return Response.json({ error: "Forbidden" }, { status: 403 });
+      }
+      try {
+        if (pathname.endsWith("/choose")) {
+          const selected = (await Utils.openFileDialog({
+            startingFolder: workspace.getStatus().path,
+            canChooseFiles: false,
+            canChooseDirectory: true,
+            allowsMultipleSelection: false,
+          })).join(",").trim();
+          if (selected) await workspace.setRoot(selected);
+          return Response.json({ ...workspace.getStatus(), changed: Boolean(selected) });
+        }
+        if (pathname.endsWith("/open")) {
+          Utils.openPath(workspace.getStatus().path);
+          return Response.json({ ...workspace.getStatus(), opened: true });
+        }
+        if (pathname.endsWith("/rescan")) {
+          await workspace.rescan();
+          return Response.json({ ...workspace.getStatus(), rescanned: true });
+        }
+      } catch (error) {
+        return Response.json(
+          { error: error instanceof Error ? error.message : "Workspace operation failed" },
+          { status: 400 },
+        );
+      }
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
     if (request.method === "GET") {
       const fontResponse = await serveXiaolaiFont(pathname);
       if (fontResponse) return fontResponse;

@@ -20,6 +20,7 @@ type AdvancedSettingsProps = {
   confirmToggleAuthEnabled: () => void;
   setImportError: React.Dispatch<React.SetStateAction<DialogState>>;
   setImportSuccess: React.Dispatch<React.SetStateAction<SuccessDialogState>>;
+  showAuthentication?: boolean;
 };
 
 export const AdvancedSettings = ({
@@ -37,6 +38,7 @@ export const AdvancedSettings = ({
   confirmToggleAuthEnabled,
   setImportError,
   setImportSuccess,
+  showAuthentication = true,
 }: AdvancedSettingsProps) => (
   <details className="mt-8 bg-white/30 dark:bg-neutral-900/30 border border-slate-200/70 dark:border-neutral-800/70 rounded-2xl p-4 sm:p-6">
     <summary className="cursor-pointer select-none font-bold text-slate-800 dark:text-neutral-200">
@@ -90,7 +92,7 @@ export const AdvancedSettings = ({
           </div>{" "}
         </button>{" "}
       </div>{" "}
-      <button
+      {showAuthentication && <button
         onClick={confirmToggleAuthEnabled}
         disabled={
           isManagedAuthMode ||
@@ -132,7 +134,7 @@ export const AdvancedSettings = ({
                   : "Enable multi-user login"}{" "}
           </p>{" "}
         </div>{" "}
-      </button>{" "}
+      </button>}{" "}
       <div className="relative">
         {" "}
         <input

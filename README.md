@@ -150,7 +150,14 @@ npx localdraw
 
 The first run downloads and installs a checksum-verified native build; later runs open it directly. LocalDraw supports Apple silicon and Intel Macs, x64 Windows, and x64 Linux. Windows on ARM uses the x64 build through emulation.
 
-Drawings live in a private SQLite database under the app's standard user-data directory. The desktop build binds its frontend and API to `127.0.0.1` only and disables outbound update checks.
+Drawings live as ordinary `.excalidraw` files under `~/.localdraw` by default.
+Projects are folders, while LocalDraw's hidden `.localdraw` metadata directory
+stores ordering information and the same restorable canvas-version history
+available in the editor. Settings can open, rescan, or move the drawing folder;
+changing it copies the current workspace before switching. A private SQLite
+index remains during the transition so existing installations migrate without
+losing data. The desktop build binds its frontend and API to `127.0.0.1` only
+and disables outbound update checks.
 
 To keep the native download compact, LocalDraw omits deployment-only OIDC,
 S3, password-sharing, and Mermaid/text-to-diagram implementations. These

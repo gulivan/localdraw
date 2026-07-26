@@ -77,7 +77,7 @@ services:
 
 ## Contributors (Code Changes)
 
-- Architecture map: backend (`backend/src`), frontend (`frontend/src`)
+- Architecture map: backend (`backend/src`), frontend (`frontend/src`), desktop host (`desktop/src/bun`)
 - Config source of truth: `backend/src/config.ts` (env + validation)
 - Entry server init: `backend/src/index.ts`
 - API client: `frontend/src/api/index.ts`
@@ -144,6 +144,7 @@ Understand runtime first, then touch code with local tests if requested.
 
 - `backend/`: Express API, Prisma schema, auth, sockets, scripts, Docker runtime.
 - `frontend/`: React UI, API client wiring, Vite config/build pipeline.
+- `desktop/`: Electrobun host, native packaging, and the filesystem workspace bridge.
 - `e2e/`: Playwright tests and compose-based test runner.
 - `docker-compose.yml`: local compose setup for source builds.
 - `docker-compose.prod.yml`: production-style compose using published images.
@@ -313,6 +314,14 @@ Frontend architecture notes:
 - `frontend/src/pages/Editor.tsx` wires Socket.IO and live collaboration.
 - `frontend/vite.config.ts` sets Vite proxy to backend in local dev and compile-time app metadata.
 - Production serving and backend proxy are handled by `frontend/Dockerfile`, `frontend/nginx.conf.template`, `frontend/docker-entrypoint.sh`.
+
+Desktop storage notes:
+
+- LocalDraw is a single-user application. Its durable workspace defaults to `~/.localdraw` and can be changed from Settings.
+- Drawings are ordinary `.excalidraw` files; project manifests and restorable canvas snapshots live under the selected workspace.
+- `desktop/src/bun/filesystemWorkspace*.ts` owns migration, reconciliation, safe writes, and version-history import/export.
+- The desktop SQLite database remains a disposable query/index cache during the filesystem transition; do not treat it as the durable desktop source.
+- Run `cd desktop && npm run test:runtime` after storage changes; it verifies SQLite migration, filesystem reconciliation, cache rebuild, version history, and bundle budgets.
 
 ## Makefile command map
 
