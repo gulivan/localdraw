@@ -1,4 +1,3 @@
-import { Folder } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Collection } from "../../types";
 import { SlideThumbnail } from "./SlideThumbnail";
@@ -16,10 +15,12 @@ export const ProjectCard = ({
       <button type="button" onClick={onView} className="workspace-focus relative h-36 w-full overflow-hidden text-left">
         <SlideThumbnail drawing={project.latestDrawing} className="h-full w-full" />
         <span
-          className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white"
+          className="absolute left-3 top-3 inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-[11px] font-semibold text-white"
           style={{ backgroundColor: project.color || "#7c3aed" }}
+          aria-label={`${count} ${count === 1 ? "canvas" : "canvases"}`}
+          title={`${count} ${count === 1 ? "canvas" : "canvases"}`}
         >
-          <Folder size={12} /> {count} {count === 1 ? "canvas" : "canvases"}
+          {count}
         </span>
       </button>
       <div className="flex h-20 flex-col justify-center p-4">

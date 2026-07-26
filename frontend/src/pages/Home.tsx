@@ -186,7 +186,7 @@ export const Home = () => {
 
 const UnfiledCard = ({ count, slide, onView }: { count: number; slide?: DrawingSummary; onView: () => void }) => (
   <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-    <button type="button" onClick={onView} className="workspace-focus relative h-36 w-full"><SlideThumbnail drawing={slide} className="h-full w-full" /><span className="absolute left-3 top-3 rounded-full bg-zinc-700 px-2.5 py-1 text-[11px] font-semibold text-white">{count} {count === 1 ? "canvas" : "canvases"}</span></button>
+    <button type="button" onClick={onView} className="workspace-focus relative h-36 w-full"><SlideThumbnail drawing={slide} className="h-full w-full" /><span className="absolute left-3 top-3 inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-zinc-700 px-2 text-[11px] font-semibold text-white" aria-label={`${count} ${count === 1 ? "canvas" : "canvases"}`} title={`${count} ${count === 1 ? "canvas" : "canvases"}`}>{count}</span></button>
     <div className="flex h-20 items-center p-4"><h3 className="font-semibold">Other</h3></div>
   </article>
 );
