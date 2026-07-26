@@ -207,7 +207,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
       <ConfirmModal
         isOpen={deleteModalOpen}
         title={`Delete project “${project.name}”?`}
-        message={<div className="space-y-4"><p>{deleteSlides ? "Its slides will move to Trash." : "Its slides will move to Unfiled."}</p><label className="workspace-focus flex cursor-pointer items-center justify-center gap-2 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"><input type="checkbox" checked={deleteSlides} onChange={(event) => setDeleteSlides(event.target.checked)} className="h-4 w-4 accent-rose-600" /><span>Delete slides too.</span></label></div>}
+        message={<div className="space-y-4"><p>{deleteSlides ? "Its slides will move to Trash." : "Its slides will move to Other."}</p><label className="workspace-focus flex cursor-pointer items-center justify-center gap-2 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"><input type="checkbox" checked={deleteSlides} onChange={(event) => setDeleteSlides(event.target.checked)} className="h-4 w-4 accent-rose-600" /><span>Delete slides too.</span></label></div>}
         confirmText="Delete project"
         onConfirm={() => void removeProject()}
         onCancel={closeDeleteModal}

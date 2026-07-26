@@ -47,10 +47,6 @@ export const adminRoleUpdateSchema = z.object({
   role: z.enum(["ADMIN", "USER"]),
 });
 
-export const authEnabledToggleSchema = z.object({
-  enabled: z.boolean(),
-});
-
 export const authOnboardingChoiceSchema = z.object({
   enableAuth: z.boolean(),
 });

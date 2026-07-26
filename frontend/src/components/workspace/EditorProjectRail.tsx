@@ -203,7 +203,7 @@ export const EditorProjectRail = ({
               );
             })}
             {!activeCollectionId && (
-              <div className="rounded-xl bg-white p-2 dark:bg-zinc-900"><div className="flex items-center gap-2 px-1 pb-1 text-xs font-semibold"><Folder size={14} /> Unfiled</div>{slides.map((slide) => <button key={slide.id} type="button" onClick={() => void go(slide.id, slide.name)} className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}>{slide.name}</button>)}</div>
+              <div className="rounded-xl bg-white p-2 dark:bg-zinc-900"><div className="flex items-center gap-2 px-1 pb-1 text-xs font-semibold"><Folder size={14} /> Other</div>{slides.map((slide) => <button key={slide.id} type="button" onClick={() => void go(slide.id, slide.name)} className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}>{slide.name}</button>)}</div>
             )}
           </div>
         )}

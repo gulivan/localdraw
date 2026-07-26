@@ -92,7 +92,7 @@ export const Home = () => {
   }, [debouncedQuery, projects, searchResults]);
 
   const createSlide = async (collectionId: string | null = null) => {
-    const drawing = await api.createDrawing("Untitled Slide", collectionId);
+    const drawing = await api.createDrawing("Untitled Canvas", collectionId);
     navigate(`/editor/${drawing.id}`);
   };
 
@@ -142,7 +142,7 @@ export const Home = () => {
                           <span className="block truncate text-sm font-semibold">{slide.name}</span>
                           <span className="mt-1 flex items-center gap-1 truncate text-[11px] text-zinc-600 dark:text-zinc-400">
                             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project?.color || "#71717a" }} />
-                            {project?.name || "Unfiled"} · {formatDistanceToNow(slide.updatedAt)} ago
+                            {project?.name || "Other"} · {formatDistanceToNow(slide.updatedAt)} ago
                           </span>
                         </span>
                       </button>

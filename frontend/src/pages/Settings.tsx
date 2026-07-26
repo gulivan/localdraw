@@ -2,66 +2,19 @@ import React, { useEffect, useState } from "react";
 import { Layout } from "../components/Layout";
 import * as api from "../api";
 import { useTheme } from "../context/ThemeContext";
-import { useAuth } from "../context/AuthContext";
 import { SettingsMainGrid } from "./settings/SettingsMainGrid";
-import { AdvancedSettings } from "./settings/AdvancedSettings";
-import { SettingsConfirmModals } from "./settings/SettingsConfirmModals";
 import { displayFontFamily } from "../utils/displayFont";
 import { isDesktopApp } from "../utils/productBrand";
 import { WorkspaceSettingsCard } from "./settings/WorkspaceSettingsCard";
+import { SettingsFooter } from "./settings/SettingsFooter";
 export const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { authEnabled, user, authMode } = useAuth();
-  const [legacyDbImportConfirmation, setLegacyDbImportConfirmation] = useState<{
-    isOpen: boolean;
-    file: File | null;
-    info: null | {
-      drawings: number;
-      collections: number;
-      legacyLatestMigration: string | null;
-      currentLatestMigration: string | null;
-    };
-  }>({ isOpen: false, file: null, info: null });
-  const [importError, setImportError] = useState<{
-    isOpen: boolean;
-    message: string;
-  }>({ isOpen: false, message: "" });
-  const [importSuccess, setImportSuccess] = useState<{
-    isOpen: boolean;
-    message: React.ReactNode;
-  }>({ isOpen: false, message: "" });
-  const [legacyDbImportLoading, setLegacyDbImportLoading] = useState(false);
-  const [authToggleLoading, setAuthToggleLoading] = useState(false);
-  const [authToggleError, setAuthToggleError] = useState<string | null>(null);
-  const [authToggleConfirm, setAuthToggleConfirm] = useState<{
-    isOpen: boolean;
-    nextEnabled: boolean | null;
-  }>({ isOpen: false, nextEnabled: null });
-  const [authDisableFinalConfirmOpen, setAuthDisableFinalConfirmOpen] =
-    useState(false);
   const [backupExportExt, setBackupExportExt] = useState<
     "localdraw" | "localdraw.zip"
   >("localdraw");
-  const [backupImportConfirmation, setBackupImportConfirmation] = useState<{
-    isOpen: boolean;
-    file: File | null;
-    info: null | {
-      formatVersion: number;
-      exportedAt: string;
-      excalidashBackendVersion: string | null;
-      collections: number;
-      drawings: number;
-    };
-  }>({ isOpen: false, file: null, info: null });
-  const [backupImportLoading, setBackupImportLoading] = useState(false);
-  const [backupImportSuccess, setBackupImportSuccess] = useState(false);
-  const [backupImportError, setBackupImportError] = useState<{
-    isOpen: boolean;
-    message: string;
-  }>({ isOpen: false, message: "" });
+  const [backupExportError, setBackupExportError] = useState<string | null>(null);
   const appVersion = import.meta.env.VITE_APP_VERSION || "Unknown version";
   const buildLabel = import.meta.env.VITE_APP_BUILD_LABEL;
-  const isManagedAuthMode = authMode !== "local";
   const UPDATE_CHANNEL_KEY = "excalidash-update-channel";
   const UPDATE_INFO_KEY = "excalidash-update-info";
   const [updateChannel, setUpdateChannel] = useState<api.UpdateChannel>(() => {
@@ -119,38 +72,8 @@ export const Settings: React.FC = () => {
   useEffect(() => {
     void checkForUpdates(updateChannel);
   }, []);
-  const setAuthEnabled = async (enabled: boolean) => {
-    setAuthToggleLoading(true);
-    setAuthToggleError(null);
-    try {
-      const response = await api.api.post<{
-        authEnabled: boolean;
-        bootstrapRequired?: boolean;
-      }>("/auth/auth-enabled", { enabled });
-      if (response.data.authEnabled) {
-        window.location.href = response.data.bootstrapRequired
-          ? "/register"
-          : "/login";
-        return;
-      }
-      window.location.reload();
-    } catch (err: unknown) {
-      let message = "Failed to update authentication setting";
-      if (api.isAxiosError(err)) {
-        message =
-          err.response?.data?.message || err.response?.data?.error || message;
-      }
-      setAuthToggleError(message);
-    } finally {
-      setAuthToggleLoading(false);
-    }
-  };
-  const confirmToggleAuthEnabled = () => {
-    if (authEnabled === null) return;
-    if (authToggleLoading) return;
-    setAuthToggleConfirm({ isOpen: true, nextEnabled: !authEnabled });
-  };
   const exportBackup = async () => {
+    setBackupExportError(null);
     try {
       const extQuery = backupExportExt === "localdraw.zip" ? "?ext=zip" : "";
       const response = await api.api.get(`/export/excalidash${extQuery}`, {
@@ -171,85 +94,7 @@ export const Settings: React.FC = () => {
       window.URL.revokeObjectURL(url);
     } catch (err: unknown) {
       console.error("Backup export failed:", err);
-      setBackupImportError({
-        isOpen: true,
-        message: "Failed to export backup. Please try again.",
-      });
-    }
-  };
-  const verifyBackupFile = async (file: File) => {
-    setBackupImportLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("archive", file);
-      const response = await api.api.post<{
-        valid: boolean;
-        formatVersion: number;
-        exportedAt: string;
-        excalidashBackendVersion: string | null;
-        collections: number;
-        drawings: number;
-      }>("/import/excalidash/verify", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setBackupImportConfirmation({
-        isOpen: true,
-        file,
-        info: {
-          formatVersion: response.data.formatVersion,
-          exportedAt: response.data.exportedAt,
-          excalidashBackendVersion:
-            response.data.excalidashBackendVersion ?? null,
-          collections: response.data.collections,
-          drawings: response.data.drawings,
-        },
-      });
-    } catch (err: unknown) {
-      console.error("Backup verify failed:", err);
-      let message = "Failed to verify backup file.";
-      if (api.isAxiosError(err)) {
-        message =
-          err.response?.data?.message || err.response?.data?.error || message;
-      }
-      setBackupImportError({ isOpen: true, message });
-    } finally {
-      setBackupImportLoading(false);
-    }
-  };
-  const verifyLegacyDbFile = async (file: File) => {
-    setLegacyDbImportLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("db", file);
-      const response = await api.api.post<{
-        valid: boolean;
-        drawings: number;
-        collections: number;
-        latestMigration: string | null;
-        currentLatestMigration: string | null;
-      }>("/import/sqlite/legacy/verify", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setLegacyDbImportConfirmation({
-        isOpen: true,
-        file,
-        info: {
-          drawings: response.data.drawings,
-          collections: response.data.collections,
-          legacyLatestMigration: response.data.latestMigration ?? null,
-          currentLatestMigration: response.data.currentLatestMigration ?? null,
-        },
-      });
-    } catch (err: unknown) {
-      console.error("Legacy DB verify failed:", err);
-      let message = "Failed to verify legacy database file.";
-      if (api.isAxiosError(err)) {
-        message =
-          err.response?.data?.message || err.response?.data?.error || message;
-      }
-      setImportError({ isOpen: true, message });
-    } finally {
-      setLegacyDbImportLoading(false);
+      setBackupExportError("Failed to export backup. Please try again.");
     }
   };
   return (
@@ -262,11 +107,11 @@ export const Settings: React.FC = () => {
         {" "}
         Settings{" "}
       </h1>{" "}
-      {authToggleError && (
+      {backupExportError && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl">
           {" "}
           <p className="text-red-800 dark:text-red-200 font-medium">
-            {authToggleError}
+            {backupExportError}
           </p>{" "}
         </div>
       )}{" "}
@@ -293,44 +138,8 @@ export const Settings: React.FC = () => {
           void checkForUpdates(next);
         }}
         onCheckForUpdates={() => void checkForUpdates(updateChannel)}
-      />{" "}
-      <AdvancedSettings
-        authEnabled={authEnabled}
-        authMode={authMode}
-        authToggleLoading={authToggleLoading}
-        backupImportLoading={backupImportLoading}
-        legacyDbImportLoading={legacyDbImportLoading}
-        isManagedAuthMode={isManagedAuthMode}
-        user={user}
-        appVersion={appVersion}
-        buildLabel={buildLabel}
-        verifyBackupFile={verifyBackupFile}
-        verifyLegacyDbFile={verifyLegacyDbFile}
-        confirmToggleAuthEnabled={confirmToggleAuthEnabled}
-        setImportError={setImportError}
-        setImportSuccess={setImportSuccess}
-        showAuthentication={!isDesktopApp}
-      />{" "}
-      <SettingsConfirmModals
-        legacyDbImportConfirmation={legacyDbImportConfirmation}
-        setLegacyDbImportConfirmation={setLegacyDbImportConfirmation}
-        importError={importError}
-        setImportError={setImportError}
-        importSuccess={importSuccess}
-        setImportSuccess={setImportSuccess}
-        authToggleConfirm={authToggleConfirm}
-        setAuthToggleConfirm={setAuthToggleConfirm}
-        authDisableFinalConfirmOpen={authDisableFinalConfirmOpen}
-        setAuthDisableFinalConfirmOpen={setAuthDisableFinalConfirmOpen}
-        setAuthEnabled={setAuthEnabled}
-        backupImportConfirmation={backupImportConfirmation}
-        setBackupImportConfirmation={setBackupImportConfirmation}
-        backupImportSuccess={backupImportSuccess}
-        setBackupImportSuccess={setBackupImportSuccess}
-        backupImportError={backupImportError}
-        setBackupImportError={setBackupImportError}
-        setBackupImportLoading={setBackupImportLoading}
-      />{" "}
+      />
+      <SettingsFooter appVersion={appVersion} buildLabel={buildLabel} />
     </Layout>
   );
 };
