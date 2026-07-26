@@ -11,11 +11,11 @@ export const ProjectCard = ({
 }) => {
   const count = project.drawingCount ?? 0;
   return (
-    <article className="group overflow-hidden rounded-2xl border border-zinc-200 bg-white transition duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
+    <article className="group h-[226px] overflow-hidden rounded-2xl border border-zinc-200 bg-white transition duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
       <button type="button" onClick={onView} className="workspace-focus relative h-36 w-full overflow-hidden text-left">
         <SlideThumbnail drawing={project.latestDrawing} className="h-full w-full" />
         <span
-          className="absolute left-3 top-3 inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-[11px] font-semibold text-white"
+          className="absolute left-3 top-3 inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white"
           style={{ backgroundColor: project.color || "#7c3aed" }}
           aria-label={`${count} ${count === 1 ? "canvas" : "canvases"}`}
           title={`${count} ${count === 1 ? "canvas" : "canvases"}`}
