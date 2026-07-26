@@ -13,14 +13,16 @@ const getCollections = vi.fn();
 const getDrawings = vi.fn();
 const updateDrawing = vi.fn();
 const createDrawing = vi.fn();
+const duplicateDrawing = vi.fn();
+const placeDrawing = vi.fn();
 
 vi.mock("../../api", () => ({
   getDrawing: (...args: unknown[]) => getDrawing(...args),
   getCollections: (...args: unknown[]) => getCollections(...args),
   getDrawings: (...args: unknown[]) => getDrawings(...args),
-  placeDrawing: vi.fn(),
+  placeDrawing: (...args: unknown[]) => placeDrawing(...args),
   createDrawing: (...args: unknown[]) => createDrawing(...args),
-  duplicateDrawing: vi.fn(),
+  duplicateDrawing: (...args: unknown[]) => duplicateDrawing(...args),
   updateDrawing: (...args: unknown[]) => updateDrawing(...args),
 }));
 
@@ -79,6 +81,10 @@ describe("EditorProjectRail project visibility", () => {
       id: "canvas-new",
       updatedAt: 2,
     });
+    duplicateDrawing.mockReset();
+    duplicateDrawing.mockResolvedValue(undefined);
+    placeDrawing.mockReset();
+    placeDrawing.mockResolvedValue(undefined);
     getDrawing.mockResolvedValue({ ...otherSlide, elements: [], appState: {}, files: {} });
     getCollections.mockResolvedValue([project]);
     getDrawings.mockImplementation(
@@ -230,5 +236,39 @@ describe("EditorProjectRail project visibility", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.getByText("Project canvas")).toBeVisible();
     expect(updateDrawing).not.toHaveBeenCalled();
+  });
+
+  it("gives Other canvases the same actions without numbering them", async () => {
+    renderRail("current");
+
+    const canvas = await screen.findByRole("button", {
+      name: "Current canvas",
+    });
+    expect(canvas).toHaveTextContent("Current canvas");
+    expect(canvas).not.toHaveTextContent("1.");
+    expect(
+      screen.getByRole("button", { name: "Move canvas earlier" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Move canvas later" }),
+    ).toBeEnabled();
+
+    fireEvent.doubleClick(canvas);
+    expect(
+      screen.getByRole("textbox", { name: "Rename Current canvas" }),
+    ).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Escape" });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Actions for Current canvas" }),
+    );
+    expect(screen.getByRole("button", { name: "Rename" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Duplicate" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Duplicate" }));
+
+    await waitFor(() =>
+      expect(duplicateDrawing).toHaveBeenCalledWith(otherSlide.id),
+    );
   });
 });

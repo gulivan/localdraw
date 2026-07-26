@@ -261,6 +261,111 @@ export const EditorProjectRail = ({
     }
   };
 
+  const renderCanvasRow = (
+    slide: DrawingSummary,
+    index: number,
+    collectionId: string | null,
+    enumerated: boolean,
+  ) => {
+    const active = collectionId === activeCollectionId;
+    const isRenaming = renamingSlideId === slide.id;
+    return (
+      <div
+        key={slide.id}
+        draggable={canEdit && active && !isRenaming}
+        onDragStart={(event) =>
+          event.dataTransfer.setData("application/x-excalidash-slide", slide.id)
+        }
+        onDragOver={(event) => canEdit && event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          const dragged = event.dataTransfer.getData(
+            "application/x-excalidash-slide",
+          );
+          if (dragged && dragged !== slide.id) {
+            void place(dragged, collectionId, index);
+          }
+        }}
+        className={`group flex items-center gap-1 rounded-lg ${slideRowTone(slide.id === drawingId)}`}
+      >
+        {isRenaming ? (
+          <form
+            className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitRename(slide.id);
+            }}
+          >
+            {enumerated && (
+              <span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">
+                {index + 1}.
+              </span>
+            )}
+            <input
+              autoFocus
+              aria-label={`Rename ${slide.name}`}
+              value={renameValue}
+              onChange={(event) => setRenameValue(event.target.value)}
+              onBlur={cancelRename}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  cancelRename();
+                }
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+              className="workspace-focus min-w-0 flex-1 rounded-md border border-violet-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-zinc-900 dark:border-violet-700 dark:bg-zinc-950 dark:text-white"
+            />
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void go(slide.id, slide.name)}
+            onDoubleClick={() => canEdit && active && startRename(slide)}
+            className="workspace-focus flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium"
+          >
+            {enumerated && (
+              <span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">
+                {index + 1}.
+              </span>
+            )}
+            <span className="truncate">{slide.name}</span>
+          </button>
+        )}
+        {canEdit && active && slide.id === drawingId && (
+          <span className="mr-1 hidden gap-0.5 group-hover:flex">
+            <button
+              type="button"
+              disabled={index === 0}
+              onClick={() => void place(slide.id, collectionId, index - 1)}
+              className="workspace-focus rounded p-1 hover:bg-white disabled:opacity-30 dark:hover:bg-zinc-700"
+              aria-label="Move canvas earlier"
+            >
+              <ArrowUp size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() => void place(slide.id, collectionId, index + 1)}
+              className="workspace-focus rounded p-1 hover:bg-white dark:hover:bg-zinc-700"
+              aria-label="Move canvas later"
+            >
+              <ArrowDown size={11} />
+            </button>
+          </span>
+        )}
+        {canEdit && active && (
+          <EditorRailActions
+            slideName={slide.name}
+            onRename={() => startRename(slide)}
+            onDuplicate={() => void duplicateSlide(slide.id)}
+            onDelete={() => void deleteSlide(slide.id, index)}
+          />
+        )}
+      </div>
+    );
+  };
+
   const visibleProjects =
     projectScope === "all"
       ? projects
@@ -330,67 +435,9 @@ export const EditorProjectRail = ({
                   </div>
                   {expanded && (
                     <div className="pb-2 pl-3 pr-1">
-                      {projectSlides.map((slide, index) => (
-                        <div
-                          key={slide.id}
-                          draggable={canEdit && active && renamingSlideId !== slide.id}
-                          onDragStart={(event) => event.dataTransfer.setData("application/x-excalidash-slide", slide.id)}
-                          onDragOver={(event) => canEdit && event.preventDefault()}
-                          onDrop={(event) => {
-                            event.preventDefault();
-                            const dragged = event.dataTransfer.getData("application/x-excalidash-slide");
-                            if (dragged && dragged !== slide.id) void place(dragged, project.id, index);
-                          }}
-                          className={`group flex items-center gap-1 rounded-lg ${slideRowTone(slide.id === drawingId)}`}
-                        >
-                          {renamingSlideId === slide.id ? (
-                            <form
-                              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1"
-                              onSubmit={(event) => {
-                                event.preventDefault();
-                                void submitRename(slide.id);
-                              }}
-                            >
-                              <span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">{index + 1}.</span>
-                              <input
-                                autoFocus
-                                aria-label={`Rename ${slide.name}`}
-                                value={renameValue}
-                                onChange={(event) => setRenameValue(event.target.value)}
-                                onBlur={cancelRename}
-                                onKeyDown={(event) => {
-                                  if (event.key === "Escape") {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    cancelRename();
-                                  }
-                                }}
-                                onPointerDown={(event) => event.stopPropagation()}
-                                className="workspace-focus min-w-0 flex-1 rounded-md border border-violet-300 bg-white px-1.5 py-0.5 text-[11px] font-medium text-zinc-900 dark:border-violet-700 dark:bg-zinc-950 dark:text-white"
-                              />
-                            </form>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => void go(slide.id, slide.name)}
-                              onDoubleClick={() => canEdit && active && startRename(slide)}
-                              className="workspace-focus flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-medium"
-                            >
-                              <span className="w-4 shrink-0 text-right text-[10px] text-zinc-500">{index + 1}.</span>
-                              <span className="truncate">{slide.name}</span>
-                            </button>
-                          )}
-                          {canEdit && active && slide.id === drawingId && <span className="mr-1 hidden gap-0.5 group-hover:flex"><button type="button" disabled={index === 0} onClick={() => void place(slide.id, activeCollectionId, index - 1)} className="workspace-focus rounded p-1 hover:bg-white disabled:opacity-30 dark:hover:bg-zinc-700" aria-label="Move slide earlier"><ArrowUp size={11} /></button><button type="button" onClick={() => void place(slide.id, activeCollectionId, index + 1)} className="workspace-focus rounded p-1 hover:bg-white dark:hover:bg-zinc-700" aria-label="Move slide later"><ArrowDown size={11} /></button></span>}
-                          {canEdit && active && (
-                            <EditorRailActions
-                              slideName={slide.name}
-                              onRename={() => startRename(slide)}
-                              onDuplicate={() => void duplicateSlide(slide.id)}
-                              onDelete={() => void deleteSlide(slide.id, index)}
-                            />
-                          )}
-                        </div>
-                      ))}
+                      {projectSlides.map((slide, index) =>
+                        renderCanvasRow(slide, index, project.id, true),
+                      )}
                       {canEdit && active && <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300"><FilePlus2 size={13} /> Add canvas</button>}
                     </div>
                   )}
@@ -425,16 +472,9 @@ export const EditorProjectRail = ({
                 </div>
                 {otherExpanded && (
                   <div className="pb-2 pl-3 pr-1">
-                    {otherSlides.map((slide) => (
-                      <button
-                        key={slide.id}
-                        type="button"
-                        onClick={() => void go(slide.id, slide.name)}
-                        className={`workspace-focus block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11px] ${slideRowTone(slide.id === drawingId)}`}
-                      >
-                        {slide.name}
-                      </button>
-                    ))}
+                    {otherSlides.map((slide, index) =>
+                      renderCanvasRow(slide, index, null, false),
+                    )}
                     {canEdit && activeCollectionId === null && (
                       <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300"><FilePlus2 size={13} /> Add canvas</button>
                     )}

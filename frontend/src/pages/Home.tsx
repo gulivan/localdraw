@@ -187,10 +187,18 @@ export const Home = () => {
 };
 
 const UnfiledCard = ({ count, slide, onView }: { count: number; slide?: DrawingSummary; onView: () => void }) => (
-  <article className="h-[226px] overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-    <button type="button" onClick={onView} className="workspace-focus relative h-36 w-full"><SlideThumbnail drawing={slide} className="h-full w-full" /><span className="absolute left-3 top-3 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-zinc-700 px-1.5 text-[10px] font-semibold text-white" aria-label={`${count} ${count === 1 ? "canvas" : "canvases"}`} title={`${count} ${count === 1 ? "canvas" : "canvases"}`}>{count}</span></button>
-    <div className="flex h-20 items-center p-4"><h3 className="font-semibold">Other</h3></div>
-  </article>
+  <ProjectCard
+    project={{
+      id: "__other__",
+      name: "Other",
+      color: "#71717a",
+      createdAt: slide?.createdAt ?? 0,
+      drawingCount: count,
+      lastActivityAt: slide?.updatedAt,
+      latestDrawing: slide,
+    }}
+    onView={onView}
+  />
 );
 
 const SearchView = ({ query, projects, slides, onOpenProject, onOpenSlide }: { query: string; projects: Collection[]; slides: DrawingSummary[]; onOpenProject: (id: string) => void; onOpenSlide: (id: string) => void }) => (

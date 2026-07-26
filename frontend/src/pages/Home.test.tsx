@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   createDrawing: vi.fn(),
   getCollections: vi.fn(),
   getDrawings: vi.fn(),
+  projectCard: vi.fn(),
   uploadFiles: vi.fn(),
 }));
 
@@ -30,9 +31,10 @@ vi.mock("../components/workspace/SlideThumbnail", () => ({
 }));
 
 vi.mock("../components/workspace/ProjectCard", () => ({
-  ProjectCard: ({ project }: { project: { name: string } }) => (
-    <article>{project.name}</article>
-  ),
+  ProjectCard: ({ project }: { project: { name: string } }) => {
+    mocks.projectCard(project);
+    return <article>{project.name}</article>;
+  },
 }));
 
 vi.mock("../components/workspace/WorkspaceHeader", () => ({
@@ -152,5 +154,38 @@ describe("Home workspace", () => {
       }),
     );
     expect(await screen.findByText("Project destination")).toBeInTheDocument();
+  });
+
+  it("models Other with the same project card metadata", async () => {
+    const unfiledSlide = drawing({
+      id: "other-canvas",
+      name: "Loose canvas",
+      collectionId: null,
+      updatedAt: Date.now() - 180_000,
+    });
+    mocks.getDrawings.mockImplementation(
+      (_query?: string, collectionId?: string | null) =>
+        collectionId === null
+          ? Promise.resolve({ drawings: [unfiledSlide], totalCount: 8 })
+          : Promise.resolve({ drawings: [drawing()], totalCount: 1 }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("Other");
+    expect(mocks.projectCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Other",
+        drawingCount: 8,
+        lastActivityAt: unfiledSlide.updatedAt,
+        latestDrawing: unfiledSlide,
+      }),
+    );
   });
 });
