@@ -1,6 +1,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  Copy,
   FolderInput,
   MoreHorizontal,
   Pencil,
@@ -18,6 +19,7 @@ export const ProjectSlideCard = ({
   onOpen,
   onRename,
   onDelete,
+  onDuplicate,
   onMove,
   onReorder,
   onDropAt,
@@ -29,6 +31,7 @@ export const ProjectSlideCard = ({
   onOpen: () => void;
   onRename: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   onMove: (collectionId: string | null) => void;
   onReorder: (targetIndex: number) => void;
   onDropAt: (draggedId: string, targetIndex: number) => void;
@@ -43,9 +46,9 @@ export const ProjectSlideCard = ({
       const id = event.dataTransfer.getData("application/x-excalidash-slide");
       if (id && id !== slide.id) onDropAt(id, index);
     }}
-    className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+    className="group relative z-0 flex flex-col overflow-visible rounded-2xl border border-zinc-200 bg-white transition focus-within:z-30 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
   >
-    <button type="button" onClick={onOpen} className="workspace-focus relative h-40 w-full">
+    <button type="button" onClick={onOpen} className="workspace-focus relative h-40 w-full overflow-hidden rounded-t-[15px]">
       <SlideThumbnail drawing={slide} className="h-full w-full" />
       <span className="absolute left-3 top-3 flex h-7 min-w-7 items-center justify-center rounded-lg bg-white px-2 text-xs font-bold text-zinc-700 shadow-sm dark:bg-zinc-900 dark:text-zinc-200">
         {index + 1}
@@ -59,13 +62,14 @@ export const ProjectSlideCard = ({
         </span>
       </button>
       {canOrganize && (
-        <details className="relative">
+        <details className="relative open:z-30">
           <summary className="workspace-focus flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
             <MoreHorizontal size={17} />
             <span className="sr-only">Slide actions</span>
           </summary>
           <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-[0_4px_8px_rgba(24,24,27,0.12)] dark:border-zinc-700 dark:bg-zinc-900">
             <Action icon={<Pencil size={14} />} label="Rename" onClick={onRename} />
+            <Action icon={<Copy size={14} />} label="Duplicate" onClick={onDuplicate} />
             <Action icon={<ArrowUp size={14} />} label="Move earlier" disabled={index === 0} onClick={() => onReorder(index - 1)} />
             <Action icon={<ArrowDown size={14} />} label="Move later" onClick={() => onReorder(index + 1)} />
             <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />

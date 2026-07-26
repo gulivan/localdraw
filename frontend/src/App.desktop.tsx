@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
@@ -22,6 +22,11 @@ const protectedPage = (page: React.ReactNode) => (
   <ProtectedRoute>{page}</ProtectedRoute>
 );
 
+const CollectionsPage = () => {
+  const [searchParams] = useSearchParams();
+  return searchParams.get('id') === 'unorganized' ? <Project unfiled /> : <Dashboard />;
+};
+
 export default function DesktopApp() {
   return (
     <ThemeProvider>
@@ -32,7 +37,7 @@ export default function DesktopApp() {
               <Routes>
                 <Route path="/" element={protectedPage(<Home />)} />
                 <Route path="/projects/:id" element={protectedPage(<Project />)} />
-                <Route path="/collections" element={protectedPage(<Dashboard />)} />
+                <Route path="/collections" element={protectedPage(<CollectionsPage />)} />
                 <Route path="/settings" element={protectedPage(<Settings />)} />
                 <Route path="/editor/:id" element={protectedPage(<Editor />)} />
                 <Route path="*" element={<Navigate to="/" replace />} />

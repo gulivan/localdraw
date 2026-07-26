@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import {
   FilePlus2,
-  FolderPlus,
   LogOut,
   Moon,
   Search,
@@ -22,7 +21,6 @@ import { Logo } from "../Logo";
 type Props = {
   query: string;
   onQueryChange: (value: string) => void;
-  onNewProject: () => void;
   onNewSlide: () => void;
   onImport: (files: FileList | null) => void;
 };
@@ -30,7 +28,6 @@ type Props = {
 export const WorkspaceHeader = ({
   query,
   onQueryChange,
-  onNewProject,
   onNewSlide,
   onImport,
 }: Props) => {
@@ -60,7 +57,7 @@ export const WorkspaceHeader = ({
           <input
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search projects & slides…"
+            placeholder="Search"
             className="workspace-focus h-10 w-full rounded-xl border border-zinc-200 bg-zinc-100 pl-9 pr-3 text-sm text-zinc-950 placeholder:text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-400"
           />
         </label>
@@ -97,7 +94,6 @@ export const WorkspaceHeader = ({
                 </div>
               )}
               <MenuButton icon={<Upload size={15} />} label="Import slides" onClick={() => fileRef.current?.click()} />
-              <MenuButton icon={<FolderPlus size={15} />} label="New project" onClick={onNewProject} />
               <MenuButton icon={<Trash2 size={15} />} label="Trash" onClick={() => navigate("/collections?id=trash")} />
               <MenuButton icon={theme === "dark" ? <Sun size={15} /> : <Moon size={15} />} label={theme === "dark" ? "Light theme" : "Dark theme"} onClick={toggleTheme} />
               <MenuButton icon={<Settings size={15} />} label="Settings" onClick={() => navigate("/settings")} />

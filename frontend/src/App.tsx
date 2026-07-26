@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { UploadProvider } from './context/UploadContext';
 import { AuthProvider } from './context/AuthContext';
@@ -24,6 +24,11 @@ const PageLoader = () => (
     <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
   </div>
 );
+
+const CollectionsPage = () => {
+  const [searchParams] = useSearchParams();
+  return searchParams.get('id') === 'unorganized' ? <Project unfiled /> : <Dashboard />;
+};
 
 function App() {
   return (
@@ -58,7 +63,7 @@ function App() {
                   path="/collections"
                   element={
                     <ProtectedRoute>
-                      <Dashboard />
+                      <CollectionsPage />
                     </ProtectedRoute>
                   }
                 />

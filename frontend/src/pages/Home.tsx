@@ -107,7 +107,6 @@ export const Home = () => {
       <WorkspaceHeader
         query={query}
         onQueryChange={setQuery}
-        onNewProject={() => setNewProjectOpen(true)}
         onNewSlide={() => void createSlide()}
         onImport={(files) => void importFiles(files)}
       />
@@ -155,7 +154,7 @@ export const Home = () => {
 
             <section aria-labelledby="projects-title">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <h2 id="projects-title" className="text-2xl font-bold tracking-[-0.02em]">Your projects</h2>
+                <h2 id="projects-title" className="text-2xl font-bold tracking-[-0.02em]">Folders</h2>
                 <button
                   type="button"
                   onClick={() => setNewProjectOpen(true)}

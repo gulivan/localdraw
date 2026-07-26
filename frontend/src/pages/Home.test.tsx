@@ -39,11 +39,9 @@ vi.mock("../components/workspace/WorkspaceHeader", () => ({
   WorkspaceHeader: ({
     query,
     onQueryChange,
-    onNewProject,
   }: {
     query: string;
     onQueryChange: (value: string) => void;
-    onNewProject: () => void;
   }) => (
     <header>
       <input
@@ -51,9 +49,6 @@ vi.mock("../components/workspace/WorkspaceHeader", () => ({
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
       />
-      <button type="button" onClick={onNewProject}>
-        New project
-      </button>
     </header>
   ),
 }));
@@ -147,7 +142,7 @@ describe("Home workspace", () => {
     );
 
     await screen.findByText("Recent");
-    fireEvent.click(screen.getAllByRole("button", { name: "New project" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "New project" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm project" }));
 
     await waitFor(() =>
