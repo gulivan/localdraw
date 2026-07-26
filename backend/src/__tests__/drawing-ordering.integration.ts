@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  moveCollectionSlides,
   moveCollectionSlidesToUnfiled,
   placeDrawing,
 } from "../routes/dashboard/drawingOrdering";
@@ -120,6 +121,29 @@ describe("project slide ordering", () => {
     });
     expect(ordered).toEqual([
       { id: unfiled.id, sortOrder: 0 },
+      { id: first.id, sortOrder: 1 },
+      { id: second.id, sortOrder: 2 },
+    ]);
+  });
+
+  it("appends a deleted project's slides to Trash when requested", async () => {
+    const project = await createProject("Temporary");
+    const trash = await createProject("Trash");
+    const existing = await createSlide("Already deleted", trash.id, 0);
+    const first = await createSlide("Project one", project.id, 0);
+    const second = await createSlide("Project two", project.id, 1);
+
+    await prisma.$transaction((tx) =>
+      moveCollectionSlides(tx, project.id, userId, trash.id),
+    );
+
+    const ordered = await prisma.drawing.findMany({
+      where: { userId, collectionId: trash.id },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, sortOrder: true },
+    });
+    expect(ordered).toEqual([
+      { id: existing.id, sortOrder: 0 },
       { id: first.id, sortOrder: 1 },
       { id: second.id, sortOrder: 2 },
     ]);

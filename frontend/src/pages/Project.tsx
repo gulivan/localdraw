@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import * as api from "../api";
+import { ConfirmModal } from "../components/ConfirmModal";
 import { PROJECT_COLORS } from "../components/workspace/projectColors";
 import { ProjectSlideCard } from "../components/workspace/ProjectSlideCard";
 import { UploadStatus } from "../components/UploadStatus";
@@ -22,6 +23,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   const navigate = useNavigate();
   const { uploadFiles } = useUpload();
   const fileRef = useRef<HTMLInputElement>(null);
+  const colorPickerRef = useRef<HTMLDetailsElement>(null);
   const [projects, setProjects] = useState<Collection[]>([]);
   const [project, setProject] = useState<Collection | null>(null);
   const [slides, setSlides] = useState<DrawingSummary[]>([]);
@@ -29,6 +31,8 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   const [error, setError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState("");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteSlides, setDeleteSlides] = useState(false);
 
   const load = useCallback(async () => {
     if (!unfiled && !id) return;
@@ -143,9 +147,14 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   };
 
   const removeProject = async () => {
-    if (!project || !window.confirm(`Delete project “${project.name}”? Its slides will move to Unfiled.`)) return;
-    await api.deleteCollection(project.id);
+    if (!project) return;
+    await api.deleteCollection(project.id, { deleteSlides });
     navigate("/");
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setDeleteSlides(false);
   };
 
   if (loading) {
@@ -160,12 +169,12 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
       <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 dark:border-zinc-800 dark:bg-zinc-950/95">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
           <button type="button" onClick={() => navigate("/")} className="workspace-focus flex h-9 w-9 items-center justify-center rounded-xl text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800" aria-label="Back to Home"><ArrowLeft size={19} /></button>
-          <span className="h-8 w-1.5 rounded-full" style={{ backgroundColor: project.color || "#7c3aed" }} />
+          {!unfiled && <details ref={colorPickerRef} className="relative"><summary aria-label="Change project color" className="workspace-focus h-8 w-1.5 cursor-pointer list-none rounded-full [&::-webkit-details-marker]:hidden" style={{ backgroundColor: project.color || "#7c3aed" }} /><div className="absolute left-0 top-10 z-50 flex gap-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">{PROJECT_COLORS.map((color) => <button key={color} type="button" onClick={() => { colorPickerRef.current?.removeAttribute("open"); void updateColor(color); }} aria-label={`Use project color ${color}`} aria-pressed={project.color === color} className={`workspace-focus h-6 w-6 rounded-full border-2 border-white dark:border-zinc-900 ${project.color === color ? "ring-2 ring-zinc-900 ring-offset-1 dark:ring-zinc-100 dark:ring-offset-zinc-900" : ""}`} style={{ backgroundColor: color }} />)}</div></details>}
           <div className="min-w-0 flex-1">
             {renaming ? (
-              <form onSubmit={(event) => { event.preventDefault(); void saveName(); }}><input autoFocus value={name} onChange={(event) => setName(event.target.value)} onBlur={() => void saveName()} className="workspace-focus h-9 w-full max-w-md rounded-lg border border-violet-300 bg-zinc-100 px-2 text-sm font-semibold dark:bg-zinc-800" /></form>
+              <form onSubmit={(event) => { event.preventDefault(); void saveName(); }}><input autoFocus value={name} onChange={(event) => setName(event.target.value)} onBlur={() => void saveName()} className="workspace-focus h-10 w-full max-w-md rounded-lg border border-violet-300 bg-zinc-100 px-2 text-2xl font-bold tracking-[-0.02em] dark:bg-zinc-800" /></form>
             ) : (
-              <button type="button" onDoubleClick={() => !unfiled && setRenaming(true)} className="workspace-focus block max-w-full truncate rounded text-left text-sm font-bold">{project.name}</button>
+              <button type="button" onDoubleClick={() => !unfiled && setRenaming(true)} className="workspace-focus block max-w-full truncate rounded text-left text-2xl font-bold tracking-[-0.02em]">{project.name}</button>
             )}
             <p className="text-[11px] text-zinc-600 dark:text-zinc-400">{slides.length} slide{slides.length === 1 ? "" : "s"}</p>
           </div>
@@ -176,10 +185,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-7 sm:px-6">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div><h1 className="text-2xl font-bold tracking-[-0.02em]">{project.name}</h1>{!unfiled && <div className="mt-3 flex gap-2">{PROJECT_COLORS.map((color) => <button key={color} type="button" onClick={() => void updateColor(color)} aria-label={`Use project color ${color}`} aria-pressed={project.color === color} className={`workspace-focus h-6 w-6 rounded-full border-2 border-white dark:border-zinc-950 ${project.color === color ? "ring-2 ring-zinc-900 ring-offset-1 dark:ring-zinc-100 dark:ring-offset-zinc-950" : ""}`} style={{ backgroundColor: color }} />)}</div>}</div>
-          {!unfiled && <button type="button" onClick={() => void removeProject()} className="workspace-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><Trash2 size={14} /> Delete project</button>}
-        </div>
+        {!unfiled && <div className="mb-6 flex justify-end"><button type="button" onClick={() => setDeleteModalOpen(true)} className="workspace-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><Trash2 size={14} /> Delete project</button></div>}
         {slides.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 py-20 text-center dark:border-zinc-700">
             <FilePlus2 className="mx-auto text-zinc-400" />
@@ -198,6 +204,14 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
         )}
       </main>
       <UploadStatus />
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        title={`Delete project “${project.name}”?`}
+        message={<div className="space-y-4"><p>{deleteSlides ? "Its slides will move to Trash." : "Its slides will move to Unfiled."}</p><label className="workspace-focus flex cursor-pointer items-center justify-center gap-2 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"><input type="checkbox" checked={deleteSlides} onChange={(event) => setDeleteSlides(event.target.checked)} className="h-4 w-4 accent-rose-600" /><span>Delete slides too.</span></label></div>}
+        confirmText="Delete project"
+        onConfirm={() => void removeProject()}
+        onCancel={closeDeleteModal}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import express from "express";
 import { DashboardRouteDeps } from "./types";
 import { getUserTrashCollectionId, isTrashCollectionId } from "./trash";
-import { moveCollectionSlidesToUnfiled } from "./drawingOrdering";
+import { moveCollectionSlides, moveCollectionSlidesToUnfiled } from "./drawingOrdering";
 
 const projectColorPattern = /^#[0-9a-fA-F]{6}$/;
 
@@ -208,8 +208,15 @@ export const registerCollectionRoutes = (
       if (!collection)
         return res.status(404).json({ error: "Collection not found" });
 
+      const deleteSlides = req.query.deleteSlides === "true";
+      const trashCollectionId = getUserTrashCollectionId(req.user.id);
+      if (deleteSlides) await ensureTrashCollection(prisma, req.user.id);
       await prisma.$transaction(async (tx) => {
-        await moveCollectionSlidesToUnfiled(tx, id, req.user!.id);
+        if (deleteSlides) {
+          await moveCollectionSlides(tx, id, req.user!.id, trashCollectionId);
+        } else {
+          await moveCollectionSlidesToUnfiled(tx, id, req.user!.id);
+        }
         await tx.collection.deleteMany({ where: { id, userId: req.user!.id } });
       });
       invalidateDrawingsCache();
@@ -221,7 +228,7 @@ export const registerCollectionRoutes = (
           resource: `collection:${id}`,
           ipAddress: req.ip || req.connection.remoteAddress || undefined,
           userAgent: req.headers["user-agent"] || undefined,
-          details: { collectionId: id, collectionName: collection.name },
+          details: { collectionId: id, collectionName: collection.name, deleteSlides },
         });
       }
 

@@ -41,26 +41,33 @@ export const normalizeDrawingOrder = async (
   return drawings.map((drawing, sortOrder) => ({ ...drawing, sortOrder }));
 };
 
-export const moveCollectionSlidesToUnfiled = async (
+export const moveCollectionSlides = async (
   db: Database,
   collectionId: string,
   ownerUserId: string,
+  targetCollectionId: string | null,
 ) => {
   const slides = await db.drawing.findMany({
     where: { collectionId, userId: ownerUserId },
     select: { id: true },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
   });
-  const start = await getNextSortOrder(db, null, ownerUserId);
+  const start = await getNextSortOrder(db, targetCollectionId, ownerUserId);
   await Promise.all(
     slides.map((slide, index) =>
       db.drawing.update({
         where: { id: slide.id },
-        data: { collectionId: null, sortOrder: start + index },
+        data: { collectionId: targetCollectionId, sortOrder: start + index },
       }),
     ),
   );
 };
+
+export const moveCollectionSlidesToUnfiled = (
+  db: Database,
+  collectionId: string,
+  ownerUserId: string,
+) => moveCollectionSlides(db, collectionId, ownerUserId, null);
 
 export const placeDrawing = async (
   db: Database,

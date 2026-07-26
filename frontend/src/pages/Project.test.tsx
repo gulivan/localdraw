@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getCollections: vi.fn(),
   getDrawings: vi.fn(),
   placeDrawing: vi.fn(),
+  updateCollection: vi.fn(),
   updateDrawing: vi.fn(),
   uploadFiles: vi.fn(),
 }));
@@ -76,6 +77,13 @@ describe("Project workspace", () => {
     ]);
     mocks.getDrawings.mockResolvedValue({ drawings: slides, totalCount: 2 });
     mocks.placeDrawing.mockResolvedValue({ drawing: {}, orders: [] });
+    mocks.deleteCollection.mockResolvedValue({ success: true });
+    mocks.updateCollection.mockResolvedValue({
+      id: "project-1",
+      name: "Storyboard",
+      color: "#0284c7",
+      createdAt: 1,
+    });
     mocks.updateDrawing.mockResolvedValue({});
   });
 
@@ -109,6 +117,59 @@ describe("Project workspace", () => {
     await waitFor(() =>
       expect(mocks.updateDrawing).toHaveBeenCalledWith("slide-2", {
         collectionId: "trash",
+      }),
+    );
+  });
+
+  it("uses one large editable project title and reveals colors on demand", async () => {
+    render(
+      <MemoryRouter initialEntries={["/projects/project-1"]}>
+        <Routes>
+          <Route path="/projects/:id" element={<Project />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByRole("button", { name: "Storyboard" });
+    expect(title).toHaveClass("text-2xl");
+    expect(screen.queryByRole("heading", { name: "Storyboard" })).not.toBeInTheDocument();
+
+    const colorTrigger = screen.getByLabelText("Change project color");
+    const colorPicker = colorTrigger.closest("details");
+    expect(colorPicker).not.toHaveAttribute("open");
+    fireEvent.click(colorTrigger);
+    expect(colorPicker).toHaveAttribute("open");
+    fireEvent.click(screen.getByRole("button", { name: "Use project color #0284c7" }));
+    expect(colorPicker).not.toHaveAttribute("open");
+
+    await waitFor(() =>
+      expect(mocks.updateCollection).toHaveBeenCalledWith("project-1", {
+        color: "#0284c7",
+      }),
+    );
+  });
+
+  it("offers to move slides to Trash when deleting a project", async () => {
+    render(
+      <MemoryRouter initialEntries={["/projects/project-1"]}>
+        <Routes>
+          <Route path="/projects/:id" element={<Project />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Delete project" }));
+    expect(screen.getByText("Delete project “Storyboard”?")).toBeInTheDocument();
+    expect(screen.getByText("Its slides will move to Unfiled.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Delete slides too." }));
+    expect(screen.getByText("Its slides will move to Trash.")).toBeInTheDocument();
+    const deleteButtons = screen.getAllByRole("button", { name: "Delete project" });
+    fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+
+    await waitFor(() =>
+      expect(mocks.deleteCollection).toHaveBeenCalledWith("project-1", {
+        deleteSlides: true,
       }),
     );
   });

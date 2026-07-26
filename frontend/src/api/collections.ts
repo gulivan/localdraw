@@ -46,8 +46,13 @@ export const updateCollection = async (
   return deserializeCollection(response.data);
 };
 
-export const deleteCollection = async (id: string) => {
-  const response = await api.delete<{ success: true }>(`/collections/${id}`);
+export const deleteCollection = async (
+  id: string,
+  options?: { deleteSlides?: boolean },
+) => {
+  const response = await api.delete<{ success: true }>(`/collections/${id}`, {
+    params: options?.deleteSlides ? { deleteSlides: "true" } : undefined,
+  });
   return response.data;
 };
 
