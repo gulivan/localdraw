@@ -100,7 +100,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   };
 
   const createSlide = async () => {
-    const drawing = await api.createDrawing(`Slide ${slides.length + 1}`, collectionId);
+    const drawing = await api.createDrawing(`Canvas ${slides.length + 1}`, collectionId);
     navigate(`/editor/${drawing.id}`, {
       state: disposableDraftNavigationState(drawing),
     });
@@ -124,7 +124,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   };
 
   const renameSlide = async (slide: DrawingSummary) => {
-    const nextName = window.prompt("Rename slide", slide.name)?.trim();
+    const nextName = window.prompt("Rename canvas", slide.name)?.trim();
     if (!nextName) return;
     setSlides((current) =>
       current.map((item) =>
@@ -157,7 +157,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
       await api.duplicateDrawing(slideId);
       await load();
     } catch (duplicateError) {
-      console.error("Failed to duplicate slide", duplicateError);
+      console.error("Failed to duplicate canvas", duplicateError);
     }
   };
 
@@ -259,7 +259,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
           </div>
           {!unfiled && <button type="button" onClick={() => setRenaming(true)} className="workspace-focus hidden h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 sm:flex"><Pencil size={14} /> Rename</button>}
           <button type="button" onClick={() => fileRef.current?.click()} className="workspace-focus flex h-9 items-center gap-1.5 rounded-xl border border-zinc-200 px-3 text-xs font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"><Upload size={14} /><span className="hidden sm:inline">Import</span></button>
-          <button type="button" onClick={() => void createSlide()} className="workspace-focus flex h-9 items-center gap-1.5 rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700"><FilePlus2 size={14} /> Add slide</button>
+          <button type="button" onClick={() => void createSlide()} className="workspace-focus flex h-9 items-center gap-1.5 rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700"><FilePlus2 size={14} /> Add canvas</button>
           <input ref={fileRef} type="file" accept=".json,.excalidraw" multiple className="hidden" onChange={(event) => { void importFiles(event.target.files); event.target.value = ""; }} />
         </div>
       </header>
@@ -280,12 +280,12 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
         {slides.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 py-20 text-center dark:border-zinc-700">
             <FilePlus2 className="mx-auto text-zinc-400" />
-            <h2 className="mt-3 text-sm font-semibold">No slides yet</h2>
+            <h2 className="mt-3 text-sm font-semibold">No canvases yet</h2>
             <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-              Add a slide to start this project.
+              Add a canvas to start this project.
             </p>
             <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-4 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white">
-              Add first slide
+              Add first canvas
             </button>
           </div>
         ) : (
@@ -323,7 +323,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
       <ConfirmModal
         isOpen={deleteModalOpen}
         title={`Delete project “${project.name}”?`}
-        message={<div className="space-y-4"><p>{deleteSlides ? "Its slides will move to Trash." : "Its slides will move to Other."}</p><label className="workspace-focus flex cursor-pointer items-center justify-center gap-2 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"><input type="checkbox" checked={deleteSlides} onChange={(event) => setDeleteSlides(event.target.checked)} className="h-4 w-4 accent-rose-600" /><span>Delete slides too.</span></label></div>}
+        message={<div className="space-y-4"><p>{deleteSlides ? "Its canvases will move to Trash." : "Its canvases will move to Other."}</p><label className="workspace-focus flex cursor-pointer items-center justify-center gap-2 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"><input type="checkbox" checked={deleteSlides} onChange={(event) => setDeleteSlides(event.target.checked)} className="h-4 w-4 accent-rose-600" /><span>Delete canvases too.</span></label></div>}
         confirmText="Delete project"
         onConfirm={() => void removeProject()}
         onCancel={closeDeleteModal}

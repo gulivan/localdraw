@@ -143,7 +143,7 @@ export const EditorProjectRail = ({
         try {
           await loadProjectSlides(collectionId);
         } catch (error) {
-          console.error("Failed to load project slides", error);
+          console.error("Failed to load project canvases", error);
         }
       }
     },
@@ -177,7 +177,7 @@ export const EditorProjectRail = ({
         await load();
       }
     } catch (error) {
-      console.error("Failed to place slide", error);
+      console.error("Failed to place canvas", error);
     }
   };
 
@@ -198,7 +198,7 @@ export const EditorProjectRail = ({
       await api.duplicateDrawing(slideId);
       await load();
     } catch (error) {
-      console.error("Failed to duplicate slide", error);
+      console.error("Failed to duplicate canvas", error);
     }
   };
 
@@ -235,7 +235,7 @@ export const EditorProjectRail = ({
       onDrawingRenamed?.(slideId, name);
       cancelRename();
     } catch (error) {
-      console.error("Failed to rename slide", error);
+      console.error("Failed to rename canvas", error);
     }
   };
 
@@ -257,7 +257,7 @@ export const EditorProjectRail = ({
         onNavigate?.();
       }
     } catch (error) {
-      console.error("Failed to delete slide", error);
+      console.error("Failed to delete canvas", error);
     }
   };
 
@@ -386,7 +386,7 @@ export const EditorProjectRail = ({
         </button>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="Projects and slides">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="Projects and canvases">
         <button type="button" onClick={() => void onNavigateTo("/")} className="workspace-focus mb-3 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-200 dark:text-zinc-200 dark:hover:bg-zinc-800"><Home size={15} /> Home</button>
         {loading ? (
           <div className="flex justify-center py-8 text-violet-600"><Loader2 size={18} className="animate-spin" /></div>

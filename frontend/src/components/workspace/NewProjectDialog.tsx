@@ -49,7 +49,7 @@ export const NewProjectDialog = ({
           </span>
           <div className="min-w-0 flex-1">
             <h2 id="new-project-title" className="text-lg font-bold tracking-tight">New project</h2>
-            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Start an ordered set of Excalidraw slides.</p>
+            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Start an ordered set of Excalidraw canvases.</p>
           </div>
           <button type="button" onClick={onClose} className="workspace-focus rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800" aria-label="Close new project dialog">
             <X size={17} />

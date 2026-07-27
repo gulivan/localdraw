@@ -6,11 +6,11 @@ product
 
 ## Users
 
-People running ExcaliDash for their own drawing library, either as a self-hosted web app or as the LocalDraw desktop app, plus collaborators invited to shared drawings. They usually arrive to resume a recent drawing, find a project, or add the next slide without managing infrastructure or thinking about storage.
+People running ExcaliDash for their own drawing library, either as a self-hosted web app or as the LocalDraw desktop app, plus collaborators invited to shared drawings. They usually arrive to resume a recent drawing, find a project, or add the next canvas without managing infrastructure or thinking about storage.
 
 ## Product Purpose
 
-ExcaliDash is the durable workspace around Excalidraw. It turns individual canvases into an organized, resumable library of projects and ordered slides while preserving Excalidraw's familiar editor and supporting self-hosted collaboration. Success means a user can reopen the app, understand where their work lives, and continue drawing in seconds.
+ExcaliDash is the durable workspace around Excalidraw. It turns individual canvases into an organized, resumable library of projects while preserving Excalidraw's familiar editor and supporting self-hosted collaboration. Success means a user can reopen the app, understand where their work lives, and continue drawing in seconds.
 
 ## Brand Personality
 
@@ -27,10 +27,10 @@ Calm, personal, immediate. The workspace should feel dependable and close to the
 
 1. Resume before organizing: recent work and a clear continuation path lead the experience.
 2. The drawing is the product: surrounding chrome stays compact and yields to Excalidraw.
-3. Projects provide continuity: ordered slides, project context, and safe movement are visible everywhere they matter.
+3. Projects provide continuity: ordered canvases, project context, and safe movement are visible everywhere they matter.
 4. Storage language stays honest: desktop and hosted persistence are described differently.
 5. Familiar controls earn trust: standard navigation, menus, focus behavior, and reversible organization actions beat novelty.
-6. Projects have one owner: project membership and slide order stay private to that owner's workspace, while collaboration is granted explicitly per drawing.
+6. Projects have one owner: project membership and canvas order stay private to that owner's workspace, while collaboration is granted explicitly per drawing.
 7. Files remain yours: LocalDraw uses readable `.excalidraw` files as its durable desktop format, with disposable indexes and hidden metadata only where ordering and version restoration require them.
 
 ## Accessibility & Inclusion

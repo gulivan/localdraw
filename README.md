@@ -23,9 +23,9 @@ A self-hosted dashboard and organizer for [Excalidraw](https://github.com/excali
 ## Features
 
 <details>
-<summary>Projects with ordered slides and a resume-first home</summary>
+<summary>Projects with ordered canvases and a resume-first home</summary>
 
-Group drawings into color-coded projects, keep their slides in a deliberate
+Group drawings into color-coded projects, keep their canvases in a deliberate
 order, and jump back into recent work from the workspace home.
 
 </details>
@@ -80,7 +80,7 @@ Automatically retain recent drawing snapshots, preview past versions from the ed
 </details>
 
 <details>
-<summary>Drag and drop slides into projects</summary>
+<summary>Drag and drop canvases into projects</summary>
 
 ![](readme-assets/collections.gif)
 
@@ -91,7 +91,7 @@ Automatically retain recent drawing snapshots, preview past versions from the ed
 
 Export a `.localdraw` archive containing projects as folders and drawings as
 ordinary `.excalidraw` files. Import individual `.excalidraw` or JSON drawings
-from All slides.
+from All items.
 
 </details>
 

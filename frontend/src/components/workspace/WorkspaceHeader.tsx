@@ -50,7 +50,7 @@ export const WorkspaceHeader = ({
         </button>
 
         <label className="relative order-3 w-full min-w-0 flex-1 sm:order-none sm:ml-3 sm:max-w-md">
-          <span className="sr-only">Search projects and slides</span>
+          <span className="sr-only">Search projects and canvases</span>
           <Search
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
@@ -94,7 +94,7 @@ export const WorkspaceHeader = ({
                   <div className="truncate text-[11px] text-zinc-600 dark:text-zinc-400">{user.email}</div>
                 </div>
               )}
-              <MenuButton icon={<Upload size={15} />} label="Import slides" onClick={() => fileRef.current?.click()} />
+              <MenuButton icon={<Upload size={15} />} label="Import canvases" onClick={() => fileRef.current?.click()} />
               <MenuButton icon={<Trash2 size={15} />} label="Trash" onClick={() => navigate("/collections?id=trash")} />
               <MenuButton icon={theme === "dark" ? <Sun size={15} /> : <Moon size={15} />} label={theme === "dark" ? "Light theme" : "Dark theme"} onClick={toggleTheme} />
               <MenuButton icon={<Settings size={15} />} label="Settings" onClick={() => navigate("/settings")} />

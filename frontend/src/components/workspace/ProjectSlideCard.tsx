@@ -87,7 +87,7 @@ export const ProjectSlideCard = ({
         <details className="relative open:z-30">
           <summary className="workspace-focus flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
             <MoreHorizontal size={17} />
-            <span className="sr-only">Slide actions</span>
+            <span className="sr-only">Canvas actions</span>
           </summary>
           <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-[0_4px_8px_rgba(24,24,27,0.12)] dark:border-zinc-700 dark:bg-zinc-900">
             <Action icon={<Pencil size={14} />} label="Rename" onClick={onRename} />

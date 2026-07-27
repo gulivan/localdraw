@@ -111,7 +111,7 @@ describe("Project workspace", () => {
     mocks.updateDrawing.mockResolvedValue({});
   });
 
-  it("loads slides in project order and exposes accessible organization actions", async () => {
+  it("loads canvases in project order and exposes accessible organization actions", async () => {
     render(
       <MemoryRouter initialEntries={["/projects/project-1"]}>
         <Routes>
@@ -173,7 +173,7 @@ describe("Project workspace", () => {
     );
   });
 
-  it("offers to move slides to Trash when deleting a project", async () => {
+  it("offers to move canvases to Trash when deleting a project", async () => {
     render(
       <MemoryRouter initialEntries={["/projects/project-1"]}>
         <Routes>
@@ -184,10 +184,10 @@ describe("Project workspace", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Delete project" }));
     expect(screen.getByText("Delete project “Storyboard”?")).toBeInTheDocument();
-    expect(screen.getByText("Its slides will move to Other.")).toBeInTheDocument();
+    expect(screen.getByText("Its canvases will move to Other.")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Delete slides too." }));
-    expect(screen.getByText("Its slides will move to Trash.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Delete canvases too." }));
+    expect(screen.getByText("Its canvases will move to Trash.")).toBeInTheDocument();
     const deleteButtons = screen.getAllByRole("button", { name: "Delete project" });
     fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 

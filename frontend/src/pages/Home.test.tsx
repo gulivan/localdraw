@@ -75,7 +75,7 @@ vi.mock("../components/workspace/NewProjectDialog", () => ({
 
 const drawing = (overrides: Record<string, unknown> = {}) => ({
   id: "slide-1",
-  name: "Opening slide",
+  name: "Opening canvas",
   collectionId: "project-1",
   sortOrder: 0,
   version: 1,
@@ -113,7 +113,7 @@ describe("Home workspace", () => {
     mocks.createCollection.mockResolvedValue({ id: "project-new" });
   });
 
-  it("loads resume content and searches slides without losing project context", async () => {
+  it("loads resume content and searches canvases without losing project context", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
@@ -125,7 +125,7 @@ describe("Home workspace", () => {
     expect(await screen.findByText("Recent")).toBeInTheDocument();
     expect(screen.getByText("Product story")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "All items" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Opening slide/ })).not.toHaveClass(
+    expect(screen.getByRole("button", { name: /^Opening canvas/ })).not.toHaveClass(
       "hover:-translate-y-0.5",
     );
     expect(mocks.getDrawings).toHaveBeenCalledWith(
@@ -142,7 +142,7 @@ describe("Home workspace", () => {
     expect(screen.getByText("Results for “needle”")).toBeInTheDocument();
   });
 
-  it("creates a project with its initial slide option", async () => {
+  it("creates a project with its initial canvas option", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
