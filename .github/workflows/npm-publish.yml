@@ -31,6 +31,22 @@ jobs:
       - name: Use current npm with trusted publishing support
         run: npm install --global npm@latest
 
+      - name: Verify matching native release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}-desktop"
+          ASSETS=$(gh release view "$TAG" --repo gulivan/localdraw --json assets --jq '.assets[].name')
+          for ASSET in \
+            "localdraw-${VERSION}-darwin-arm64.dmg" \
+            "localdraw-${VERSION}-darwin-x64.dmg" \
+            "localdraw-${VERSION}-linux-x64.tar.gz" \
+            "localdraw-${VERSION}-win-x64-portable.exe"; do
+            grep -Fxq "$ASSET" <<<"$ASSETS"
+            grep -Fxq "${ASSET}.sha256" <<<"$ASSETS"
+          done
+
       - name: Verify package contents
         run: npm pack --dry-run
 

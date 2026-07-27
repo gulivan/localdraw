@@ -1,14 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getInstallLayout, getTarget } from "../lib/platform.js";
+import { APP_VERSION, RELEASE_VERSION, getInstallLayout, getTarget } from "../lib/platform.js";
+
+test("derives the native release from the npm package version", () => {
+  assert.equal(APP_VERSION, "0.5.11");
+  assert.equal(RELEASE_VERSION, `${APP_VERSION}-desktop`);
+});
 
 test("maps supported platforms to release assets", () => {
-  assert.equal(getTarget("darwin", "arm64").archive, "localdraw-0.5.9-darwin-arm64.dmg");
-  assert.equal(getTarget("darwin", "x64").archive, "localdraw-0.5.9-darwin-x64.dmg");
-  assert.equal(getTarget("linux", "x64").archive, "localdraw-0.5.9-linux-x64.tar.gz");
+  assert.equal(getTarget("darwin", "arm64").archive, `localdraw-${APP_VERSION}-darwin-arm64.dmg`);
+  assert.equal(getTarget("darwin", "x64").archive, `localdraw-${APP_VERSION}-darwin-x64.dmg`);
+  assert.equal(getTarget("linux", "x64").archive, `localdraw-${APP_VERSION}-linux-x64.tar.gz`);
   assert.equal(
     getTarget("win32", "arm64").archive,
-    "localdraw-0.5.9-win-x64-portable.exe",
+    `localdraw-${APP_VERSION}-win-x64-portable.exe`,
   );
 });
 

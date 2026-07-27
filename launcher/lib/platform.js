@@ -1,8 +1,13 @@
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-export const RELEASE_VERSION = "0.5.9-desktop";
-export const APP_VERSION = RELEASE_VERSION.replace(/-desktop$/, "");
+const packageJson = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+);
+
+export const APP_VERSION = packageJson.version;
+export const RELEASE_VERSION = `${APP_VERSION}-desktop`;
 
 export const getTarget = (platform = process.platform, arch = process.arch) => {
   if (platform === "darwin" && ["arm64", "x64"].includes(arch)) {

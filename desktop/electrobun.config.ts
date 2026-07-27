@@ -1,10 +1,15 @@
 import type { ElectrobunConfig } from "electrobun";
+import { readFileSync } from "node:fs";
+
+const packageJson = JSON.parse(
+  readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 export default {
   app: {
     name: "LocalDraw",
     identifier: "dev.gulivan.excalidash",
-    version: "0.5.10",
+    version: packageJson.version,
   },
   runtime: {
     exitOnLastWindowClosed: true,
