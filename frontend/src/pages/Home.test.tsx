@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Home } from "./Home";
 
@@ -84,6 +84,18 @@ const drawing = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const ProjectDestination = () => {
+  const location = useLocation();
+  const state = location.state as {
+    disposableDraft?: { drawingId?: string; updatedAt?: number };
+  } | null;
+  return (
+    <div>
+      Project destination {state?.disposableDraft?.drawingId ?? "without draft"}
+    </div>
+  );
+};
+
 describe("Home workspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,7 +122,10 @@ describe("Home workspace", () => {
       }
       return Promise.resolve({ drawings: [drawing()], totalCount: 1 });
     });
-    mocks.createCollection.mockResolvedValue({ id: "project-new" });
+    mocks.createCollection.mockResolvedValue({
+      id: "project-new",
+      initialDrawing: { id: "canvas-initial", updatedAt: 1234 },
+    });
   });
 
   it("loads resume content and searches canvases without losing project context", async () => {
@@ -147,7 +162,7 @@ describe("Home workspace", () => {
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/projects/:id" element={<div>Project destination</div>} />
+          <Route path="/projects/:id" element={<ProjectDestination />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -162,7 +177,9 @@ describe("Home workspace", () => {
         createInitialDrawing: true,
       }),
     );
-    expect(await screen.findByText("Project destination")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Project destination canvas-initial"),
+    ).toBeInTheDocument();
   });
 
   it("models Other with the same project card metadata", async () => {

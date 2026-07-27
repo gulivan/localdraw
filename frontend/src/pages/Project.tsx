@@ -9,12 +9,15 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { PROJECT_COLORS } from "../components/workspace/projectColors";
 import { ProjectSlideCard } from "../components/workspace/ProjectSlideCard";
-import { disposableDraftNavigationState } from "./editor/disposableDraft";
+import {
+  disposableDraftNavigationState,
+  readDisposableDraft,
+} from "./editor/disposableDraft";
 import { UploadStatus } from "../components/UploadStatus";
 import { useUpload } from "../context/UploadContext";
 import type { Collection, DrawingSummary } from "../types";
@@ -24,6 +27,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   const { id } = useParams<{ id: string }>();
   const collectionId: string | null = unfiled ? null : (id ?? null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { uploadFiles } = useUpload();
   const fileRef = useRef<HTMLInputElement>(null);
   const colorPickerRef = useRef<HTMLDetailsElement>(null);
@@ -104,6 +108,14 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
     navigate(`/editor/${drawing.id}`, {
       state: disposableDraftNavigationState(drawing),
     });
+  };
+
+  const openCanvas = (canvas: DrawingSummary) => {
+    const initialDraft = readDisposableDraft(location.state, canvas.id);
+    navigate(
+      `/editor/${canvas.id}`,
+      initialDraft ? { state: { disposableDraft: initialDraft } } : undefined,
+    );
   };
 
   const saveName = async () => {
@@ -290,7 +302,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {slides.map((slide, index) => <ProjectSlideCard key={slide.id} slide={slide} index={index} projects={projects} canOrganize isSelected={selectedIds.has(slide.id)} onToggleSelection={() => toggleSlideSelection(slide.id)} onOpen={() => navigate(`/editor/${slide.id}`)} onRename={() => void renameSlide(slide)} onDelete={() => void moveSlideToTrash(slide.id)} onDuplicate={() => void duplicateSlide(slide.id)} onMove={(targetCollectionId) => void place(slide.id, targetCollectionId, projects.find((item) => item.id === targetCollectionId)?.drawingCount ?? 0)} onReorder={(targetIndex) => void place(slide.id, collectionId, targetIndex)} onDropAt={(draggedId, targetIndex) => void place(draggedId, collectionId, targetIndex)} />)}
+            {slides.map((slide, index) => <ProjectSlideCard key={slide.id} slide={slide} index={index} projects={projects} canOrganize isSelected={selectedIds.has(slide.id)} onToggleSelection={() => toggleSlideSelection(slide.id)} onOpen={() => openCanvas(slide)} onRename={() => void renameSlide(slide)} onDelete={() => void moveSlideToTrash(slide.id)} onDuplicate={() => void duplicateSlide(slide.id)} onMove={(targetCollectionId) => void place(slide.id, targetCollectionId, projects.find((item) => item.id === targetCollectionId)?.drawingCount ?? 0)} onReorder={(targetIndex) => void place(slide.id, collectionId, targetIndex)} onDropAt={(draggedId, targetIndex) => void place(draggedId, collectionId, targetIndex)} />)}
           </div>
         )}
       </main>

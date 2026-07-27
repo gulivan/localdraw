@@ -15,6 +15,7 @@ const updateDrawing = vi.fn();
 const createDrawing = vi.fn();
 const duplicateDrawing = vi.fn();
 const placeDrawing = vi.fn();
+const deleteDrawingIfUntouched = vi.fn();
 
 vi.mock("../../api", () => ({
   getDrawing: (...args: unknown[]) => getDrawing(...args),
@@ -24,6 +25,8 @@ vi.mock("../../api", () => ({
   createDrawing: (...args: unknown[]) => createDrawing(...args),
   duplicateDrawing: (...args: unknown[]) => duplicateDrawing(...args),
   updateDrawing: (...args: unknown[]) => updateDrawing(...args),
+  deleteDrawingIfUntouched: (...args: unknown[]) =>
+    deleteDrawingIfUntouched(...args),
 }));
 
 const project = {
@@ -51,6 +54,7 @@ const projectSlide = {
 const renderRail = (
   projectScope: "current" | "all",
   drawing = otherSlide,
+  onSelectDrawing = vi.fn().mockResolvedValue(true),
 ) => {
   const onNavigateTo = vi.fn().mockResolvedValue(true);
   const onDrawingRenamed = vi.fn();
@@ -61,12 +65,12 @@ const renderRail = (
       drawingNameSourceId={drawing.id}
       canEdit
       projectScope={projectScope}
-      onSelectDrawing={vi.fn().mockResolvedValue(true)}
+      onSelectDrawing={onSelectDrawing}
       onNavigateTo={onNavigateTo}
       onDrawingRenamed={onDrawingRenamed}
     />,
   );
-  return { onNavigateTo, onDrawingRenamed };
+  return { onNavigateTo, onDrawingRenamed, onSelectDrawing };
 };
 
 describe("EditorProjectRail project visibility", () => {
@@ -85,6 +89,8 @@ describe("EditorProjectRail project visibility", () => {
     duplicateDrawing.mockResolvedValue(undefined);
     placeDrawing.mockReset();
     placeDrawing.mockResolvedValue(undefined);
+    deleteDrawingIfUntouched.mockReset();
+    deleteDrawingIfUntouched.mockResolvedValue(true);
     getDrawing.mockResolvedValue({ ...otherSlide, elements: [], appState: {}, files: {} });
     getCollections.mockResolvedValue([project]);
     getDrawings.mockImplementation(
@@ -216,6 +222,61 @@ describe("EditorProjectRail project visibility", () => {
     await waitFor(() =>
       expect(createDrawing).toHaveBeenCalledWith("Canvas 2", project.id),
     );
+  });
+
+  it("uses the highest numbered canvas name after earlier drafts are removed", async () => {
+    const canvasThree = {
+      ...projectSlide,
+      id: "canvas-3",
+      name: "Canvas 3",
+    };
+    getDrawing.mockResolvedValue({
+      ...canvasThree,
+      elements: [],
+      appState: {},
+      files: {},
+    });
+    getDrawings.mockResolvedValue({
+      drawings: [
+        { ...projectSlide, name: "Canvas 1" },
+        canvasThree,
+      ],
+      totalCount: 2,
+    });
+    renderRail("current", canvasThree);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add canvas" }));
+
+    await waitFor(() =>
+      expect(createDrawing).toHaveBeenCalledWith("Canvas 4", project.id),
+    );
+  });
+
+  it("allows only one canvas creation request at a time", async () => {
+    let finishCreation!: (drawing: { id: string; updatedAt: number }) => void;
+    createDrawing.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishCreation = resolve;
+        }),
+    );
+    getDrawing.mockResolvedValue({
+      ...projectSlide,
+      elements: [],
+      appState: {},
+      files: {},
+    });
+    renderRail("current", projectSlide);
+
+    const addCanvas = await screen.findByRole("button", { name: "Add canvas" });
+    fireEvent.click(addCanvas);
+    fireEvent.click(addCanvas);
+
+    expect(createDrawing).toHaveBeenCalledTimes(1);
+    expect(addCanvas).toBeDisabled();
+
+    finishCreation({ id: "canvas-new", updatedAt: 2 });
+    await waitFor(() => expect(addCanvas).toBeEnabled());
   });
 
   it("cancels inline renaming when focus moves elsewhere", async () => {

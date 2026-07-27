@@ -20,6 +20,12 @@ const deserializeCollection = (collection: Collection): Collection => ({
         updatedAt: timestamp(collection.latestDrawing.updatedAt),
       }
     : null,
+  initialDrawing: collection.initialDrawing
+    ? {
+        ...collection.initialDrawing,
+        updatedAt: timestamp(collection.initialDrawing.updatedAt),
+      }
+    : undefined,
 });
 
 export const getCollections = async (options?: { includeOverview?: boolean }) => {

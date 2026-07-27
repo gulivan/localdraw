@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Project } from "./Project";
 
@@ -29,6 +29,7 @@ vi.mock("../components/workspace/ProjectSlideCard", () => ({
     slide,
     index,
     onDelete,
+    onOpen,
     onReorder,
     isSelected,
     onToggleSelection,
@@ -36,6 +37,7 @@ vi.mock("../components/workspace/ProjectSlideCard", () => ({
     slide: { name: string };
     index: number;
     onDelete: () => void;
+    onOpen: () => void;
     onReorder: (targetIndex: number) => void;
     isSelected: boolean;
     onToggleSelection: () => void;
@@ -55,9 +57,20 @@ vi.mock("../components/workspace/ProjectSlideCard", () => ({
       <button type="button" onClick={onDelete}>
         Trash {slide.name}
       </button>
+      <button type="button" onClick={onOpen}>
+        Open {slide.name}
+      </button>
     </article>
   ),
 }));
+
+const EditorDestination = () => {
+  const location = useLocation();
+  const state = location.state as {
+    disposableDraft?: { drawingId?: string; updatedAt?: number };
+  } | null;
+  return <div>Editor draft {state?.disposableDraft?.drawingId ?? "none"}</div>;
+};
 
 const slides = [
   {
@@ -143,6 +156,30 @@ describe("Project workspace", () => {
         collectionId: "trash",
       }),
     );
+  });
+
+  it("forwards a new project's initial canvas draft marker to the editor", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/projects/project-1",
+            state: {
+              disposableDraft: { drawingId: "slide-1", updatedAt: 1 },
+            },
+          },
+        ]}
+      >
+        <Routes>
+          <Route path="/projects/:id" element={<Project />} />
+          <Route path="/editor/:id" element={<EditorDestination />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open First" }));
+
+    expect(await screen.findByText("Editor draft slide-1")).toBeInTheDocument();
   });
 
   it("uses one large editable project title and reveals colors on demand", async () => {

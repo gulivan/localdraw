@@ -180,7 +180,12 @@ export const Home = () => {
       </main>
       <NewProjectDialog open={newProjectOpen} onClose={() => setNewProjectOpen(false)} onCreate={async (name, color) => {
         const project = await api.createCollection(name, { color, createInitialDrawing: true });
-        navigate(`/projects/${project.id}`);
+        navigate(
+          `/projects/${project.id}`,
+          project.initialDrawing
+            ? { state: disposableDraftNavigationState(project.initialDrawing) }
+            : undefined,
+        );
       }} />
       <UploadStatus />
     </div>

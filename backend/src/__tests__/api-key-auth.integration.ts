@@ -182,6 +182,10 @@ describe("API key authentication", () => {
     expect(createResponse.status).toBe(200);
     expect(createResponse.body?.color).toBe("#0ea5e9");
     expect(createResponse.body?.initialDrawingId).toEqual(expect.any(String));
+    expect(createResponse.body?.initialDrawing).toEqual({
+      id: createResponse.body.initialDrawingId,
+      updatedAt: expect.any(String),
+    });
 
     const overviewResponse = await request(app)
       .get("/collections?includeOverview=true")

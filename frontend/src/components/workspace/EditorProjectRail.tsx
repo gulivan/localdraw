@@ -23,6 +23,7 @@ import type { DisposableDraft } from "../../pages/editor/disposableDraft";
 import type { EditorSidebarScope } from "../../utils/editorSidebar";
 
 const OTHER_PROJECT_KEY = "__other__";
+const NUMBERED_CANVAS_NAME = /^Canvas\s+(\d+)$/i;
 
 const slideRowTone = (active: boolean) =>
   active
@@ -66,7 +67,9 @@ export const EditorProjectRail = ({
   const [renamingSlideId, setRenamingSlideId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const hasLoadedRef = useRef(false);
+  const isCreatingRef = useRef(false);
 
   const loadProjectSlides = useCallback(
     async (collectionId: string | null) => {
@@ -166,6 +169,7 @@ export const EditorProjectRail = ({
   ) => {
     const switched = await onSelectDrawing(id, name, disposableDraft);
     if (switched) onNavigate?.();
+    return switched;
   };
 
   const place = async (slideId: string, collectionId: string | null, targetIndex: number) => {
@@ -182,15 +186,41 @@ export const EditorProjectRail = ({
   };
 
   const createSlide = async () => {
-    const name = `Canvas ${slides.length + 1}`;
-    const created = await api.createDrawing(
-      name,
-      activeCollectionId,
-    );
-    await go(created.id, name, {
-      drawingId: created.id,
-      updatedAt: created.updatedAt,
-    });
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
+    setIsCreating(true);
+    let created: DrawingSummary | null = null;
+    let switched = false;
+    try {
+      const highestCanvasNumber = slides.reduce((highest, canvas) => {
+        const match = NUMBERED_CANVAS_NAME.exec(canvas.name.trim());
+        return match ? Math.max(highest, Number(match[1])) : highest;
+      }, 0);
+      const name = `Canvas ${Math.max(slides.length, highestCanvasNumber) + 1}`;
+      created = await api.createDrawing(name, activeCollectionId);
+      switched = await go(created.id, name, {
+        drawingId: created.id,
+        updatedAt: created.updatedAt,
+      });
+      if (!switched) {
+        await api.deleteDrawingIfUntouched(created.id, created.updatedAt);
+        return;
+      }
+      const refreshed = await loadProjectSlides(activeCollectionId);
+      setSlides(refreshed);
+    } catch (error) {
+      console.error("Failed to create canvas", error);
+      if (created && !switched) {
+        try {
+          await api.deleteDrawingIfUntouched(created.id, created.updatedAt);
+        } catch {
+          // The server keeps the canvas if it changed before cleanup.
+        }
+      }
+    } finally {
+      isCreatingRef.current = false;
+      setIsCreating(false);
+    }
   };
 
   const duplicateSlide = async (slideId: string) => {
@@ -438,7 +468,7 @@ export const EditorProjectRail = ({
                       {projectSlides.map((slide, index) =>
                         renderCanvasRow(slide, index, project.id, true),
                       )}
-                      {canEdit && active && <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300"><FilePlus2 size={13} /> Add canvas</button>}
+                      {canEdit && active && <button type="button" disabled={isCreating} onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 disabled:cursor-wait disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300">{isCreating ? <Loader2 size={13} className="animate-spin" /> : <FilePlus2 size={13} />} Add canvas</button>}
                     </div>
                   )}
                 </div>
@@ -476,7 +506,7 @@ export const EditorProjectRail = ({
                       renderCanvasRow(slide, index, null, false),
                     )}
                     {canEdit && activeCollectionId === null && (
-                      <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300"><FilePlus2 size={13} /> Add canvas</button>
+                      <button type="button" disabled={isCreating} onClick={() => void createSlide()} className="workspace-focus mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-violet-700 disabled:cursor-wait disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-violet-300">{isCreating ? <Loader2 size={13} className="animate-spin" /> : <FilePlus2 size={13} />} Add canvas</button>
                     )}
                   </div>
                 )}
