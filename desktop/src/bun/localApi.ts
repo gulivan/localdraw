@@ -3,6 +3,7 @@ import {
   FilesystemWorkspace,
   type DrawingUpdate,
 } from "./filesystemWorkspace";
+import { getDesktopUpdateInfo } from "./desktopUpdates";
 
 const json = (body: unknown, status = 200): Response =>
   Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -165,15 +166,10 @@ export const createLocalApi = (
     }
     if (method === "GET" && path === "/files/config") return json({ s3Enabled: false });
     if (method === "GET" && path === "/system/update") {
-      return json({
-        currentVersion: version,
-        channel: url.searchParams.get("channel") === "prerelease" ? "prerelease" : "stable",
-        outboundEnabled: false,
-        latestVersion: null,
-        latestUrl: null,
-        publishedAt: null,
-        isUpdateAvailable: null,
-      });
+      const channel = url.searchParams.get("channel") === "prerelease"
+        ? "prerelease"
+        : "stable";
+      return json(await getDesktopUpdateInfo(version, channel));
     }
     if (workspace.getStatus().state !== "ready") {
       return json({

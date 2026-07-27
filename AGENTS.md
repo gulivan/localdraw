@@ -100,7 +100,7 @@ services:
 - Do not manually create the normal desktop tag or GitHub Release. Automation creates `v<VERSION>-desktop`, opens a draft release, calls `.github/workflows/desktop-release.yml`, and publishes only after macOS arm64/x64, Linux x64, and Windows x64 assets all succeed.
 - A docs/chore-only range intentionally produces no tag. Use an accurate `fix:`, `feat:`, or breaking Conventional Commit when the change should ship.
 - `scripts/next-desktop-version.mjs` is the version-policy source of truth; update its tests whenever release classification changes.
-- Manual dispatch of `desktop-release.yml` is a recovery path for an existing tag/release, not the normal release process. npm launcher publication remains a separate guarded workflow.
+- Manual dispatch of `desktop-release.yml` is a recovery path for an existing tag/release, not the normal release process. After every native asset succeeds and the GitHub Release is published, the reusable `npm-publish.yml` workflow publishes the matching launcher version; it safely no-ops when that version already exists on npm.
 
 ## Helper workflow
 

@@ -2,6 +2,7 @@ name: Publish npm launcher
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -31,7 +32,20 @@ jobs:
       - name: Use current npm with trusted publishing support
         run: npm install --global npm@latest
 
+      - name: Check whether this launcher version is already published
+        id: published
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "localdraw@$VERSION" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "localdraw@$VERSION is already published; nothing to do."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Verify matching native release assets
+        if: steps.published.outputs.published != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -48,7 +62,9 @@ jobs:
           done
 
       - name: Verify package contents
+        if: steps.published.outputs.published != 'true'
         run: npm pack --dry-run
 
       - name: Publish package
+        if: steps.published.outputs.published != 'true'
         run: npm publish --access public --provenance

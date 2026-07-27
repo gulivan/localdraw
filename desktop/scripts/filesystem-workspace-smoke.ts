@@ -15,6 +15,11 @@ import {
   FilesystemWorkspace,
 } from "../src/bun/filesystemWorkspace";
 import { createLocalApi } from "../src/bun/localApi";
+import {
+  compareDesktopVersions,
+  parseDesktopReleaseVersion,
+  pickLatestDesktopRelease,
+} from "../src/bun/desktopUpdates";
 
 const fixtureRoot = resolve(tmpdir(), `localdraw-files-${randomUUID()}`);
 const dataDir = join(fixtureRoot, "app-data");
@@ -23,6 +28,20 @@ const movedWorkspacePath = join(fixtureRoot, "moved-workspace");
 const externalWorkspacePath = join(fixtureRoot, "external-workspace");
 
 mkdirSync(fixtureRoot, { recursive: true });
+
+const currentRelease = parseDesktopReleaseVersion("v0.6.0-desktop");
+const laterRelease = parseDesktopReleaseVersion("v0.6.1-desktop");
+assert.ok(currentRelease);
+assert.ok(laterRelease);
+assert.equal(compareDesktopVersions(laterRelease, currentRelease) > 0, true);
+assert.equal(
+  pickLatestDesktopRelease([
+    { tag_name: "v0.6.2-beta.1-desktop", prerelease: true },
+    { tag_name: "v0.6.1-desktop", html_url: "stable", prerelease: false },
+    { tag_name: "v0.5.11-desktop", html_url: "old", prerelease: false },
+  ], "stable")?.html_url,
+  "stable",
+);
 
 const drawingPathFromIndex = (root: string, id: string): string => {
   const index = JSON.parse(

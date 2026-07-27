@@ -28,6 +28,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: desktop-release-${{ inputs.tag || github.event.release.tag_name }}
@@ -353,3 +354,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag || github.event.release.tag_name }}
         run: gh release edit "$TAG" --repo "${{ github.repository }}" --draft=false
+
+  publish-launcher:
+    name: Publish npm launcher
+    needs: publish
+    uses: ./.github/workflows/npm-publish.yml
+    secrets: inherit
