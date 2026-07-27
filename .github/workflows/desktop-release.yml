@@ -206,7 +206,7 @@ jobs:
           APP_PID=$!
           trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:32145/auth/status >/dev/null; then
+            if curl --fail --silent http://127.0.0.1:32144/auth/status >/dev/null; then
               exit 0
             fi
             if ! kill -0 "$APP_PID" 2>/dev/null; then
