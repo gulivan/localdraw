@@ -43,14 +43,11 @@ export const NewProjectDialog = ({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-950/35 px-4" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <form onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="new-project-title" className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_16px_rgba(24,24,27,0.18)] dark:border-zinc-700 dark:bg-zinc-900">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
             <FolderPlus size={19} />
           </span>
-          <div className="min-w-0 flex-1">
-            <h2 id="new-project-title" className="text-lg font-bold tracking-tight">New project</h2>
-            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Start an ordered set of Excalidraw canvases.</p>
-          </div>
+          <h2 id="new-project-title" className="min-w-0 flex-1 text-lg font-bold tracking-tight">New project</h2>
           <button type="button" onClick={onClose} className="workspace-focus rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800" aria-label="Close new project dialog">
             <X size={17} />
           </button>

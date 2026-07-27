@@ -1,13 +1,17 @@
 {
   "name": "localdraw",
-  "version": "0.5.11",
+  "version": "0.6.1",
   "description": "Launch the local-first ExcaliDash desktop app",
   "license": "AGPL-3.0-only",
   "type": "module",
   "bin": {
     "localdraw": "bin/excalidash.js"
   },
-  "files": ["bin", "lib", "README.md"],
+  "files": [
+    "bin",
+    "lib",
+    "README.md"
+  ],
   "scripts": {
     "test": "node --test"
   },

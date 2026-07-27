@@ -89,6 +89,19 @@ services:
   - stop with `make dev-stop`
   - `make dev-backend` / `make dev-frontend` if you only need one side
 
+### Desktop release automation
+
+- Commits merged or pushed to `main` must use Conventional Commit subjects because successful `main` CI drives desktop versioning:
+  - `fix:` and `perf:` produce a patch release.
+  - `feat:` produces a minor release.
+  - `type!:` or a `BREAKING CHANGE:` footer produces a major release.
+  - `docs:`, `test:`, `build:`, `ci:`, `refactor:`, and `chore:` do not release by themselves.
+- Do not manually bump `desktop/package.json`, `desktop/package-lock.json`, or `launcher/package.json` for a normal release. `.github/workflows/automatic-desktop-release.yml` updates all three after the `Tests` workflow succeeds on the current `main` head.
+- Do not manually create the normal desktop tag or GitHub Release. Automation creates `v<VERSION>-desktop`, opens a draft release, calls `.github/workflows/desktop-release.yml`, and publishes only after macOS arm64/x64, Linux x64, and Windows x64 assets all succeed.
+- A docs/chore-only range intentionally produces no tag. Use an accurate `fix:`, `feat:`, or breaking Conventional Commit when the change should ship.
+- `scripts/next-desktop-version.mjs` is the version-policy source of truth; update its tests whenever release classification changes.
+- Manual dispatch of `desktop-release.yml` is a recovery path for an existing tag/release, not the normal release process. After every native asset succeeds and the GitHub Release is published, the reusable `npm-publish.yml` workflow publishes the matching launcher version; it safely no-ops when that version already exists on npm.
+
 ## Helper workflow
 
 Prioritize operational steps, then point to the exact commands or files.
@@ -317,11 +330,13 @@ Frontend architecture notes:
 
 Desktop storage notes:
 
-- LocalDraw is a single-user application. Its durable workspace defaults to `~/.localdraw` and can be changed from Settings.
-- Drawings are ordinary `.excalidraw` files; project manifests and restorable canvas snapshots live under the selected workspace.
-- `desktop/src/bun/filesystemWorkspace*.ts` owns migration, reconciliation, safe writes, and version-history import/export.
-- The desktop SQLite database remains a disposable query/index cache during the filesystem transition; do not treat it as the durable desktop source.
-- Run `cd desktop && npm run test:runtime` after storage changes; it verifies SQLite migration, filesystem reconciliation, cache rebuild, version history, and bundle budgets.
+- LocalDraw is a single-user application. Its durable workspace defaults to the OS `Documents/LocalDraw` folder and can be changed from Settings.
+- Drawings are ordinary `.excalidraw` files. Root canvases are unfiled, first-level folders are projects, and hidden `.localdraw` metadata stores ordering, preferences, library data, Trash, conflicts, previews, and restorable history.
+- `desktop/src/bun/filesystemWorkspace*.ts` owns the authoritative repository, atomic writes, external-change reconciliation, derived JSON indexing, and history.
+- Native LocalDraw does not use SQLite or the self-hosted Express/Prisma backend. Keep self-hosted database changes separate from desktop storage work.
+- The filesystem-native desktop format is a pre-release reset; legacy `excalidash.db` files are ignored rather than migrated.
+- Run `cd desktop && npm run test:runtime` after storage changes; it verifies file authority, external edits, conflicts, cache rebuild, history, API compatibility, and bundle budgets.
+- Desktop release packaging must remain filesystem-native: never restore backend bundles, database files, or SQLite smoke scripts to `.github/workflows/desktop-release.yml`.
 
 ## Makefile command map
 

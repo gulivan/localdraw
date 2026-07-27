@@ -44,7 +44,7 @@ Use bundled DM Sans for workspace navigation, headings, labels, and body copy, w
 - Ordered canvas card: numbered preview with title, time, project context, and accessible move menu.
 - Editor project rail: lazy project tree, active canvas, add controls, drag targets, storage status.
 - Status language: `Saved on this device` for LocalDraw and `Saved to ExcaliDash` for hosted mode, with saving and failure variants.
-- Desktop storage settings: show the resolved drawing-folder path with native Choose, Open, and Rescan actions; explain that `.excalidraw` files are portable and `.localdraw` contains ordering/version metadata.
+- Desktop storage settings: show the resolved drawing-folder path with native Reveal, Rescan, Open Existing, and Move Workspace actions; explain that `.excalidraw` files are authoritative and `.localdraw` contains portable workspace metadata and history.
 
 ## Responsive and States
 

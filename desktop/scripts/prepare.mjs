@@ -1,5 +1,4 @@
 import {
-  cpSync,
   mkdirSync,
   readFileSync,
   rmSync,
@@ -8,22 +7,15 @@ import {
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import {
+  cleanDesktopBuildOutputs,
   createXiaolaiManifest,
-  pruneDesktopDependencies,
   pruneDesktopFrontend,
 } from "./prepare-utils.mjs";
-import { resolveElectrobunBun } from "./electrobun-bun.mjs";
 
 const desktopDir = resolve(import.meta.dirname, "..");
 const rootDir = resolve(desktopDir, "..");
-const backendDir = resolve(rootDir, "backend");
 const frontendDir = resolve(rootDir, "frontend");
 const buildDir = resolve(desktopDir, "build");
-const stagedBackendDir = resolve(buildDir, "backend");
-const stagedBackendDistDir = resolve(stagedBackendDir, "dist");
-const generatedClientDir = resolve(backendDir, "src/generated/client");
-const stagedGeneratedClientDir = resolve(stagedBackendDistDir, "generated/client");
-const templateDb = resolve(buildDir, "template.db");
 const xiaolaiManifestPath = resolve(buildDir, "xiaolai-manifest.json");
 const desktopPackage = JSON.parse(
   readFileSync(resolve(desktopDir, "package.json"), "utf8"),
@@ -44,12 +36,14 @@ const run = (command, args, options = {}) => {
 };
 
 mkdirSync(buildDir, { recursive: true });
-run("npm", ["run", "build"], { cwd: backendDir });
+cleanDesktopBuildOutputs(buildDir);
+rmSync(resolve(buildDir, "backend"), { recursive: true, force: true });
+rmSync(resolve(buildDir, "template.db"), { force: true });
 run("npm", ["run", "build"], {
   cwd: frontendDir,
   env: {
     ...process.env,
-    VITE_API_URL: "http://127.0.0.1:32145",
+    VITE_API_URL: "/api",
     VITE_APP_BUILD_LABEL: "Electrobun desktop",
     VITE_APP_VERSION: desktopVersion,
     VITE_DESKTOP_MINIMAL: "true",
@@ -74,50 +68,3 @@ const xiaolaiManifest = createXiaolaiManifest(
 );
 writeFileSync(xiaolaiManifestPath, JSON.stringify(xiaolaiManifest));
 rmSync(xiaolaiDir, { recursive: true, force: true });
-
-rmSync(templateDb, { force: true });
-run("npx", ["prisma", "db", "push", "--skip-generate"], {
-  cwd: backendDir,
-  env: { ...process.env, DATABASE_URL: `file:${templateDb}` },
-});
-
-rmSync(stagedBackendDir, { recursive: true, force: true });
-mkdirSync(stagedBackendDistDir, { recursive: true });
-
-const bunExecutable = resolveElectrobunBun(desktopDir);
-run(
-  bunExecutable,
-  [
-    resolve(desktopDir, "scripts/bundle-backend.mjs"),
-    resolve(backendDir, "dist/index.js"),
-    resolve(stagedBackendDistDir, "index.js"),
-  ],
-  { cwd: backendDir, shell: false },
-);
-
-mkdirSync(resolve(stagedGeneratedClientDir, "runtime"), { recursive: true });
-for (const relativePath of [
-  "index.js",
-  "query_compiler_bg.js",
-  "query_compiler_bg.wasm",
-  "runtime/client.js",
-  "schema.prisma",
-]) {
-  cpSync(
-    resolve(generatedClientDir, relativePath),
-    resolve(stagedGeneratedClientDir, relativePath),
-  );
-}
-
-const generatedClientProxyDir = resolve(stagedBackendDir, "generated/client");
-mkdirSync(generatedClientProxyDir, { recursive: true });
-writeFileSync(
-  resolve(generatedClientProxyDir, "index.js"),
-  'module.exports = require("../../dist/generated/client");\n',
-);
-
-cpSync(
-  resolve(backendDir, "package.json"),
-  resolve(stagedBackendDir, "package.json"),
-);
-pruneDesktopDependencies(stagedBackendDir);

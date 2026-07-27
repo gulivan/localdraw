@@ -22,6 +22,7 @@ import { UploadStatus } from "../components/UploadStatus";
 import { useUpload } from "../context/UploadContext";
 import type { Collection, DrawingSummary } from "../types";
 import { exportDrawingToFile } from "../utils/exportUtils";
+import { useDesktopWorkspaceChange } from "../hooks/useDesktopWorkspaceEvents";
 
 export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   const { id } = useParams<{ id: string }>();
@@ -78,6 +79,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   }, [collectionId, id, unfiled]);
 
   useEffect(() => void load(), [load]);
+  useDesktopWorkspaceChange(() => void load());
 
   const place = async (slideId: string, collectionId: string | null, targetIndex: number) => {
     const previous = slides;

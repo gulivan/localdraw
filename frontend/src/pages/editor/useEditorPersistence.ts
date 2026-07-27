@@ -12,9 +12,15 @@ import {
 } from "./shared";
 
 class DrawingSaveConflictError extends Error {
-  constructor(message = "Drawing version conflict") {
+  readonly conflictPath?: string;
+
+  constructor(
+    message = "Drawing version conflict",
+    conflictPath?: string,
+  ) {
     super(message);
     this.name = "DrawingSaveConflictError";
+    this.conflictPath = conflictPath;
   }
 }
 
@@ -172,17 +178,26 @@ export const useEditorPersistence = ({
           }
         } catch (err) {
           if (api.isAxiosError(err) && err.response?.status === 409) {
+            const conflictCode = String(err.response?.data?.code || "");
+            const conflictPath = typeof err.response?.data?.conflictPath === "string"
+              ? err.response.data.conflictPath
+              : undefined;
             const reportedVersion = Number(err.response?.data?.currentVersion);
             const hasReportedVersion =
               Number.isInteger(reportedVersion) && reportedVersion > 0;
             if (hasReportedVersion) {
               refs.currentDrawingVersion.current = reportedVersion;
             }
-            if (attempt === 0 && hasReportedVersion) {
+            if (conflictCode !== "FILE_CONFLICT" && attempt === 0 && hasReportedVersion) {
               await persistScene(1);
               return;
             }
-            throw new DrawingSaveConflictError();
+            throw new DrawingSaveConflictError(
+              conflictCode === "FILE_CONFLICT"
+                ? "Drawing changed on disk"
+                : "Drawing version conflict",
+              conflictPath,
+            );
           }
           throw err;
         }
@@ -193,7 +208,23 @@ export const useEditorPersistence = ({
     } catch (err) {
       onSaveStateChange?.("error");
       if (err instanceof DrawingSaveConflictError) {
-        toast.error("Drawing changed in another tab. Refresh to load latest.");
+        const isFileConflict = Boolean(err.conflictPath);
+        toast.error(
+          isFileConflict
+            ? `Drawing changed on disk. Your version was preserved at ${err.conflictPath}. Reload to use the disk version.`
+            : "Drawing changed in another tab. Refresh to load latest.",
+          {
+            duration: isFileConflict ? Infinity : 12_000,
+            ...(isFileConflict
+              ? {
+                  action: {
+                    label: "Reload",
+                    onClick: () => window.location.reload(),
+                  },
+                }
+              : {}),
+          },
+        );
         throw err;
       }
       console.error("Failed to save drawing", err);

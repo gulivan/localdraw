@@ -3,6 +3,7 @@ import * as api from "../../api";
 import type { DrawingSortField, SortDirection } from "../../api";
 import type { Collection, DrawingSummary } from "../../types";
 import { isLatestRequest, mergeUniqueDrawings } from "./pagination";
+import { useDesktopWorkspaceChange } from "../../hooks/useDesktopWorkspaceEvents";
 
 type SelectedCollectionId = string | null | undefined;
 
@@ -118,6 +119,7 @@ export const useDashboardData = ({
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+  useDesktopWorkspaceChange(() => void refreshData());
 
   return {
     drawings,

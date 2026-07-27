@@ -20,9 +20,7 @@ export default {
       minify: true,
     },
     copy: {
-      "build/backend": "backend",
       "../frontend/dist": "frontend",
-      "build/template.db": "template.db",
       "build/xiaolai-manifest.json": "xiaolai-manifest.json",
     },
     mac: { bundleCEF: false, icons: "icon.iconset" },

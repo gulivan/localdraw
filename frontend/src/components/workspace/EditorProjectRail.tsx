@@ -21,6 +21,7 @@ import { productName } from "../../utils/productBrand";
 import { Logo } from "../Logo";
 import type { DisposableDraft } from "../../pages/editor/disposableDraft";
 import type { EditorSidebarScope } from "../../utils/editorSidebar";
+import { useDesktopWorkspaceChange } from "../../hooks/useDesktopWorkspaceEvents";
 
 const OTHER_PROJECT_KEY = "__other__";
 const NUMBERED_CANVAS_NAME = /^Canvas\s+(\d+)$/i;
@@ -154,6 +155,7 @@ export const EditorProjectRail = ({
   );
 
   useEffect(() => void load(), [load]);
+  useDesktopWorkspaceChange(() => void load());
   useEffect(() => {
     if (!drawingId || drawingNameSourceId !== drawingId) return;
     setSlides((current) =>
