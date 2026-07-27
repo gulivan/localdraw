@@ -5,7 +5,7 @@ This file helps two kinds of agents work on ExcaliDash.
 ## Project summary (what is ExcaliDash?)
 
 ExcaliDash is a self-hosted dashboard and organizer for Excalidraw drawings, with persistent storage and live collaboration.
-Core user-facing features include organizing drawings into collections, search, export/import for backup, and configurable authentication (local and optional OIDC).
+Core user-facing features include organizing drawings into projects, search, portable workspace exports, individual drawing imports, and configurable authentication (local and optional OIDC).
 
 ## Helpers (Operations)
 

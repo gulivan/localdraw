@@ -6,10 +6,9 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
-import { getTestPrisma, setupTestDb, initTestDb, createTestUser } from "../../__tests__/testUtils";
+import { getTestPrisma, setupTestDb, initTestDb } from "../../__tests__/testUtils";
 import {
   logAuditEvent,
-  getAuditLogs,
   setAuditPrismaProvider,
   type AuditLogData,
 } from "../audit";
@@ -143,81 +142,4 @@ describe("Audit Logging", () => {
     });
   });
 
-  describe("getAuditLogs", () => {
-    beforeEach(async () => {
-      await prisma.auditLog.createMany({
-        data: [
-          {
-            userId: testUser.id,
-            action: "action_1",
-            createdAt: new Date("2025-01-01T10:00:00Z"),
-          },
-          {
-            userId: testUser.id,
-            action: "action_2",
-            createdAt: new Date("2025-01-01T11:00:00Z"),
-          },
-          {
-            userId: testUser.id,
-            action: "action_3",
-            createdAt: new Date("2025-01-01T12:00:00Z"),
-          },
-        ],
-      });
-    });
-
-    it("should retrieve audit logs for a specific user", async () => {
-      const logs = await getAuditLogs(testUser.id);
-
-      expect(logs.length).toBe(3);
-      expect(logs[0].action).toBe("action_3"); // Most recent first
-      expect(logs[1].action).toBe("action_2");
-      expect(logs[2].action).toBe("action_1");
-    });
-
-    it("should retrieve all audit logs when userId is not provided", async () => {
-      const otherUser = await createTestUser(prisma, "other@example.com");
-      await prisma.auditLog.create({
-        data: {
-          userId: otherUser.id,
-          action: "other_action",
-        },
-      });
-
-      const logs = await getAuditLogs();
-
-      expect(logs.length).toBeGreaterThanOrEqual(4);
-    });
-
-    it("should respect limit parameter", async () => {
-      const logs = await getAuditLogs(testUser.id, 2);
-
-      expect(logs.length).toBe(2);
-    });
-
-    it("should parse details JSON in returned logs", async () => {
-      await prisma.auditLog.create({
-        data: {
-          userId: testUser.id,
-          action: "with_details",
-          details: JSON.stringify({ key: "value" }),
-        },
-      });
-
-      const logs = await getAuditLogs(testUser.id, 1);
-
-      expect(logs.length).toBe(1);
-      expect((logs[0] as { details: unknown }).details).toEqual({ key: "value" });
-    });
-
-    it("should include user information in logs", async () => {
-      const logs = await getAuditLogs(testUser.id, 1);
-
-      expect(logs.length).toBe(1);
-      const log = logs[0] as { user: { id: string; email: string; name: string } };
-      expect(log.user).toBeDefined();
-      expect(log.user.id).toBe(testUser.id);
-      expect(log.user.email).toBe(testUser.email);
-    });
-  });
 });

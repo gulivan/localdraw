@@ -73,12 +73,6 @@ Automatically retain recent drawing snapshots, preview past versions from the ed
 </details>
 
 <details>
-<summary>Scoped internal & external sharing</summary>
-
-![](readme-assets/scoped.png)
-
-</details>
-<details>
 <summary>Search your drawings</summary>
 
 ![](readme-assets/search.gif)
@@ -93,22 +87,17 @@ Automatically retain recent drawing snapshots, preview past versions from the ed
 </details>
 
 <details>
-<summary>Export/import your drawings for backup</summary>
+<summary>Export your workspace and import drawings</summary>
 
-### Excalidash uses a non-proprietary archival format that stores your drawings in plain .excalidraw format
-
-![](readme-assets/backupsImport.gif)
+Export a `.localdraw` archive containing projects as folders and drawings as
+ordinary `.excalidraw` files. Import individual `.excalidraw` or JSON drawings
+from All slides.
 
 </details>
 
 # Upgrading
 
 See [release notes](https://github.com/ZimengXiong/ExcaliDash/releases) for a specific release.
-
-The projects-and-slides migration replaces collection-level sharing with
-drawing-level permissions. Existing collection shares are converted into
-permissions on each drawing, and drawings created by a collaborator are moved
-to that drawing owner's Unfiled area. No drawing content is deleted.
 
 ExcaliDash includes an in-app update notifier that checks GitHub Releases. If your deployment must not make outbound network calls, disable it on the backend:
 
@@ -159,9 +148,9 @@ index remains during the transition so existing installations migrate without
 losing data. The desktop build binds its frontend and API to `127.0.0.1` only
 and disables outbound update checks.
 
-To keep the native download compact, LocalDraw omits deployment-only OIDC,
-S3, password-sharing, and Mermaid/text-to-diagram implementations. These
-features remain available in the self-hosted server build. The desktop editor
+To keep the native download compact, LocalDraw omits deployment-only OIDC, S3,
+and Mermaid/text-to-diagram implementations. These features remain available
+in the self-hosted server build. The desktop editor
 ships its English interface only; the server build continues to include every
 Excalidraw translation. Desktop persistence uses Bun's built-in SQLite runtime,
 so no second native database library is packaged.

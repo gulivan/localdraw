@@ -52,7 +52,6 @@
     "@types/ms": "^2.1.0",
     "@types/node": "^24.10.1",
     "@types/sanitize-html": "^2.16.1",
-    "@types/socket.io": "^3.0.1",
     "@types/supertest": "^6.0.3",
     "nodemon": "^3.1.11",
     "supertest": "^7.1.4",
