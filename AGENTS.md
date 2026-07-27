@@ -89,6 +89,19 @@ services:
   - stop with `make dev-stop`
   - `make dev-backend` / `make dev-frontend` if you only need one side
 
+### Desktop release automation
+
+- Commits merged or pushed to `main` must use Conventional Commit subjects because successful `main` CI drives desktop versioning:
+  - `fix:` and `perf:` produce a patch release.
+  - `feat:` produces a minor release.
+  - `type!:` or a `BREAKING CHANGE:` footer produces a major release.
+  - `docs:`, `test:`, `build:`, `ci:`, `refactor:`, and `chore:` do not release by themselves.
+- Do not manually bump `desktop/package.json`, `desktop/package-lock.json`, or `launcher/package.json` for a normal release. `.github/workflows/automatic-desktop-release.yml` updates all three after the `Tests` workflow succeeds on the current `main` head.
+- Do not manually create the normal desktop tag or GitHub Release. Automation creates `v<VERSION>-desktop`, opens a draft release, calls `.github/workflows/desktop-release.yml`, and publishes only after macOS arm64/x64, Linux x64, and Windows x64 assets all succeed.
+- A docs/chore-only range intentionally produces no tag. Use an accurate `fix:`, `feat:`, or breaking Conventional Commit when the change should ship.
+- `scripts/next-desktop-version.mjs` is the version-policy source of truth; update its tests whenever release classification changes.
+- Manual dispatch of `desktop-release.yml` is a recovery path for an existing tag/release, not the normal release process. npm launcher publication remains a separate guarded workflow.
+
 ## Helper workflow
 
 Prioritize operational steps, then point to the exact commands or files.
@@ -323,6 +336,7 @@ Desktop storage notes:
 - Native LocalDraw does not use SQLite or the self-hosted Express/Prisma backend. Keep self-hosted database changes separate from desktop storage work.
 - The filesystem-native desktop format is a pre-release reset; legacy `excalidash.db` files are ignored rather than migrated.
 - Run `cd desktop && npm run test:runtime` after storage changes; it verifies file authority, external edits, conflicts, cache rebuild, history, API compatibility, and bundle budgets.
+- Desktop release packaging must remain filesystem-native: never restore backend bundles, database files, or SQLite smoke scripts to `.github/workflows/desktop-release.yml`.
 
 ## Makefile command map
 

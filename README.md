@@ -177,6 +177,15 @@ npm run check:bundle
 
 Native artifacts are written to `desktop/artifacts/`. Because Electrobun builds are host-specific, release artifacts are produced by the macOS, Windows, and Linux matrix in `.github/workflows/desktop-release.yml`.
 
+Desktop releases are automatic after a successful `main` build. Conventional
+Commit subjects select the next version: `fix:`/`perf:` increment the patch,
+`feat:` increments the minor, and `!` or a `BREAKING CHANGE:` footer increments
+the major. Documentation and maintenance-only commits do not create a release.
+Automation creates a `v<VERSION>-desktop` tag and draft GitHub Release, uploads
+all platform artifacts and checksums, then publishes the release only when every
+platform succeeds. Version files and release tags should not be bumped manually
+during the normal contributor flow.
+
 > [!CAUTION]
 > This is a BETA deployment and production-readiness depends on deployment controls:
 > use TLS, trusted reverse proxy, fixed secrets, backups, and endpoint rate limits.

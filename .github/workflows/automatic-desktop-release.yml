@@ -1,0 +1,109 @@
+name: Automatic Desktop Release
+
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: automatic-desktop-release
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Calculate and create release
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.version.outputs.release }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Confirm the tested commit is still main
+        id: current
+        shell: bash
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          git fetch origin main --tags --force
+          if test "$(git rev-parse origin/main)" != "$TESTED_SHA"; then
+            echo "A newer main commit exists; its CI run will handle the release."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "current=true" >> "$GITHUB_OUTPUT"
+
+      - name: Calculate semantic version
+        if: steps.current.outputs.current == 'true'
+        id: version
+        shell: bash
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          LATEST_TAG=$(git tag --list 'v[0-9]*-desktop' --sort=-version:refname | head -1)
+          if test -n "$LATEST_TAG"; then
+            CURRENT_VERSION="${LATEST_TAG#v}"
+            CURRENT_VERSION="${CURRENT_VERSION%-desktop}"
+            RANGE="$LATEST_TAG..$TESTED_SHA"
+          else
+            CURRENT_VERSION=$(node -p "require('./desktop/package.json').version")
+            RANGE="$TESTED_SHA"
+          fi
+          node scripts/next-desktop-version.mjs \
+            --current "$CURRENT_VERSION" \
+            --range "$RANGE" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Commit version and create tag
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          npm version "$VERSION" --no-git-tag-version --prefix desktop
+          npm version "$VERSION" --no-git-tag-version --prefix launcher
+          test "$(node -p "require('./desktop/package.json').version")" = "$VERSION"
+          test "$(node -p "require('./launcher/package.json').version")" = "$VERSION"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add desktop/package.json desktop/package-lock.json launcher/package.json
+          git commit -m "chore(release): $TAG [skip ci]"
+          git tag --annotate "$TAG" --message "LocalDraw $VERSION"
+          git push origin HEAD:main
+          git push origin "$TAG"
+
+      - name: Create draft GitHub release
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$TAG" \
+            --draft \
+            --generate-notes \
+            --title "LocalDraw v$VERSION" \
+            --target "$(git rev-parse HEAD)"
+
+  package:
+    name: Package release
+    needs: version
+    if: needs.version.outputs.release == 'true'
+    uses: ./.github/workflows/desktop-release.yml
+    with:
+      tag: ${{ needs.version.outputs.tag }}
+      publish: true
+    secrets: inherit

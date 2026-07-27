@@ -8,9 +8,30 @@ on:
       tag:
         description: Release tag (for example, v0.5.1-desktop)
         required: true
+        type: string
+      publish:
+        description: Publish a draft release after all artifacts succeed
+        required: false
+        default: true
+        type: boolean
+  workflow_call:
+    inputs:
+      tag:
+        description: Existing draft or published release tag
+        required: true
+        type: string
+      publish:
+        description: Publish the release after all artifacts succeed
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
+
+concurrency:
+  group: desktop-release-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
 
 jobs:
   validate-version:
@@ -19,11 +40,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
       - name: Match tag, desktop, and launcher versions
         shell: bash
         run: |
-          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          TAG="${{ inputs.tag || github.event.release.tag_name }}"
           VERSION="${TAG#v}"
           VERSION="${VERSION%-desktop}"
           DESKTOP_VERSION=$(node -p "require('./desktop/package.json').version")
@@ -47,13 +68,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: |
-            backend/package-lock.json
             frontend/package-lock.json
             desktop/package-lock.json
       - uses: oven-sh/setup-bun@v2
@@ -61,7 +81,6 @@ jobs:
           bun-version: 1.3.13
       - name: Install dependencies
         run: |
-          npm ci --prefix backend
           npm ci --prefix frontend
           npm ci --prefix desktop
       - name: Build desktop app
@@ -82,13 +101,13 @@ jobs:
         run: |
           npm test
           npm run typecheck
-          node scripts/run-electrobun-bun.mjs scripts/bun-sqlite-smoke.ts
+          node scripts/run-electrobun-bun.mjs scripts/filesystem-workspace-smoke.ts
           npm run check:bundle
       - name: Prepare release asset
         id: asset
         shell: bash
         run: |
-          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          TAG="${{ inputs.tag || github.event.release.tag_name }}"
           VERSION="${TAG#v}"
           VERSION="${VERSION%-desktop}"
           SOURCE=$(find desktop/artifacts -type f -name '*.dmg' | head -1)
@@ -107,7 +126,6 @@ jobs:
             echo "### macOS ${{ matrix.arch }} desktop size"
             echo
             echo "- Download: $(du -h "$ASSET" | cut -f1) ($BYTES bytes)"
-            echo "- Backend: $(du -sh desktop/build/stable-macos-*/LocalDraw.app/Contents/Resources/app/backend | cut -f1)"
             echo "- Frontend: $(du -sh desktop/build/stable-macos-*/LocalDraw.app/Contents/Resources/app/frontend | cut -f1)"
             echo "- Limit: 40 MiB"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -116,7 +134,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ github.event.release.tag_name || inputs.tag }}" \
+          gh release upload "${{ inputs.tag || github.event.release.tag_name }}" \
             "${{ steps.asset.outputs.asset }}" \
             "${{ steps.asset.outputs.asset }}.sha256" --clobber
 
@@ -127,13 +145,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: |
-            backend/package-lock.json
             frontend/package-lock.json
             desktop/package-lock.json
       - uses: oven-sh/setup-bun@v2
@@ -150,7 +167,6 @@ jobs:
             zstd
       - name: Install dependencies
         run: |
-          npm ci --prefix backend
           npm ci --prefix frontend
           npm ci --prefix desktop
       - name: Build desktop app
@@ -160,7 +176,7 @@ jobs:
         run: |
           npm test
           npm run typecheck
-          node scripts/run-electrobun-bun.mjs scripts/bun-sqlite-smoke.ts
+          node scripts/run-electrobun-bun.mjs scripts/filesystem-workspace-smoke.ts
           npm run check:bundle
       - name: Extract portable app bundle
         shell: bash
@@ -205,7 +221,7 @@ jobs:
         id: asset
         shell: bash
         run: |
-          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          TAG="${{ inputs.tag || github.event.release.tag_name }}"
           VERSION="${TAG#v}"
           VERSION="${VERSION%-desktop}"
           BUNDLE_DIR=desktop/portable-linux/LocalDraw
@@ -225,7 +241,6 @@ jobs:
             echo
             echo "- Download: $(du -h "$ASSET" | cut -f1) ($BYTES bytes)"
             echo "- Runtime: $(du -sh desktop/portable-linux/LocalDraw/bin | cut -f1)"
-            echo "- Backend: $(du -sh desktop/portable-linux/LocalDraw/Resources/app/backend | cut -f1)"
             echo "- Frontend: $(du -sh desktop/portable-linux/LocalDraw/Resources/app/frontend | cut -f1)"
             echo "- Limit: 70 MiB"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -234,7 +249,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ github.event.release.tag_name || inputs.tag }}" \
+          gh release upload "${{ inputs.tag || github.event.release.tag_name }}" \
             "${{ steps.asset.outputs.asset }}" \
             "${{ steps.asset.outputs.asset }}.sha256" --clobber
 
@@ -245,13 +260,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: |
-            backend/package-lock.json
             frontend/package-lock.json
             desktop/package-lock.json
       - uses: oven-sh/setup-bun@v2
@@ -260,7 +274,6 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
-          npm ci --prefix backend
           npm ci --prefix frontend
           npm ci --prefix desktop
       - name: Build desktop app
@@ -271,7 +284,7 @@ jobs:
         run: |
           npm test
           npm run typecheck
-          node scripts/run-electrobun-bun.mjs scripts/bun-sqlite-smoke.ts
+          node scripts/run-electrobun-bun.mjs scripts/filesystem-workspace-smoke.ts
           npm run check:bundle
       - name: Extract portable app bundle
         shell: pwsh
@@ -286,7 +299,7 @@ jobs:
         id: asset
         shell: pwsh
         run: |
-          $tag = "${{ github.event.release.tag_name || inputs.tag }}"
+          $tag = "${{ inputs.tag || github.event.release.tag_name }}"
           $version = $tag -replace '^v', '' -replace '-desktop$', ''
           $bundleDir = 'desktop/portable-win/LocalDraw'
           $portableExe = "localdraw-$version-win-x64-portable.exe"
@@ -314,7 +327,6 @@ jobs:
             ''
             "- Portable executable: $('{0:N1}' -f ($bytes / 1MB)) MiB ($bytes bytes)"
             "- Runtime: $(& $directorySize "$bundle/bin")"
-            "- Backend: $(& $directorySize "$bundle/Resources/app/backend")"
             "- Frontend: $(& $directorySize "$bundle/Resources/app/frontend")"
             '- Limit: 80 MiB'
           ) | Add-Content $env:GITHUB_STEP_SUMMARY
@@ -326,6 +338,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ github.event.release.tag_name || inputs.tag }}" \
+          gh release upload "${{ inputs.tag || github.event.release.tag_name }}" \
             "${{ steps.asset.outputs.asset }}" \
             "${{ steps.asset.outputs.asset }}.sha256" --clobber
+
+  publish:
+    name: Publish GitHub release
+    needs: [macos, linux, windows]
+    if: github.event_name == 'release' || inputs.publish == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release after every platform succeeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: gh release edit "$TAG" --repo "${{ github.repository }}" --draft=false

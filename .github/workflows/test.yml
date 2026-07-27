@@ -7,6 +7,20 @@ on:
     branches: [main]
 
 jobs:
+  release-automation-tests:
+    name: Release Automation Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test semantic version calculation
+        run: node --test scripts/next-desktop-version.test.mjs
+
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
