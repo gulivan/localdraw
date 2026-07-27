@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Home } from "./Home";
 
@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   createDrawing: vi.fn(),
   getCollections: vi.fn(),
   getDrawings: vi.fn(),
+  projectCard: vi.fn(),
   uploadFiles: vi.fn(),
 }));
 
@@ -30,9 +31,10 @@ vi.mock("../components/workspace/SlideThumbnail", () => ({
 }));
 
 vi.mock("../components/workspace/ProjectCard", () => ({
-  ProjectCard: ({ project }: { project: { name: string } }) => (
-    <article>{project.name}</article>
-  ),
+  ProjectCard: ({ project }: { project: { name: string } }) => {
+    mocks.projectCard(project);
+    return <article>{project.name}</article>;
+  },
 }));
 
 vi.mock("../components/workspace/WorkspaceHeader", () => ({
@@ -73,7 +75,7 @@ vi.mock("../components/workspace/NewProjectDialog", () => ({
 
 const drawing = (overrides: Record<string, unknown> = {}) => ({
   id: "slide-1",
-  name: "Opening slide",
+  name: "Opening canvas",
   collectionId: "project-1",
   sortOrder: 0,
   version: 1,
@@ -81,6 +83,18 @@ const drawing = (overrides: Record<string, unknown> = {}) => ({
   updatedAt: Date.now(),
   ...overrides,
 });
+
+const ProjectDestination = () => {
+  const location = useLocation();
+  const state = location.state as {
+    disposableDraft?: { drawingId?: string; updatedAt?: number };
+  } | null;
+  return (
+    <div>
+      Project destination {state?.disposableDraft?.drawingId ?? "without draft"}
+    </div>
+  );
+};
 
 describe("Home workspace", () => {
   beforeEach(() => {
@@ -108,10 +122,13 @@ describe("Home workspace", () => {
       }
       return Promise.resolve({ drawings: [drawing()], totalCount: 1 });
     });
-    mocks.createCollection.mockResolvedValue({ id: "project-new" });
+    mocks.createCollection.mockResolvedValue({
+      id: "project-new",
+      initialDrawing: { id: "canvas-initial", updatedAt: 1234 },
+    });
   });
 
-  it("loads resume content and searches slides without losing project context", async () => {
+  it("loads resume content and searches canvases without losing project context", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
@@ -122,6 +139,15 @@ describe("Home workspace", () => {
 
     expect(await screen.findByText("Recent")).toBeInTheDocument();
     expect(screen.getByText("Product story")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All items" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Opening canvas/ })).not.toHaveClass(
+      "hover:-translate-y-0.5",
+    );
+    expect(mocks.getDrawings).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      expect.objectContaining({ limit: 5 }),
+    );
 
     fireEvent.change(screen.getByRole("textbox", { name: "Search workspace" }), {
       target: { value: "needle" },
@@ -131,12 +157,12 @@ describe("Home workspace", () => {
     expect(screen.getByText("Results for “needle”")).toBeInTheDocument();
   });
 
-  it("creates a project with its initial slide option", async () => {
+  it("creates a project with its initial canvas option", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/projects/:id" element={<div>Project destination</div>} />
+          <Route path="/projects/:id" element={<ProjectDestination />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -151,6 +177,41 @@ describe("Home workspace", () => {
         createInitialDrawing: true,
       }),
     );
-    expect(await screen.findByText("Project destination")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Project destination canvas-initial"),
+    ).toBeInTheDocument();
+  });
+
+  it("models Other with the same project card metadata", async () => {
+    const unfiledSlide = drawing({
+      id: "other-canvas",
+      name: "Loose canvas",
+      collectionId: null,
+      updatedAt: Date.now() - 180_000,
+    });
+    mocks.getDrawings.mockImplementation(
+      (_query?: string, collectionId?: string | null) =>
+        collectionId === null
+          ? Promise.resolve({ drawings: [unfiledSlide], totalCount: 8 })
+          : Promise.resolve({ drawings: [drawing()], totalCount: 1 }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("Other");
+    expect(mocks.projectCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Other",
+        drawingCount: 8,
+        lastActivityAt: unfiledSlide.updatedAt,
+        latestDrawing: unfiledSlide,
+      }),
+    );
   });
 });

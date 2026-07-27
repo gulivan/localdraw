@@ -25,7 +25,7 @@ test.describe("Local-first workspace", () => {
     }
   });
 
-  test("resumes recent slides and exposes their project from Home", async ({
+  test("resumes recent canvases and exposes their project from Home", async ({
     page,
     request,
   }) => {
@@ -45,18 +45,18 @@ test.describe("Local-first workspace", () => {
     await expect(page.getByPlaceholder("Search")).toBeVisible();
   });
 
-  test("reorders project slides with the accessible action menu", async ({
+  test("reorders project canvases with the accessible action menu", async ({
     page,
     request,
   }) => {
     const project = await createCollection(request, `Ordered ${Date.now()}`);
     collectionIds.push(project.id);
     const first = await createDrawing(request, {
-      name: "First slide",
+      name: "First canvas",
       collectionId: project.id,
     });
     const second = await createDrawing(request, {
-      name: "Second slide",
+      name: "Second canvas",
       collectionId: project.id,
     });
     drawingIds.push(first.id, second.id);

@@ -4,7 +4,6 @@ import { ConnectAiModal } from "./ConnectAiModal";
 import * as api from "../../api";
 
 vi.mock("../../api", () => ({
-  API_URL: "/api",
   API_KEY_SCOPES: ["drawings:read", "drawings:write", "collections:read", "collections:write"],
   listApiKeys: vi.fn(),
   createApiKey: vi.fn(),

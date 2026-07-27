@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
 const desktopDir = resolve(import.meta.dirname, "..");
@@ -6,6 +6,9 @@ const rootDir = resolve(desktopDir, "..");
 const backendDir = resolve(desktopDir, "build/backend");
 const frontendDir = resolve(rootDir, "frontend/dist");
 const artifactsDir = resolve(desktopDir, "artifacts");
+const desktopVersion = JSON.parse(
+  readFileSync(resolve(desktopDir, "package.json"), "utf8"),
+).version;
 
 const treeSize = (directory) =>
   readdirSync(directory, { withFileTypes: true }).reduce((total, entry) => {
@@ -28,6 +31,14 @@ const assertBudget = (label, bytes, maximum) => {
 
 const backendFiles = walkFiles(backendDir);
 const frontendFiles = walkFiles(frontendDir);
+const embedsDesktopVersion = frontendFiles
+  .filter((path) => path.endsWith(".js") || path.endsWith(".html"))
+  .some((path) => readFileSync(path, "utf8").includes(desktopVersion));
+
+if (!embedsDesktopVersion) {
+  throw new Error(`Desktop frontend does not embed version ${desktopVersion}`);
+}
+console.log(`Embedded desktop version: ${desktopVersion}`);
 const forbiddenBackend = backendFiles.filter(
   (path) => path.endsWith(".node") || path.includes("/node_modules/@libsql/"),
 );

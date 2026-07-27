@@ -6,6 +6,7 @@ import {
   Search,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { disposableDraftNavigationState } from "./editor/disposableDraft";
 import { useNavigate } from "react-router-dom";
 import * as api from "../api";
 import { NewProjectDialog } from "../components/workspace/NewProjectDialog";
@@ -16,6 +17,7 @@ import { UploadStatus } from "../components/UploadStatus";
 import { useUpload } from "../context/UploadContext";
 import { useDebounce } from "../hooks/useDebounce";
 import type { Collection, DrawingSummary } from "../types";
+import { readRecentCanvasesLimit } from "../utils/recentCanvases";
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -38,7 +40,7 @@ export const Home = () => {
         api.getCollections({ includeOverview: true }),
         api.getDrawings(undefined, undefined, {
           includePreview: true,
-          limit: 8,
+          limit: readRecentCanvasesLimit(),
           sortField: "updatedAt",
           sortDirection: "desc",
         }),
@@ -93,7 +95,9 @@ export const Home = () => {
 
   const createSlide = async (collectionId: string | null = null) => {
     const drawing = await api.createDrawing("Untitled Canvas", collectionId);
-    navigate(`/editor/${drawing.id}`);
+    navigate(`/editor/${drawing.id}`, {
+      state: disposableDraftNavigationState(drawing),
+    });
   };
 
   const importFiles = async (files: FileList | null) => {
@@ -130,13 +134,13 @@ export const Home = () => {
                   <h1 id="continue-title" className="flex items-center gap-2 text-sm font-semibold">
                     <Clock3 size={16} className="text-zinc-500" /> Recent
                   </h1>
-                  <button type="button" onClick={() => navigate("/collections")} className="workspace-focus rounded text-xs font-semibold text-violet-700 hover:underline dark:text-violet-300">All slides</button>
+                  <button type="button" onClick={() => navigate("/collections")} className="workspace-focus rounded text-xs font-semibold text-violet-700 hover:underline dark:text-violet-300">All items</button>
                 </div>
                 <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-3">
                   {recent.map((slide) => {
                     const project = projects.find((item) => item.id === slide.collectionId);
                     return (
-                      <button key={slide.id} type="button" onClick={() => navigate(`/editor/${slide.id}`)} className="workspace-focus group w-52 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-700">
+                      <button key={slide.id} type="button" onClick={() => navigate(`/editor/${slide.id}`)} className="workspace-focus group w-52 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left transition hover:border-violet-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-700">
                         <SlideThumbnail drawing={slide} className="h-28 w-full" />
                         <span className="block p-3">
                           <span className="block truncate text-sm font-semibold">{slide.name}</span>
@@ -176,7 +180,12 @@ export const Home = () => {
       </main>
       <NewProjectDialog open={newProjectOpen} onClose={() => setNewProjectOpen(false)} onCreate={async (name, color) => {
         const project = await api.createCollection(name, { color, createInitialDrawing: true });
-        navigate(`/projects/${project.id}`);
+        navigate(
+          `/projects/${project.id}`,
+          project.initialDrawing
+            ? { state: disposableDraftNavigationState(project.initialDrawing) }
+            : undefined,
+        );
       }} />
       <UploadStatus />
     </div>
@@ -184,14 +193,22 @@ export const Home = () => {
 };
 
 const UnfiledCard = ({ count, slide, onView }: { count: number; slide?: DrawingSummary; onView: () => void }) => (
-  <article className="h-[226px] overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-    <button type="button" onClick={onView} className="workspace-focus relative h-36 w-full"><SlideThumbnail drawing={slide} className="h-full w-full" /><span className="absolute left-3 top-3 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-zinc-700 px-1.5 text-[10px] font-semibold text-white" aria-label={`${count} ${count === 1 ? "canvas" : "canvases"}`} title={`${count} ${count === 1 ? "canvas" : "canvases"}`}>{count}</span></button>
-    <div className="flex h-20 items-center p-4"><h3 className="font-semibold">Other</h3></div>
-  </article>
+  <ProjectCard
+    project={{
+      id: "__other__",
+      name: "Other",
+      color: "#71717a",
+      createdAt: slide?.createdAt ?? 0,
+      drawingCount: count,
+      lastActivityAt: slide?.updatedAt,
+      latestDrawing: slide,
+    }}
+    onView={onView}
+  />
 );
 
 const SearchView = ({ query, projects, slides, onOpenProject, onOpenSlide }: { query: string; projects: Collection[]; slides: DrawingSummary[]; onOpenProject: (id: string) => void; onOpenSlide: (id: string) => void }) => (
-  <section><h1 className="text-2xl font-bold tracking-[-0.02em]">Results for “{query}”</h1>{projects.length === 0 && slides.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-zinc-300 py-16 text-center dark:border-zinc-700"><Search className="mx-auto text-zinc-400" /><p className="mt-3 text-sm font-semibold">No matching projects or slides</p></div> : <><div className="mt-6 flex flex-wrap gap-2">{projects.map((project) => <button key={project.id} type="button" onClick={() => onOpenProject(project.id)} className="workspace-focus rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold dark:border-zinc-700 dark:bg-zinc-900"><span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: project.color || "#7c3aed" }} />{project.name}</button>)}</div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{slides.map((slide) => <button key={slide.id} type="button" onClick={() => onOpenSlide(slide.id)} className="workspace-focus overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left dark:border-zinc-800 dark:bg-zinc-900"><SlideThumbnail drawing={slide} className="h-36" /><span className="block truncate p-4 text-sm font-semibold">{slide.name}</span></button>)}</div></>}</section>
+  <section><h1 className="text-2xl font-bold tracking-[-0.02em]">Results for “{query}”</h1>{projects.length === 0 && slides.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-zinc-300 py-16 text-center dark:border-zinc-700"><Search className="mx-auto text-zinc-400" /><p className="mt-3 text-sm font-semibold">No matching projects or canvases</p></div> : <><div className="mt-6 flex flex-wrap gap-2">{projects.map((project) => <button key={project.id} type="button" onClick={() => onOpenProject(project.id)} className="workspace-focus rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold dark:border-zinc-700 dark:bg-zinc-900"><span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: project.color || "#7c3aed" }} />{project.name}</button>)}</div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{slides.map((slide) => <button key={slide.id} type="button" onClick={() => onOpenSlide(slide.id)} className="workspace-focus overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left dark:border-zinc-800 dark:bg-zinc-900"><SlideThumbnail drawing={slide} className="h-36" /><span className="block truncate p-4 text-sm font-semibold">{slide.name}</span></button>)}</div></>}</section>
 );
 
 const HomeSkeleton = () => <div aria-label="Loading workspace" className="animate-pulse"><div className="h-5 w-28 rounded bg-zinc-200 dark:bg-zinc-800" /><div className="mt-4 flex gap-3 overflow-hidden">{[1, 2, 3, 4].map((item) => <div key={item} className="h-44 w-52 shrink-0 rounded-2xl bg-zinc-200 dark:bg-zinc-800" />)}</div><div className="mt-10 h-8 w-40 rounded bg-zinc-200 dark:bg-zinc-800" /><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-64 rounded-2xl bg-zinc-200 dark:bg-zinc-800" />)}</div></div>;

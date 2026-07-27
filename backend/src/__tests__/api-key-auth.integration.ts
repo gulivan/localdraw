@@ -169,7 +169,7 @@ describe("API key authentication", () => {
     );
   });
 
-  it("creates an initial slide and returns project overview metadata", async () => {
+  it("creates an initial canvas and returns project overview metadata", async () => {
     const createResponse = await request(app)
       .post("/collections")
       .set("Authorization", `Bearer ${apiKeyToken}`)
@@ -182,6 +182,10 @@ describe("API key authentication", () => {
     expect(createResponse.status).toBe(200);
     expect(createResponse.body?.color).toBe("#0ea5e9");
     expect(createResponse.body?.initialDrawingId).toEqual(expect.any(String));
+    expect(createResponse.body?.initialDrawing).toEqual({
+      id: createResponse.body.initialDrawingId,
+      updatedAt: expect.any(String),
+    });
 
     const overviewResponse = await request(app)
       .get("/collections?includeOverview=true")
@@ -195,14 +199,14 @@ describe("API key authentication", () => {
       drawingCount: 1,
       latestDrawing: {
         id: createResponse.body.initialDrawingId,
-        name: "Slide 1",
+        name: "Canvas 1",
         sortOrder: 0,
       },
     });
     expect(new Date(project.lastActivityAt).getTime()).not.toBeNaN();
   });
 
-  it("orders owned slides through the placement route", async () => {
+  it("orders owned canvases through the placement route", async () => {
     const project = await prisma.collection.create({
       data: { name: "Ordered project", userId },
     });
@@ -243,7 +247,7 @@ describe("API key authentication", () => {
     ]);
   });
 
-  it("places a duplicate immediately after its source slide", async () => {
+  it("places a duplicate immediately after its source canvas", async () => {
     const project = await prisma.collection.create({
       data: { name: "Duplicate order project", userId },
     });

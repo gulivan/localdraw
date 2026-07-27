@@ -119,7 +119,9 @@ test.describe("Dashboard Workflows", () => {
 
     const collectionButton = cardLocator.locator(`[data-testid="collection-picker-${createdDrawing.id}"]`);
     await collectionButton.click();
-    await page.locator(`[data-testid="collection-option-${createdCollection.id}"]`).click();
+    const collectionOption = page.locator(`[data-testid="collection-option-${createdCollection.id}"]`);
+    await expect(collectionOption).toBeVisible();
+    await collectionOption.click({ force: true });
     await expect(collectionButton).toContainText(collectionName);
 
     await expect.poll(async () => {

@@ -5,8 +5,10 @@ import { toast } from "sonner";
 import * as api from "../../api";
 import { exportFromEditor } from "../../utils/exportUtils";
 import { hasRenderableElements } from "./shared";
+import type { DisposableDraft } from "./disposableDraft";
 
 type EditorCommandRefs = {
+  disposableDraft: MutableRefObject<DisposableDraft | null>;
   excalidrawAPI: MutableRefObject<any>;
   hasSceneChangesSinceLoad: MutableRefObject<boolean>;
   latestFiles: MutableRefObject<any>;
@@ -88,6 +90,37 @@ export const useEditorCommands = ({
   const navigate = useNavigate();
   const navigationInFlightRef = useRef(false);
 
+  const cleanupDisposableDraft = useCallback(
+    async (targetDrawingId: string | undefined) => {
+      const draft = refs.disposableDraft.current;
+      if (
+        !targetDrawingId ||
+        draft?.drawingId !== targetDrawingId ||
+        refs.hasSceneChangesSinceLoad.current
+      ) {
+        return;
+      }
+      try {
+        await api.deleteDrawingIfUntouched(draft.drawingId, draft.updatedAt);
+        if (refs.disposableDraft.current?.drawingId === draft.drawingId) {
+          refs.disposableDraft.current = null;
+        }
+      } catch (error) {
+        console.warn("Failed to clean up untouched canvas", error);
+      }
+    },
+    [refs],
+  );
+
+  useEffect(() => {
+    const handleBrowserHistoryNavigation = () => {
+      void cleanupDisposableDraft(drawingId);
+    };
+    window.addEventListener("popstate", handleBrowserHistoryNavigation);
+    return () =>
+      window.removeEventListener("popstate", handleBrowserHistoryNavigation);
+  }, [cleanupDisposableDraft, drawingId]);
+
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -123,6 +156,7 @@ export const useEditorCommands = ({
       e.preventDefault();
       if (!canEdit) return;
       if (newName.trim() && drawingId) {
+        refs.disposableDraft.current = null;
         setDrawingName(newName);
         setIsRenaming(false);
         try {
@@ -132,7 +166,14 @@ export const useEditorCommands = ({
         }
       }
     },
-    [canEdit, drawingId, newName, setDrawingName, setIsRenaming],
+    [
+      canEdit,
+      drawingId,
+      newName,
+      refs.disposableDraft,
+      setDrawingName,
+      setIsRenaming,
+    ],
   );
 
   const handleLibraryChange = useCallback(
@@ -187,13 +228,26 @@ export const useEditorCommands = ({
   ]);
 
   const navigateAfterSave = useCallback(
-    async (destination: string) => {
+    async (destination: string, nextDraft?: DisposableDraft) => {
       if (navigationInFlightRef.current || isSavingOnLeave) return false;
       navigationInFlightRef.current = true;
       setIsSavingOnLeave(true);
       try {
-        await saveBeforeNavigation();
-        navigate(destination);
+        const currentDraft = refs.disposableDraft.current;
+        if (
+          currentDraft?.drawingId === drawingId &&
+          !refs.hasSceneChangesSinceLoad.current
+        ) {
+          cancelPendingSceneSaves();
+          await cleanupDisposableDraft(drawingId);
+        } else {
+          await saveBeforeNavigation();
+        }
+        if (nextDraft) {
+          navigate(destination, { state: { disposableDraft: nextDraft } });
+        } else {
+          navigate(destination);
+        }
         return true;
       } catch (err) {
         console.error("Failed to save before navigation", err);
@@ -204,7 +258,16 @@ export const useEditorCommands = ({
         setIsSavingOnLeave(false);
       }
     },
-    [isSavingOnLeave, navigate, saveBeforeNavigation, setIsSavingOnLeave],
+    [
+      cancelPendingSceneSaves,
+      cleanupDisposableDraft,
+      drawingId,
+      isSavingOnLeave,
+      navigate,
+      refs,
+      saveBeforeNavigation,
+      setIsSavingOnLeave,
+    ],
   );
 
   const handleBackClick = useCallback(async () => {
@@ -212,9 +275,16 @@ export const useEditorCommands = ({
   }, [navigateAfterSave]);
 
   const handleDrawingSwitch = useCallback(
-    async (nextDrawingId: string, nextDrawingName: string) => {
+    async (
+      nextDrawingId: string,
+      nextDrawingName: string,
+      nextDraft?: DisposableDraft,
+    ) => {
       if (!nextDrawingId || nextDrawingId === drawingId) return true;
-      const switched = await navigateAfterSave(`/editor/${nextDrawingId}`);
+      const switched = await navigateAfterSave(
+        `/editor/${nextDrawingId}`,
+        nextDraft,
+      );
       if (switched) setDrawingTitle(nextDrawingId, nextDrawingName);
       return switched;
     },
@@ -250,5 +320,6 @@ export const useEditorCommands = ({
     handleRenameStart,
     handleRenameSubmit,
     handleToggleAutoHide,
+    navigateAfterSave,
   };
 };

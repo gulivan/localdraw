@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import type { NavigateFunction } from "react-router-dom";
 import * as api from "../../api";
 import type { DrawingSummary } from "../../types";
+import { disposableDraftNavigationState } from "../editor/disposableDraft";
 
 type UseDashboardDrawingActionsParams = {
   drawings: DrawingSummary[];
@@ -40,11 +41,13 @@ export const useDashboardDrawingActions = ({
     try {
       const targetCollectionId =
         selectedCollectionId === undefined ? null : selectedCollectionId;
-      const { id } = await api.createDrawing(
+      const drawing = await api.createDrawing(
         "Untitled Drawing",
         targetCollectionId,
       );
-      navigate(`/editor/${id}`);
+      navigate(`/editor/${drawing.id}`, {
+        state: disposableDraftNavigationState(drawing),
+      });
     } catch (err) {
       console.error(err);
     }

@@ -1,6 +1,8 @@
-import { Archive, Moon, Sun, Zap, ZapOff } from "lucide-react";
+import { Archive, FolderTree, Moon, Sun, Zap, ZapOff } from "lucide-react";
 import type * as api from "../../api";
 import { UpdateSettingsCard } from "./UpdateSettingsCard";
+import { RecentCanvasesSettingsCard } from "./RecentCanvasesSettingsCard";
+import type { EditorSidebarScope } from "../../utils/editorSidebar";
 
 type SettingsMainGridProps = {
   backupExportExt: "localdraw" | "localdraw.zip";
@@ -10,6 +12,10 @@ type SettingsMainGridProps = {
   toggleTheme: () => void;
   imageCompression: boolean;
   toggleImageCompression: () => void;
+  editorSidebarScope: EditorSidebarScope;
+  setEditorSidebarScope: (scope: EditorSidebarScope) => void;
+  recentCanvasesLimit: number;
+  setRecentCanvasesLimit: (limit: number) => void;
   updateChannel: api.UpdateChannel;
   updateInfo: api.UpdateInfo | null;
   updateLoading: boolean;
@@ -26,6 +32,10 @@ export const SettingsMainGrid = ({
   toggleTheme,
   imageCompression,
   toggleImageCompression,
+  editorSidebarScope,
+  setEditorSidebarScope,
+  recentCanvasesLimit,
+  setRecentCanvasesLimit,
   updateChannel,
   updateInfo,
   updateLoading,
@@ -160,6 +170,35 @@ export const SettingsMainGrid = ({
         </p>{" "}
       </div>{" "}
     </button>{" "}
+    <div className="flex flex-col items-center justify-center gap-3 bg-white p-4 sm:gap-4 sm:p-6 lg:p-8 dark:bg-neutral-900 border-2 border-black dark:border-neutral-700 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-violet-100 bg-violet-50 sm:h-16 sm:w-16 dark:border-neutral-700 dark:bg-neutral-800">
+        <FolderTree className="hidden text-violet-600 sm:block dark:text-violet-400" size={32} />
+        <FolderTree className="text-violet-600 sm:hidden dark:text-violet-400" size={24} />
+      </div>
+      <div className="text-center">
+        <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">
+          Editor sidebar
+        </h3>
+        <p className="mx-auto max-w-[220px] text-xs font-medium text-slate-500 dark:text-neutral-400">
+          Choose which projects appear while editing
+        </p>
+      </div>
+      <select
+        aria-label="Editor sidebar projects"
+        value={editorSidebarScope}
+        onChange={(event) =>
+          setEditorSidebarScope(event.target.value as EditorSidebarScope)
+        }
+        className="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+      >
+        <option value="current">Current project only</option>
+        <option value="all">All projects</option>
+      </select>
+    </div>
+    <RecentCanvasesSettingsCard
+      value={recentCanvasesLimit}
+      onChange={setRecentCanvasesLimit}
+    />
     <UpdateSettingsCard
       updateChannel={updateChannel}
       updateInfo={updateInfo}

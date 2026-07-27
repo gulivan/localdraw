@@ -21,6 +21,10 @@ import { useEditorElementTracking } from "./editor/useEditorElementTracking";
 import { useEditorBroadcast } from "./editor/useEditorBroadcast";
 import { usePersistentExcalidrawScene } from "./editor/usePersistentExcalidrawScene";
 import { useEditorTitle } from "./editor/useEditorTitle";
+import {
+  readDisposableDraft,
+  type DisposableDraft,
+} from "./editor/disposableDraft";
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -86,11 +90,17 @@ export const Editor: React.FC = () => {
   const patchedAddFilesApisRef = useRef<WeakSet<object>>(new WeakSet());
   const suspiciousBlankLoadRef = useRef(false);
   const hasSceneChangesSinceLoadRef = useRef(false);
+  const disposableDraftRef = useRef<DisposableDraft | null>(null);
   const lastLocalChangeAtRef = useRef<number>(0);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const excalidrawAPI = useRef<any>(null);
   const currentDrawingIdRef = useRef(id);
-  currentDrawingIdRef.current = sceneDrawingId;
+  useEffect(() => {
+    currentDrawingIdRef.current = sceneDrawingId;
+  }, [sceneDrawingId]);
+  useEffect(() => {
+    disposableDraftRef.current = readDisposableDraft(location.state, id);
+  }, [id, location.key, location.state]);
   const { resolveSafeSnapshot, normalizeImageElementStatus } =
     useEditorSnapshotGuards({
       lastPersistedElementsRef,
@@ -137,7 +147,9 @@ export const Editor: React.FC = () => {
     [sceneDrawingId, socketMeRef, socketRef],
   );
   const emitFilesDeltaIfNeededRef = useRef(emitFilesDeltaIfNeeded);
-  emitFilesDeltaIfNeededRef.current = emitFilesDeltaIfNeeded;
+  useEffect(() => {
+    emitFilesDeltaIfNeededRef.current = emitFilesDeltaIfNeeded;
+  }, [emitFilesDeltaIfNeeded]);
   const setExcalidrawAPI = useCallback(
     (api: any) => {
       excalidrawAPI.current = api;
@@ -166,6 +178,7 @@ export const Editor: React.FC = () => {
             latestAppStateRef.current &&
             debouncedSaveRef.current
           ) {
+            disposableDraftRef.current = null;
             hasSceneChangesSinceLoadRef.current = true;
             debouncedSaveRef.current(
               currentDrawingId,
@@ -226,6 +239,7 @@ export const Editor: React.FC = () => {
     onSaveStateChange: setSaveStatus,
   });
   const markSceneChangedSinceLoad = useCallback(() => {
+    disposableDraftRef.current = null;
     hasSceneChangesSinceLoadRef.current = true;
   }, []);
   const broadcastChanges = useEditorBroadcast({
@@ -312,6 +326,7 @@ export const Editor: React.FC = () => {
     });
   const commandRefs = React.useMemo(
     () => ({
+      disposableDraft: disposableDraftRef,
       excalidrawAPI,
       hasSceneChangesSinceLoad: hasSceneChangesSinceLoadRef,
       latestFiles: latestFilesRef,
@@ -329,6 +344,7 @@ export const Editor: React.FC = () => {
     handleRenameStart,
     handleRenameSubmit,
     handleToggleAutoHide,
+    navigateAfterSave,
   } = useEditorCommands({
     autoHideEnabled,
     canEdit,
@@ -373,9 +389,12 @@ export const Editor: React.FC = () => {
         onCanvasChange={handleCanvasChange}
         onCanvasDropCapture={handleCanvasDropCapture}
         onDrawingSwitch={handleDrawingSwitch}
+        onDrawingRenamed={(drawingId, name) => {
+          if (drawingId === id) setDrawingTitle(drawingId, name);
+        }}
         onExportClick={handleExportClick}
         onLibraryChange={handleLibraryChange}
-        onNavigateHome={() => navigate("/")}
+        onNavigateTo={navigateAfterSave}
         onNewNameChange={setNewName}
         onPointerUpdate={onPointerUpdate}
         onRenameBlur={() => setIsRenaming(false)}

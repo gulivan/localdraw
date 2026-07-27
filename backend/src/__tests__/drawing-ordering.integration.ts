@@ -11,7 +11,7 @@ import {
   setupTestDb,
 } from "./testUtils";
 
-describe("project slide ordering", () => {
+describe("project canvas ordering", () => {
   const prisma = getTestPrisma();
   let userId: string;
 
@@ -48,7 +48,7 @@ describe("project slide ordering", () => {
       },
     });
 
-  it("reorders a slide within its project and normalizes every position", async () => {
+  it("reorders a canvas within its project and normalizes every position", async () => {
     const project = await createProject("Storyboard");
     const first = await createSlide("One", project.id, 0);
     const second = await createSlide("Two", project.id, 1);
@@ -70,7 +70,7 @@ describe("project slide ordering", () => {
     ]);
   });
 
-  it("moves a slide across projects and closes the source order gap", async () => {
+  it("moves a canvas across projects and closes the source order gap", async () => {
     const source = await createProject("Source");
     const target = await createProject("Target");
     const first = await createSlide("One", source.id, 0);
@@ -104,9 +104,9 @@ describe("project slide ordering", () => {
     ]);
   });
 
-  it("appends a deleted project's ordered slides to Unfiled", async () => {
+  it("appends a deleted project's ordered canvases to Unfiled", async () => {
     const project = await createProject("Temporary");
-    const unfiled = await createSlide("Existing loose slide", null, 0);
+    const unfiled = await createSlide("Existing loose canvas", null, 0);
     const first = await createSlide("Project one", project.id, 0);
     const second = await createSlide("Project two", project.id, 1);
 
@@ -126,7 +126,7 @@ describe("project slide ordering", () => {
     ]);
   });
 
-  it("appends a deleted project's slides to Trash when requested", async () => {
+  it("appends a deleted project's canvases to Trash when requested", async () => {
     const project = await createProject("Temporary");
     const trash = await createProject("Trash");
     const existing = await createSlide("Already deleted", trash.id, 0);

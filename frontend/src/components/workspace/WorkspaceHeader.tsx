@@ -53,7 +53,7 @@ export const WorkspaceHeader = ({
         </button>
 
         <label className="relative order-3 w-full min-w-0 flex-1 sm:order-none sm:ml-3 sm:max-w-md">
-          <span className="sr-only">Search projects and slides</span>
+          <span className="sr-only">Search projects and canvases</span>
           <Search
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
@@ -80,7 +80,7 @@ export const WorkspaceHeader = ({
             onClick={onNewSlide}
             className="workspace-focus inline-flex h-10 items-center gap-1.5 rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700"
           >
-            <FilePlus2 size={15} /> <span className="hidden sm:inline">New slide</span>
+            <FilePlus2 size={15} /> <span className="hidden sm:inline">New Canvas</span>
           </button>
           <input
             ref={fileRef}
@@ -105,7 +105,7 @@ export const WorkspaceHeader = ({
                   <div className="truncate text-[11px] text-zinc-600 dark:text-zinc-400">{user.email}</div>
                 </div>
               )}
-              <MenuButton icon={<Upload size={15} />} label="Import slides" onClick={() => fileRef.current?.click()} />
+              <MenuButton icon={<Upload size={15} />} label="Import canvases" onClick={() => fileRef.current?.click()} />
               <MenuButton icon={<Trash2 size={15} />} label="Trash" onClick={() => navigate("/collections?id=trash")} />
               <MenuButton icon={theme === "dark" ? <Sun size={15} /> : <Moon size={15} />} label={theme === "dark" ? "Light theme" : "Dark theme"} onClick={toggleTheme} />
               <MenuButton icon={<Settings size={15} />} label="Settings" onClick={() => navigate("/settings")} />
@@ -113,7 +113,13 @@ export const WorkspaceHeader = ({
               {authEnabled && user?.role === "ADMIN" && <MenuButton icon={<Shield size={15} />} label="Admin" onClick={() => navigate("/admin")} />}
               {authEnabled && <MenuButton danger icon={<LogOut size={15} />} label="Log out" onClick={logout} />}
               <div className="mt-1 space-y-1 border-t border-zinc-100 px-2.5 pt-2 text-center text-[10px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                <p>based on <FooterLink href="https://excalidraw.com">Excalidraw</FooterLink>.</p>
+                <p>
+                  based on <FooterLink href="https://excalidraw.com">Excalidraw</FooterLink>
+                  {" & "}
+                  <FooterLink href="https://github.com/ZimengXiong/ExcaliDash">
+                    ExcaliDash
+                  </FooterLink>
+                </p>
                 <p>{productName} v{appVersion} <span aria-hidden="true">·</span>{" "}<FooterLink href="https://github.com/gulivan/localdraw">GitHub</FooterLink></p>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Download,
   FilePlus2,
   Folder,
   Loader2,
@@ -8,19 +9,25 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { PROJECT_COLORS } from "../components/workspace/projectColors";
 import { ProjectSlideCard } from "../components/workspace/ProjectSlideCard";
+import {
+  disposableDraftNavigationState,
+  readDisposableDraft,
+} from "./editor/disposableDraft";
 import { UploadStatus } from "../components/UploadStatus";
 import { useUpload } from "../context/UploadContext";
 import type { Collection, DrawingSummary } from "../types";
+import { exportDrawingToFile } from "../utils/exportUtils";
 
 export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   const { id } = useParams<{ id: string }>();
   const collectionId: string | null = unfiled ? null : (id ?? null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { uploadFiles } = useUpload();
   const fileRef = useRef<HTMLInputElement>(null);
   const colorPickerRef = useRef<HTMLDetailsElement>(null);
@@ -33,6 +40,11 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   const [name, setName] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteSlides, setDeleteSlides] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkExporting, setBulkExporting] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [deleteBulkPermanently, setDeleteBulkPermanently] = useState(false);
 
   const load = useCallback(async () => {
     if (!unfiled && !id) return;
@@ -56,6 +68,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
       setProject(active);
       setName(active.name);
       setSlides(drawingRows.drawings);
+      setSelectedIds(new Set());
     } catch (loadError) {
       console.error(loadError);
       setError("This project could not be opened.");
@@ -76,6 +89,11 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
       setSlides(next.map((slide, sortOrder) => ({ ...slide, sortOrder })));
     } else {
       setSlides((current) => current.filter((slide) => slide.id !== slideId));
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        next.delete(slideId);
+        return next;
+      });
     }
     try {
       await api.placeDrawing(slideId, collectionId, targetIndex);
@@ -86,8 +104,18 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   };
 
   const createSlide = async () => {
-    const drawing = await api.createDrawing(`Slide ${slides.length + 1}`, collectionId);
-    navigate(`/editor/${drawing.id}`);
+    const drawing = await api.createDrawing(`Canvas ${slides.length + 1}`, collectionId);
+    navigate(`/editor/${drawing.id}`, {
+      state: disposableDraftNavigationState(drawing),
+    });
+  };
+
+  const openCanvas = (canvas: DrawingSummary) => {
+    const initialDraft = readDisposableDraft(location.state, canvas.id);
+    navigate(
+      `/editor/${canvas.id}`,
+      initialDraft ? { state: { disposableDraft: initialDraft } } : undefined,
+    );
   };
 
   const saveName = async () => {
@@ -108,7 +136,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   };
 
   const renameSlide = async (slide: DrawingSummary) => {
-    const nextName = window.prompt("Rename slide", slide.name)?.trim();
+    const nextName = window.prompt("Rename canvas", slide.name)?.trim();
     if (!nextName) return;
     setSlides((current) =>
       current.map((item) =>
@@ -124,6 +152,11 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
 
   const moveSlideToTrash = async (slideId: string) => {
     setSlides((current) => current.filter((item) => item.id !== slideId));
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      next.delete(slideId);
+      return next;
+    });
     try {
       await api.updateDrawing(slideId, { collectionId: "trash" });
     } catch {
@@ -136,8 +169,67 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
       await api.duplicateDrawing(slideId);
       await load();
     } catch (duplicateError) {
-      console.error("Failed to duplicate slide", duplicateError);
+      console.error("Failed to duplicate canvas", duplicateError);
     }
+  };
+
+  const toggleSlideSelection = (slideId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(slideId)) next.delete(slideId);
+      else next.add(slideId);
+      return next;
+    });
+  };
+
+  const exportSelected = async () => {
+    if (selectedIds.size === 0 || bulkExporting) return;
+    setBulkExporting(true);
+    try {
+      const drawings = await Promise.all(
+        slides
+          .filter((slide) => selectedIds.has(slide.id))
+          .map((slide) => api.getDrawing(slide.id)),
+      );
+      drawings.forEach((drawing) => exportDrawingToFile(drawing));
+    } catch (exportError) {
+      console.error("Failed bulk export", exportError);
+    } finally {
+      setBulkExporting(false);
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0 || bulkDeleting) return;
+    const ids = Array.from(selectedIds);
+    setBulkDeleteModalOpen(false);
+    setBulkDeleting(true);
+    setSlides((current) =>
+      current.filter((slide) => !selectedIds.has(slide.id)),
+    );
+    setSelectedIds(new Set());
+    try {
+      if (deleteBulkPermanently) {
+        await Promise.all(ids.map((slideId) => api.deleteDrawing(slideId)));
+      } else {
+        await Promise.all(
+          ids.map((slideId) =>
+            api.updateDrawing(slideId, { collectionId: "trash" }),
+          ),
+        );
+      }
+    } catch (deleteError) {
+      console.error("Failed bulk delete", deleteError);
+      await load();
+    } finally {
+      setBulkDeleting(false);
+      setDeleteBulkPermanently(false);
+    }
+  };
+
+  const closeBulkDeleteModal = () => {
+    setBulkDeleteModalOpen(false);
+    setDeleteBulkPermanently(false);
   };
 
   const importFiles = async (files: FileList | null) => {
@@ -176,38 +268,74 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
             ) : (
               <button type="button" onDoubleClick={() => !unfiled && setRenaming(true)} className="workspace-focus block max-w-full truncate rounded text-left text-2xl font-bold tracking-[-0.02em]">{project.name}</button>
             )}
-            <p className="text-[11px] text-zinc-600 dark:text-zinc-400">{slides.length} slide{slides.length === 1 ? "" : "s"}</p>
           </div>
           {!unfiled && <button type="button" onClick={() => setRenaming(true)} className="workspace-focus hidden h-9 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 sm:flex"><Pencil size={14} /> Rename</button>}
           <button type="button" onClick={() => fileRef.current?.click()} className="workspace-focus flex h-9 items-center gap-1.5 rounded-xl border border-zinc-200 px-3 text-xs font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"><Upload size={14} /><span className="hidden sm:inline">Import</span></button>
-          <button type="button" onClick={() => void createSlide()} className="workspace-focus flex h-9 items-center gap-1.5 rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700"><FilePlus2 size={14} /> Add slide</button>
+          <button type="button" onClick={() => void createSlide()} className="workspace-focus flex h-9 items-center gap-1.5 rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700"><FilePlus2 size={14} /> Add canvas</button>
           <input ref={fileRef} type="file" accept=".json,.excalidraw" multiple className="hidden" onChange={(event) => { void importFiles(event.target.files); event.target.value = ""; }} />
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-7 sm:px-6">
-        {!unfiled && <div className="mb-6 flex justify-end"><button type="button" onClick={() => setDeleteModalOpen(true)} className="workspace-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><Trash2 size={14} /> Delete project</button></div>}
+        {(!unfiled || selectedIds.size > 0) && <div className="mb-6 flex min-h-9 justify-end gap-2">
+          {selectedIds.size > 0 && (
+            <>
+              <button type="button" disabled={bulkExporting} onClick={() => void exportSelected()} className="workspace-focus flex items-center gap-1.5 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 disabled:cursor-wait disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                {bulkExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Export bulk
+              </button>
+              <button type="button" disabled={bulkDeleting} onClick={() => setBulkDeleteModalOpen(true)} className="workspace-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/40">
+                {bulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete bulk
+              </button>
+            </>
+          )}
+          {!unfiled && <button type="button" onClick={() => setDeleteModalOpen(true)} className="workspace-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><Trash2 size={14} /> Delete project</button>}
+        </div>}
         {slides.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 py-20 text-center dark:border-zinc-700">
             <FilePlus2 className="mx-auto text-zinc-400" />
-            <h2 className="mt-3 text-sm font-semibold">No slides yet</h2>
+            <h2 className="mt-3 text-sm font-semibold">No canvases yet</h2>
             <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-              Add a slide to start this project.
+              Add a canvas to start this project.
             </p>
             <button type="button" onClick={() => void createSlide()} className="workspace-focus mt-4 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white">
-              Add first slide
+              Add first canvas
             </button>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {slides.map((slide, index) => <ProjectSlideCard key={slide.id} slide={slide} index={index} projects={projects} canOrganize onOpen={() => navigate(`/editor/${slide.id}`)} onRename={() => void renameSlide(slide)} onDelete={() => void moveSlideToTrash(slide.id)} onDuplicate={() => void duplicateSlide(slide.id)} onMove={(targetCollectionId) => void place(slide.id, targetCollectionId, projects.find((item) => item.id === targetCollectionId)?.drawingCount ?? 0)} onReorder={(targetIndex) => void place(slide.id, collectionId, targetIndex)} onDropAt={(draggedId, targetIndex) => void place(draggedId, collectionId, targetIndex)} />)}
+            {slides.map((slide, index) => <ProjectSlideCard key={slide.id} slide={slide} index={index} projects={projects} canOrganize isSelected={selectedIds.has(slide.id)} onToggleSelection={() => toggleSlideSelection(slide.id)} onOpen={() => openCanvas(slide)} onRename={() => void renameSlide(slide)} onDelete={() => void moveSlideToTrash(slide.id)} onDuplicate={() => void duplicateSlide(slide.id)} onMove={(targetCollectionId) => void place(slide.id, targetCollectionId, projects.find((item) => item.id === targetCollectionId)?.drawingCount ?? 0)} onReorder={(targetIndex) => void place(slide.id, collectionId, targetIndex)} onDropAt={(draggedId, targetIndex) => void place(draggedId, collectionId, targetIndex)} />)}
           </div>
         )}
       </main>
       <UploadStatus />
       <ConfirmModal
+        isOpen={bulkDeleteModalOpen}
+        title={`Delete ${selectedIds.size} selected ${selectedIds.size === 1 ? "canvas" : "canvases"}?`}
+        message={
+          <div className="space-y-4">
+            <p>
+              {deleteBulkPermanently
+                ? "The selected canvases will be permanently deleted. This cannot be undone."
+                : "The selected canvases will move to Trash."}
+            </p>
+            <label className="workspace-focus flex cursor-pointer items-center justify-center gap-2 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800">
+              <input
+                type="checkbox"
+                checked={deleteBulkPermanently}
+                onChange={(event) => setDeleteBulkPermanently(event.target.checked)}
+                className="h-4 w-4 accent-rose-600"
+              />
+              <span>Skip Trash and delete permanently.</span>
+            </label>
+          </div>
+        }
+        confirmText={deleteBulkPermanently ? "Delete permanently" : "Move to Trash"}
+        onConfirm={() => void deleteSelected()}
+        onCancel={closeBulkDeleteModal}
+      />
+      <ConfirmModal
         isOpen={deleteModalOpen}
         title={`Delete project “${project.name}”?`}
-        message={<div className="space-y-4"><p>{deleteSlides ? "Its slides will move to Trash." : "Its slides will move to Other."}</p><label className="workspace-focus flex cursor-pointer items-center justify-center gap-2 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"><input type="checkbox" checked={deleteSlides} onChange={(event) => setDeleteSlides(event.target.checked)} className="h-4 w-4 accent-rose-600" /><span>Delete slides too.</span></label></div>}
+        message={<div className="space-y-4"><p>{deleteSlides ? "Its canvases will move to Trash." : "Its canvases will move to Other."}</p><label className="workspace-focus flex cursor-pointer items-center justify-center gap-2 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"><input type="checkbox" checked={deleteSlides} onChange={(event) => setDeleteSlides(event.target.checked)} className="h-4 w-4 accent-rose-600" /><span>Delete canvases too.</span></label></div>}
         confirmText="Delete project"
         onConfirm={() => void removeProject()}
         onCancel={closeDeleteModal}

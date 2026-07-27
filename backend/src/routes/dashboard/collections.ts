@@ -116,11 +116,11 @@ export const registerCollectionRoutes = (
           data: { name: sanitizedName, color, userId: req.user!.id },
         });
         if (req.body.createInitialDrawing !== true) {
-          return { collection, initialDrawingId: undefined };
+          return { collection, initialDrawing: undefined };
         }
         const drawing = await tx.drawing.create({
           data: {
-            name: "Slide 1",
+            name: "Canvas 1",
             elements: "[]",
             appState: "{}",
             files: "{}",
@@ -129,12 +129,18 @@ export const registerCollectionRoutes = (
             sortOrder: 0,
           },
         });
-        return { collection, initialDrawingId: drawing.id };
+        return { collection, initialDrawing: drawing };
       });
       invalidateDrawingsCache();
       return res.json({
         ...result.collection,
-        initialDrawingId: result.initialDrawingId,
+        initialDrawingId: result.initialDrawing?.id,
+        initialDrawing: result.initialDrawing
+          ? {
+              id: result.initialDrawing.id,
+              updatedAt: result.initialDrawing.updatedAt,
+            }
+          : undefined,
       });
     }),
   );

@@ -28,6 +28,7 @@ export interface Collection {
     "id" | "name" | "preview" | "sortOrder" | "updatedAt"
   > | null;
   initialDrawingId?: string;
+  initialDrawing?: Pick<DrawingSummary, "id" | "updatedAt">;
 }
 
 export interface DrawingPlacementOrder {

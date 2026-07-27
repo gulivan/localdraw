@@ -13,8 +13,28 @@ permissions:
   contents: write
 
 jobs:
+  validate-version:
+    name: Validate release version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - name: Match tag, desktop, and launcher versions
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          VERSION="${TAG#v}"
+          VERSION="${VERSION%-desktop}"
+          DESKTOP_VERSION=$(node -p "require('./desktop/package.json').version")
+          LAUNCHER_VERSION=$(node -p "require('./launcher/package.json').version")
+          test "$TAG" = "v${VERSION}-desktop"
+          test "$DESKTOP_VERSION" = "$VERSION"
+          test "$LAUNCHER_VERSION" = "$VERSION"
+
   macos:
     name: macOS (${{ matrix.arch }})
+    needs: validate-version
     strategy:
       fail-fast: false
       matrix:
@@ -102,6 +122,7 @@ jobs:
 
   linux:
     name: Linux (x64)
+    needs: validate-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -219,6 +240,7 @@ jobs:
 
   windows:
     name: Windows (x64)
+    needs: validate-version
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

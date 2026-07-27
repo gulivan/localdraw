@@ -25,6 +25,14 @@ const generatedClientDir = resolve(backendDir, "src/generated/client");
 const stagedGeneratedClientDir = resolve(stagedBackendDistDir, "generated/client");
 const templateDb = resolve(buildDir, "template.db");
 const xiaolaiManifestPath = resolve(buildDir, "xiaolai-manifest.json");
+const desktopPackage = JSON.parse(
+  readFileSync(resolve(desktopDir, "package.json"), "utf8"),
+);
+const desktopVersion = desktopPackage.version;
+
+if (typeof desktopVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(desktopVersion)) {
+  throw new Error("desktop/package.json contains an invalid version");
+}
 
 const run = (command, args, options = {}) => {
   const result = spawnSync(command, args, {
@@ -43,6 +51,7 @@ run("npm", ["run", "build"], {
     ...process.env,
     VITE_API_URL: "http://127.0.0.1:32145",
     VITE_APP_BUILD_LABEL: "Electrobun desktop",
+    VITE_APP_VERSION: desktopVersion,
     VITE_DESKTOP_MINIMAL: "true",
   },
 });
@@ -105,13 +114,6 @@ mkdirSync(generatedClientProxyDir, { recursive: true });
 writeFileSync(
   resolve(generatedClientProxyDir, "index.js"),
   'module.exports = require("../../dist/generated/client");\n',
-);
-
-const workerDir = resolve(stagedBackendDistDir, "workers");
-mkdirSync(workerDir, { recursive: true });
-cpSync(
-  resolve(backendDir, "dist/workers/db-verify.js"),
-  resolve(workerDir, "db-verify.js"),
 );
 
 cpSync(

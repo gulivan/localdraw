@@ -2,7 +2,7 @@
 
 ## Direction
 
-ExcaliDash uses a calm personal-workspace register inspired by the supplied Foldraw prototype. The signature is a continuity trail: recent thumbnail, project color and name, slide position, and truthful save destination follow the user from Home into the editor shell. The embedded Excalidraw surface keeps its own styling.
+ExcaliDash uses a calm personal-workspace register inspired by the supplied Foldraw prototype. The signature is a continuity trail: recent thumbnail, project color and name, canvas position, and truthful save destination follow the user from Home into the editor shell. The embedded Excalidraw surface keeps its own styling.
 
 ## Theme
 
@@ -39,10 +39,10 @@ Use bundled DM Sans for workspace navigation, headings, labels, and body copy, w
 ## Core Components
 
 - Workspace header: brand and persistence context, global search, creation actions, utility menu.
-- Continue rail: horizontally scrollable recent slide previews with project context.
-- Project cover: one dominant drawing preview, project color, slide count, recent activity, and compact slide list.
-- Ordered slide card: numbered preview with title, time, project context, and accessible move menu.
-- Editor project rail: lazy project tree, active slide, add controls, drag targets, storage status.
+- Continue rail: horizontally scrollable recent canvas previews with project context.
+- Project cover: one dominant drawing preview, project color, canvas count, recent activity, and compact canvas list.
+- Ordered canvas card: numbered preview with title, time, project context, and accessible move menu.
+- Editor project rail: lazy project tree, active canvas, add controls, drag targets, storage status.
 - Status language: `Saved on this device` for LocalDraw and `Saved to ExcaliDash` for hosted mode, with saving and failure variants.
 - Desktop storage settings: show the resolved drawing-folder path with native Choose, Open, and Rescan actions; explain that `.excalidraw` files are portable and `.localdraw` contains ordering/version metadata.
 

@@ -20,7 +20,7 @@ export const registerDrawingPlacementRoutes = (
       if (!req.user) return res.status(401).json({ error: "Unauthorized" });
       const parsed = placementSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ error: "Invalid slide placement" });
+        return res.status(400).json({ error: "Invalid canvas placement" });
       }
       const drawing = await prisma.drawing.findUnique({
         where: { id: req.params.id },

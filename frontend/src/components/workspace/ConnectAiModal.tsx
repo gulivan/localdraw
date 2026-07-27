@@ -15,7 +15,7 @@ import * as api from "../../api";
 type ClientTab = "codex" | "claude" | "generic";
 
 const deriveMcpUrl = () => {
-  const apiUrl = api.API_URL || "/api";
+  const apiUrl = import.meta.env.VITE_API_URL || "/api";
   const resolved = /^https?:\/\//i.test(apiUrl)
     ? apiUrl
     : new URL(apiUrl, window.location.origin).toString();

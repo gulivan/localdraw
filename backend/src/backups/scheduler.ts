@@ -118,7 +118,7 @@ const pruneOldBackups = async (backupDir: string, retentionDays: number): Promis
   );
 };
 
-export const createSqliteBackup = async ({
+const createSqliteBackup = async ({
   prisma,
   databaseUrl,
   backupDir,
