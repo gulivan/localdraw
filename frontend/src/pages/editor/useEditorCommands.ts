@@ -235,6 +235,7 @@ export const useEditorCommands = ({
       try {
         const currentDraft = refs.disposableDraft.current;
         if (
+          !nextDraft &&
           currentDraft?.drawingId === drawingId &&
           !refs.hasSceneChangesSinceLoad.current
         ) {

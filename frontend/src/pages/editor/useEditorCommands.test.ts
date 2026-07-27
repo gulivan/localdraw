@@ -164,6 +164,71 @@ describe("useEditorCommands canvas switching", () => {
     expect(refs.disposableDraft.current).toBeNull();
   });
 
+  it("keeps the current canvas when adding another canvas", async () => {
+    const cancelPendingSceneSaves = vi.fn();
+    const enqueueSceneSave = vi.fn().mockResolvedValue(undefined);
+    const refs = {
+      disposableDraft: {
+        current: {
+          drawingId: "canvas-1",
+          updatedAt: 1_700_000_000_000,
+        } as DisposableDraft | null,
+      },
+      excalidrawAPI: { current: null },
+      hasSceneChangesSinceLoad: { current: false },
+      latestFiles: { current: {} },
+      saveData: { current: null },
+      savePreview: { current: null },
+      suspiciousBlankLoad: { current: false },
+    };
+    const { result } = renderHook(() =>
+      useEditorCommands({
+        autoHideEnabled: false,
+        canEdit: true,
+        cancelPendingSceneSaves,
+        debouncedSaveLibrary: vi.fn(),
+        drawingId: "canvas-1",
+        drawingName: "Canvas 1",
+        enqueueSceneSave,
+        isSavingOnLeave: false,
+        newName: "Canvas 1",
+        refs,
+        resolveSafeSnapshot: (snapshot) => ({
+          snapshot: snapshot ?? [],
+          prevented: false,
+          staleEmptySnapshot: false,
+          staleNonRenderableSnapshot: false,
+        }),
+        setAutoHideEnabled: vi.fn(),
+        setDrawingName: vi.fn(),
+        setDrawingTitle: vi.fn(),
+        setIsHeaderVisible: vi.fn(),
+        setIsRenaming: vi.fn(),
+        setIsSavingOnLeave: vi.fn(),
+        setNewName: vi.fn(),
+        user: null,
+      }),
+    );
+    const nextDraft = {
+      drawingId: "canvas-2",
+      updatedAt: 1_700_000_000_100,
+    };
+
+    await act(async () => {
+      await result.current.handleDrawingSwitch(
+        "canvas-2",
+        "Canvas 2",
+        nextDraft,
+      );
+    });
+
+    expect(deleteDrawingIfUntouched).not.toHaveBeenCalled();
+    expect(cancelPendingSceneSaves).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/editor/canvas-2", {
+      state: { disposableDraft: nextDraft },
+    });
+  });
+
   it("keeps a new canvas after it has been edited", async () => {
     const refs = {
       disposableDraft: { current: null },
