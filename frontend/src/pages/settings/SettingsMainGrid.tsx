@@ -1,6 +1,7 @@
 import { Archive, FolderTree, Moon, Sun, Zap, ZapOff } from "lucide-react";
 import type * as api from "../../api";
 import { UpdateSettingsCard } from "./UpdateSettingsCard";
+import { RecentCanvasesSettingsCard } from "./RecentCanvasesSettingsCard";
 import type { EditorSidebarScope } from "../../utils/editorSidebar";
 
 type SettingsMainGridProps = {
@@ -13,6 +14,8 @@ type SettingsMainGridProps = {
   toggleImageCompression: () => void;
   editorSidebarScope: EditorSidebarScope;
   setEditorSidebarScope: (scope: EditorSidebarScope) => void;
+  recentCanvasesLimit: number;
+  setRecentCanvasesLimit: (limit: number) => void;
   updateChannel: api.UpdateChannel;
   updateInfo: api.UpdateInfo | null;
   updateLoading: boolean;
@@ -31,6 +34,8 @@ export const SettingsMainGrid = ({
   toggleImageCompression,
   editorSidebarScope,
   setEditorSidebarScope,
+  recentCanvasesLimit,
+  setRecentCanvasesLimit,
   updateChannel,
   updateInfo,
   updateLoading,
@@ -190,6 +195,10 @@ export const SettingsMainGrid = ({
         <option value="all">All projects</option>
       </select>
     </div>
+    <RecentCanvasesSettingsCard
+      value={recentCanvasesLimit}
+      onChange={setRecentCanvasesLimit}
+    />
     <UpdateSettingsCard
       updateChannel={updateChannel}
       updateInfo={updateInfo}

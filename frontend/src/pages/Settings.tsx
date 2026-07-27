@@ -11,6 +11,10 @@ import {
   readEditorSidebarScope,
   writeEditorSidebarScope,
 } from "../utils/editorSidebar";
+import {
+  readRecentCanvasesLimit,
+  writeRecentCanvasesLimit,
+} from "../utils/recentCanvases";
 export const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const [backupExportExt, setBackupExportExt] = useState<
@@ -41,6 +45,9 @@ export const Settings: React.FC = () => {
   });
   const [editorSidebarScope, setEditorSidebarScope] = useState(
     readEditorSidebarScope,
+  );
+  const [recentCanvasesLimit, setRecentCanvasesLimit] = useState(
+    readRecentCanvasesLimit,
   );
   const toggleImageCompression = () => {
     const next = !imageCompression;
@@ -135,6 +142,10 @@ export const Settings: React.FC = () => {
         setEditorSidebarScope={(scope) => {
           writeEditorSidebarScope(scope);
           setEditorSidebarScope(scope);
+        }}
+        recentCanvasesLimit={recentCanvasesLimit}
+        setRecentCanvasesLimit={(limit) => {
+          setRecentCanvasesLimit(writeRecentCanvasesLimit(limit));
         }}
         updateChannel={updateChannel}
         updateInfo={updateInfo}

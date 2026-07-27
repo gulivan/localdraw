@@ -17,6 +17,7 @@ import { UploadStatus } from "../components/UploadStatus";
 import { useUpload } from "../context/UploadContext";
 import { useDebounce } from "../hooks/useDebounce";
 import type { Collection, DrawingSummary } from "../types";
+import { readRecentCanvasesLimit } from "../utils/recentCanvases";
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export const Home = () => {
         api.getCollections({ includeOverview: true }),
         api.getDrawings(undefined, undefined, {
           includePreview: true,
-          limit: 8,
+          limit: readRecentCanvasesLimit(),
           sortField: "updatedAt",
           sortDirection: "desc",
         }),
@@ -133,13 +134,13 @@ export const Home = () => {
                   <h1 id="continue-title" className="flex items-center gap-2 text-sm font-semibold">
                     <Clock3 size={16} className="text-zinc-500" /> Recent
                   </h1>
-                  <button type="button" onClick={() => navigate("/collections")} className="workspace-focus rounded text-xs font-semibold text-violet-700 hover:underline dark:text-violet-300">All slides</button>
+                  <button type="button" onClick={() => navigate("/collections")} className="workspace-focus rounded text-xs font-semibold text-violet-700 hover:underline dark:text-violet-300">All items</button>
                 </div>
                 <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-3">
                   {recent.map((slide) => {
                     const project = projects.find((item) => item.id === slide.collectionId);
                     return (
-                      <button key={slide.id} type="button" onClick={() => navigate(`/editor/${slide.id}`)} className="workspace-focus group w-52 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-700">
+                      <button key={slide.id} type="button" onClick={() => navigate(`/editor/${slide.id}`)} className="workspace-focus group w-52 shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left transition hover:border-violet-300 hover:shadow-[0_4px_8px_rgba(24,24,27,0.10)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-violet-700">
                         <SlideThumbnail drawing={slide} className="h-28 w-full" />
                         <span className="block p-3">
                           <span className="block truncate text-sm font-semibold">{slide.name}</span>

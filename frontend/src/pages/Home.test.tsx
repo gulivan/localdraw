@@ -124,6 +124,15 @@ describe("Home workspace", () => {
 
     expect(await screen.findByText("Recent")).toBeInTheDocument();
     expect(screen.getByText("Product story")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All items" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Opening slide/ })).not.toHaveClass(
+      "hover:-translate-y-0.5",
+    );
+    expect(mocks.getDrawings).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      expect.objectContaining({ limit: 5 }),
+    );
 
     fireEvent.change(screen.getByRole("textbox", { name: "Search workspace" }), {
       target: { value: "needle" },
