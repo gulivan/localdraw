@@ -1,266 +1,204 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import {
-  copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { FilesystemWorkspace } from "../src/bun/filesystemWorkspace";
+import { join, relative, resolve } from "node:path";
+import {
+  FileConflictError,
+  FilesystemWorkspace,
+} from "../src/bun/filesystemWorkspace";
+import { createLocalApi } from "../src/bun/localApi";
 
-const fixtureRoot = resolve(tmpdir(), `localdraw-workspace-${randomUUID()}`);
-const databasePath = join(fixtureRoot, "localdraw.db");
+const fixtureRoot = resolve(tmpdir(), `localdraw-files-${randomUUID()}`);
 const dataDir = join(fixtureRoot, "app-data");
 const workspacePath = join(fixtureRoot, "workspace");
 const movedWorkspacePath = join(fixtureRoot, "moved-workspace");
+const externalWorkspacePath = join(fixtureRoot, "external-workspace");
 
 mkdirSync(fixtureRoot, { recursive: true });
-copyFileSync(resolve(import.meta.dirname, "../build/template.db"), databasePath);
-Object.assign(process.env, {
-  CSRF_SECRET: "desktop-workspace-smoke-csrf-secret",
-  DATABASE_URL: `file:${databasePath}`,
-  DISABLE_ONBOARDING_GATE: "true",
-  FRONTEND_URL: "http://127.0.0.1:32144",
-  JWT_SECRET: "desktop-workspace-smoke-jwt-secret",
-  NODE_ENV: "production",
-  UPDATE_CHECK_OUTBOUND: "false",
-});
 
-const backend = await import("../build/backend/dist/index.js");
+const drawingPathFromIndex = (root: string, id: string): string => {
+  const index = JSON.parse(
+    readFileSync(join(root, ".localdraw/index.json"), "utf8"),
+  );
+  return join(root, index.drawings[id].path);
+};
+
+const workspace = new FilesystemWorkspace(dataDir, workspacePath);
 
 try {
-  const user = await backend.prisma.user.create({
-    data: {
-      id: "bootstrap-admin",
-      email: "bootstrap@excalidash.local",
-      passwordHash: "",
-      name: "LocalDraw",
-      role: "ADMIN",
-      isActive: false,
-    },
-  });
-  const project = await backend.prisma.collection.create({
-    data: { id: "project-1", name: "Roadmap", color: "#7c3aed", userId: user.id },
-  });
-  const drawing = await backend.prisma.drawing.create({
-    data: {
-      id: "drawing-1",
-      name: "Opening",
-      elements: "[]",
-      appState: "{}",
-      files: "{}",
-      userId: user.id,
-      collectionId: project.id,
-      sortOrder: 0,
-    },
-  });
-  await backend.prisma.drawingSnapshot.create({
-    data: {
-      id: "snapshot-1",
-      drawingId: drawing.id,
-      version: 1,
-      elements: "[]",
-      appState: "{}",
-      files: "{}",
-    },
-  });
-
-  const workspace = new FilesystemWorkspace(backend.prisma, dataDir, workspacePath);
   await workspace.initialize();
-  const index = JSON.parse(
-    readFileSync(join(workspacePath, ".localdraw/workspace.json"), "utf8"),
-  );
-  const drawingPath = join(workspacePath, index.drawings[drawing.id].path);
-  const document = JSON.parse(readFileSync(drawingPath, "utf8"));
-  assert.equal(document.localdraw.id, drawing.id);
-  assert.equal(document.localdraw.version, 1);
-  assert.equal(document.elements.length, 0);
-  assert.equal(
-    readFileSync(
-      join(workspacePath, ".localdraw/history/drawing-1/1-snapshot-1.excalidraw"),
-      "utf8",
-    ).length > 0,
-    true,
-  );
+  const project = await workspace.createCollection("Roadmap", "#7c3aed", true);
+  assert.equal(project.name, "Roadmap");
+  assert.ok(project.initialDrawing?.id);
 
-  document.elements = [{ id: "external", type: "rectangle" }];
-  writeFileSync(drawingPath, `${JSON.stringify(document, null, 2)}\n`);
+  const drawingId = project.initialDrawing!.id;
+  const initial = workspace.getDrawing(drawingId)!;
+  const saved = await workspace.updateDrawing(drawingId, {
+    elements: [{ id: "shape-1", type: "rectangle", text: "filesystem search" }],
+    appState: { viewBackgroundColor: "#ffffff" },
+    files: {},
+    version: initial.version,
+  });
+  assert.equal(saved.version, 2);
+  assert.equal(workspace.listDrawings({ search: "filesystem" }).totalCount, 1);
+
+  const drawingPath = drawingPathFromIndex(workspacePath, drawingId);
+  assert.equal(existsSync(drawingPath), true);
+  const external = JSON.parse(readFileSync(drawingPath, "utf8"));
+  external.elements.push({ id: "external", type: "ellipse" });
+  writeFileSync(drawingPath, `${JSON.stringify(external, null, 2)}\n`);
   await workspace.rescan();
-  const updated = await backend.prisma.drawing.findUniqueOrThrow({
-    where: { id: drawing.id },
-  });
-  assert.equal(updated.version, 2);
-  assert.equal(JSON.parse(updated.elements)[0].id, "external");
-  assert.equal(
-    await backend.prisma.drawingSnapshot.count({ where: { drawingId: drawing.id } }),
-    2,
-  );
+  assert.equal(workspace.getDrawing(drawingId)?.version, 3);
+  assert.equal((workspace.getDrawing(drawingId)?.elements as any[]).at(-1).id, "external");
+  assert.equal((await workspace.listHistory(drawingId)).totalCount >= 2, true);
 
-  await backend.prisma.drawing.update({
-    where: { id: drawing.id },
-    data: {
-      elements: JSON.stringify([{ id: "unsynced", type: "ellipse" }]),
-      version: 3,
+  const renamedPath = join(resolve(drawingPath, ".."), "Opening renamed.excalidraw");
+  await Bun.write(renamedPath, Bun.file(drawingPath));
+  rmSync(drawingPath);
+  await workspace.rescan();
+  assert.equal(workspace.getDrawing(drawingId)?.name, "Opening renamed");
+
+  const beforeConflict = workspace.getDrawing(drawingId)!;
+  const conflictDisk = JSON.parse(readFileSync(renamedPath, "utf8"));
+  conflictDisk.elements.push({ id: "disk", type: "diamond" });
+  writeFileSync(renamedPath, `${JSON.stringify(conflictDisk, null, 2)}\n`);
+  await assert.rejects(
+    () => workspace.updateDrawing(drawingId, {
+      elements: [...beforeConflict.elements, { id: "local", type: "line" }],
+      version: beforeConflict.version,
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof FileConflictError);
+      assert.equal(existsSync(join(workspacePath, error.conflictPath)), true);
+      return true;
     },
-  });
-  await backend.prisma.collection.update({
-    where: { id: project.id },
-    data: { name: "Updated Roadmap" },
-  });
+  );
+  await workspace.rescan();
 
-  await workspace.setRoot(movedWorkspacePath);
+  const copiedPath = join(resolve(renamedPath, ".."), "Opening copied.excalidraw");
+  await Bun.write(copiedPath, Bun.file(renamedPath));
+  await workspace.rescan();
+  const copiedRows = workspace.listDrawings({
+    collectionId: project.id,
+    includeData: true,
+  }).drawings;
+  assert.equal(copiedRows.length, 2);
+  assert.equal(new Set(copiedRows.map((item) => item.id)).size, 2);
+  assert.equal(workspace.getDrawing(drawingId)?.name, "Opening renamed");
+
+  cpSync(resolve(renamedPath, ".."), join(workspacePath, "Roadmap Copy"), {
+    recursive: true,
+  });
+  await workspace.rescan();
+  const copiedProjects = workspace.listCollections().filter((item) => item.id !== "trash");
+  assert.equal(copiedProjects.length, 2);
+  const allProjectDrawings = workspace.listDrawings({ includeData: true }).drawings;
+  assert.equal(new Set(allProjectDrawings.map((item) => item.id)).size, allProjectDrawings.length);
+
+  await workspace.updatePreferences({ theme: "dark", recentCanvasesLimit: 8 });
+  assert.equal((await workspace.getPreferences()).theme, "dark");
+  await workspace.updateLibrary([{ id: "library-item" }]);
+  assert.equal((await workspace.getLibrary()).length, 1);
+
+  rmSync(join(workspacePath, ".localdraw/index.json"));
+  await workspace.rescan();
+  assert.equal(existsSync(join(workspacePath, ".localdraw/index.json")), true);
+  assert.equal(workspace.getDrawing(drawingId)?.id, drawingId);
+
+  const invalidWorkspacePath = join(fixtureRoot, "not-a-directory");
+  writeFileSync(invalidWorkspacePath, "not a workspace");
+  await assert.rejects(() => workspace.openRoot(invalidWorkspacePath));
+  assert.equal(workspace.getStatus().path, workspacePath);
+
+  const unrelatedPath = join(resolve(renamedPath, ".."), "project-notes.txt");
+  writeFileSync(unrelatedPath, "keep me in the source folder");
+
+  mkdirSync(movedWorkspacePath);
+  await workspace.moveRoot(movedWorkspacePath);
   assert.equal(workspace.getStatus().path, movedWorkspacePath);
+  assert.equal(workspace.getDrawing(drawingId)?.id, drawingId);
+  assert.equal(existsSync(join(dataDir, "excalidash.db")), false);
+  assert.equal(existsSync(unrelatedPath), true);
   assert.equal(
-    readFileSync(join(movedWorkspacePath, ".localdraw/workspace.json"), "utf8").length > 0,
-    true,
-  );
-  const movedIndex = JSON.parse(
-    readFileSync(join(movedWorkspacePath, ".localdraw/workspace.json"), "utf8"),
-  );
-  const movedDocument = JSON.parse(
-    readFileSync(join(movedWorkspacePath, movedIndex.drawings[drawing.id].path), "utf8"),
-  );
-  assert.equal(movedDocument.localdraw.version, 3);
-  assert.equal(movedDocument.elements[0].id, "unsynced");
-  assert.equal(
-    JSON.parse(
-      readFileSync(
-        join(
-          movedWorkspacePath,
-          movedIndex.projects[project.id].path,
-          ".localdraw-project.json",
-        ),
-        "utf8",
-      ),
-    ).name,
-    "Updated Roadmap",
+    existsSync(join(movedWorkspacePath, relative(workspacePath, unrelatedPath))),
+    false,
   );
 
-  movedDocument.localdraw.name = "Renamed outside LocalDraw";
+  mkdirSync(externalWorkspacePath);
   writeFileSync(
-    join(movedWorkspacePath, movedIndex.drawings[drawing.id].path),
-    `${JSON.stringify(movedDocument, null, 2)}\n`,
+    join(externalWorkspacePath, "Loose canvas.excalidraw"),
+    `${JSON.stringify({
+      type: "excalidraw",
+      version: 2,
+      elements: [{ id: "loose", type: "text", text: "Loose" }],
+      appState: {},
+      files: {},
+    }, null, 2)}\n`,
   );
-  await workspace.rescan();
-  const metadataUpdate = await backend.prisma.drawing.findUniqueOrThrow({
-    where: { id: drawing.id },
-  });
-  assert.equal(metadataUpdate.name, "Renamed outside LocalDraw");
-  assert.equal(metadataUpdate.version, 3);
+  await workspace.openRoot(externalWorkspacePath);
+  const loose = workspace.listDrawings({ includeData: true });
+  assert.equal(loose.totalCount, 1);
+  assert.equal(loose.drawings[0].name, "Loose canvas");
+  assert.ok(JSON.parse(
+    readFileSync(join(externalWorkspacePath, "Loose canvas.excalidraw"), "utf8"),
+  ).localdraw.id);
 
-  const expiredHistoryPath = join(
-    movedWorkspacePath,
-    ".localdraw/history/drawing-1/1-snapshot-1.excalidraw",
+  const api = createLocalApi(workspace, "test-version");
+  const listResponse = await api(new Request("http://localhost/api/drawings?includeData=true"));
+  assert.equal(listResponse?.status, 200);
+  assert.equal((await listResponse!.json()).drawings[0].id, loose.drawings[0].id);
+  const createResponse = await api(new Request("http://localhost/api/drawings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "API canvas", elements: [], appState: {}, files: {} }),
+  }));
+  assert.equal(createResponse?.status, 200);
+  assert.equal((await createResponse!.json()).version, 1);
+  const unsafeDeleteResponse = await api(new Request(
+    `http://localhost/api/drawings/${loose.drawings[0].id}?ifUntouched=true`,
+    { method: "DELETE" },
+  ));
+  assert.equal(unsafeDeleteResponse?.status, 400);
+  assert.ok(workspace.getDrawing(loose.drawings[0].id));
+  const exportResponse = await api(new Request("http://localhost/api/export/excalidash"));
+  assert.equal(exportResponse?.status, 200);
+  assert.deepEqual(
+    [...new Uint8Array(await exportResponse!.arrayBuffer()).slice(0, 2)],
+    [0x50, 0x4b],
   );
-  const expiredHistory = JSON.parse(readFileSync(expiredHistoryPath, "utf8"));
-  expiredHistory.localdraw.updatedAt = "2000-01-01T00:00:00.000Z";
-  writeFileSync(expiredHistoryPath, `${JSON.stringify(expiredHistory, null, 2)}\n`);
-  await backend.prisma.drawingSnapshot.delete({ where: { id: "snapshot-1" } });
-  await workspace.rescan();
-  assert.equal(
-    await backend.prisma.drawingSnapshot.findUnique({ where: { id: "snapshot-1" } }),
-    null,
+  const originCheckedApi = createLocalApi(
+    workspace,
+    "test-version",
+    "http://127.0.0.1:32144",
   );
-  assert.equal(existsSync(expiredHistoryPath), false);
-
-  const disposable = await backend.prisma.drawing.create({
-    data: {
-      id: "drawing-delete",
-      name: "Delete me",
-      elements: "[]",
-      appState: "{}",
-      files: "{}",
-      userId: user.id,
-      collectionId: null,
-      sortOrder: 0,
+  const forbiddenResponse = await originCheckedApi(new Request(
+    "http://127.0.0.1:32144/api/drawings",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://example.invalid",
+      },
+      body: JSON.stringify({ name: "Blocked canvas" }),
     },
-  });
-  await workspace.rescan();
-  const beforeDeleteIndex = JSON.parse(
-    readFileSync(join(movedWorkspacePath, ".localdraw/workspace.json"), "utf8"),
-  );
-  const disposablePath = join(
-    movedWorkspacePath,
-    beforeDeleteIndex.drawings[disposable.id].path,
-  );
-  await backend.prisma.drawing.delete({ where: { id: disposable.id } });
-  await workspace.rescan();
-  assert.equal(
-    await backend.prisma.drawing.findUnique({ where: { id: disposable.id } }),
-    null,
-  );
-  assert.equal(existsSync(disposablePath), false);
+  ));
+  assert.equal(forbiddenResponse?.status, 403);
 
-  const disposableProject = await backend.prisma.collection.create({
-    data: {
-      id: "project-delete",
-      name: "Delete project",
-      color: "#71717a",
-      userId: user.id,
-    },
-  });
+  const loosePath = join(externalWorkspacePath, "Loose canvas.excalidraw");
+  rmSync(loosePath);
   await workspace.rescan();
-  const beforeProjectDeleteIndex = JSON.parse(
-    readFileSync(join(movedWorkspacePath, ".localdraw/workspace.json"), "utf8"),
-  );
-  const disposableManifest = join(
-    movedWorkspacePath,
-    beforeProjectDeleteIndex.projects[disposableProject.id].path,
-    ".localdraw-project.json",
-  );
-  await backend.prisma.collection.delete({ where: { id: disposableProject.id } });
-  await workspace.rescan();
-  assert.equal(existsSync(disposableManifest), false);
+  assert.equal(workspace.listDrawings().totalCount, 1);
 
-  await backend.prisma.drawing.delete({ where: { id: drawing.id } });
-  await backend.prisma.collection.delete({ where: { id: project.id } });
-  const rebuiltWorkspace = new FilesystemWorkspace(
-    backend.prisma,
-    dataDir,
-    movedWorkspacePath,
-  );
-  await rebuiltWorkspace.initialize();
-  assert.equal(
-    (await backend.prisma.drawing.findUnique({ where: { id: drawing.id } }))?.id,
-    drawing.id,
-  );
-  assert.equal(
-    await backend.prisma.drawingSnapshot.count({ where: { drawingId: drawing.id } }),
-    1,
-  );
-
-  if (process.platform !== "win32") {
-    const outsidePath = join(fixtureRoot, "outside");
-    const linkedProjectPath = join(movedWorkspacePath, "projects", "linked");
-    mkdirSync(outsidePath);
-    symlinkSync(outsidePath, linkedProjectPath, "dir");
-    const unsafeIndexPath = join(movedWorkspacePath, ".localdraw/workspace.json");
-    const unsafeIndex = JSON.parse(readFileSync(unsafeIndexPath, "utf8"));
-    rmSync(join(movedWorkspacePath, unsafeIndex.projects[project.id].path), {
-      recursive: true,
-      force: true,
-    });
-    unsafeIndex.projects[project.id].path = "projects/linked";
-    writeFileSync(unsafeIndexPath, `${JSON.stringify(unsafeIndex, null, 2)}\n`);
-    const unsafeWorkspace = new FilesystemWorkspace(
-      backend.prisma,
-      dataDir,
-      movedWorkspacePath,
-    );
-    await assert.rejects(
-      () => unsafeWorkspace.initialize(),
-      /symbolic links/,
-    );
-    assert.equal(existsSync(join(outsidePath, ".localdraw-project.json")), false);
-  }
-  console.log("Desktop filesystem workspace smoke test passed");
+  console.log("Desktop filesystem-native workspace smoke test passed");
 } finally {
-  await backend.prisma.$disconnect();
+  workspace.close();
   rmSync(fixtureRoot, { recursive: true, force: true });
 }
-process.exit(0);

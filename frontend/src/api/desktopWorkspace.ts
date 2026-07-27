@@ -2,13 +2,15 @@ export type DesktopWorkspaceStatus = {
   path: string;
   defaultPath: string;
   formatVersion: number;
+  revision: number;
+  state: "ready" | "missing" | "read-only" | "scanning";
   changed?: boolean;
   opened?: boolean;
   rescanned?: boolean;
 };
 
 const requestWorkspace = async (
-  action?: "choose" | "open" | "rescan",
+  action?: "open-existing" | "move" | "reveal" | "rescan",
 ): Promise<DesktopWorkspaceStatus> => {
   const response = await fetch(
     `/__localdraw/workspace${action ? `/${action}` : ""}`,
@@ -24,11 +26,14 @@ const requestWorkspace = async (
 export const getDesktopWorkspace = (): Promise<DesktopWorkspaceStatus> =>
   requestWorkspace();
 
-export const chooseDesktopWorkspace = (): Promise<DesktopWorkspaceStatus> =>
-  requestWorkspace("choose");
+export const openExistingDesktopWorkspace = (): Promise<DesktopWorkspaceStatus> =>
+  requestWorkspace("open-existing");
 
-export const openDesktopWorkspace = (): Promise<DesktopWorkspaceStatus> =>
-  requestWorkspace("open");
+export const moveDesktopWorkspace = (): Promise<DesktopWorkspaceStatus> =>
+  requestWorkspace("move");
+
+export const revealDesktopWorkspace = (): Promise<DesktopWorkspaceStatus> =>
+  requestWorkspace("reveal");
 
 export const rescanDesktopWorkspace = (): Promise<DesktopWorkspaceStatus> =>
   requestWorkspace("rescan");

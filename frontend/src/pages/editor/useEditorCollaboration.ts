@@ -4,6 +4,7 @@ import { io, type Socket } from "socket.io-client";
 import { toast } from "sonner";
 import type { UserIdentity } from "../../utils/identity";
 import { buildRemoteSceneUpdate } from "./shared";
+import { isDesktopApp } from "../../utils/productBrand";
 
 interface Peer extends UserIdentity {
   isActive: boolean;
@@ -65,7 +66,7 @@ export const useEditorCollaboration = ({
   }, [socketMe]);
 
   useEffect(() => {
-    if (!drawingId || !isReady) return;
+    if (isDesktopApp || !drawingId || !isReady) return;
     const socket = io(getSocketUrl(), {
       path: "/socket.io",
       transports: ["websocket", "polling"],

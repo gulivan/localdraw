@@ -317,11 +317,12 @@ Frontend architecture notes:
 
 Desktop storage notes:
 
-- LocalDraw is a single-user application. Its durable workspace defaults to `~/.localdraw` and can be changed from Settings.
-- Drawings are ordinary `.excalidraw` files; project manifests and restorable canvas snapshots live under the selected workspace.
-- `desktop/src/bun/filesystemWorkspace*.ts` owns migration, reconciliation, safe writes, and version-history import/export.
-- The desktop SQLite database remains a disposable query/index cache during the filesystem transition; do not treat it as the durable desktop source.
-- Run `cd desktop && npm run test:runtime` after storage changes; it verifies SQLite migration, filesystem reconciliation, cache rebuild, version history, and bundle budgets.
+- LocalDraw is a single-user application. Its durable workspace defaults to the OS `Documents/LocalDraw` folder and can be changed from Settings.
+- Drawings are ordinary `.excalidraw` files. Root canvases are unfiled, first-level folders are projects, and hidden `.localdraw` metadata stores ordering, preferences, library data, Trash, conflicts, previews, and restorable history.
+- `desktop/src/bun/filesystemWorkspace*.ts` owns the authoritative repository, atomic writes, external-change reconciliation, derived JSON indexing, and history.
+- Native LocalDraw does not use SQLite or the self-hosted Express/Prisma backend. Keep self-hosted database changes separate from desktop storage work.
+- The filesystem-native desktop format is a pre-release reset; legacy `excalidash.db` files are ignored rather than migrated.
+- Run `cd desktop && npm run test:runtime` after storage changes; it verifies file authority, external edits, conflicts, cache rebuild, history, API compatibility, and bundle budgets.
 
 ## Makefile command map
 

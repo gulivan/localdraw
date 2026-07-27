@@ -4,91 +4,33 @@ import Electrobun, {
   PATHS,
   Utils,
 } from "electrobun/bun";
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-} from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { createXiaolaiFontServer } from "./xiaolai";
-import { ensureWorkspaceSchema } from "./schema";
 import { FilesystemWorkspace } from "./filesystemWorkspace";
+import { createLocalApi } from "./localApi";
 
 const HOST = "127.0.0.1";
 const FRONTEND_PORT = 32144;
-const BACKEND_PORT = 32145;
 const appUrl = `http://${HOST}:${FRONTEND_PORT}`;
-const backendUrl = `http://${HOST}:${BACKEND_PORT}`;
 const browserMode =
   process.argv.includes("--browser") ||
   process.env.LOCALDRAW_BROWSER_MODE === "1";
 const skipBrowserOpen = process.env.LOCALDRAW_SKIP_BROWSER_OPEN === "1";
 const browserLifecycleToken = browserMode ? randomUUID() : null;
 const resourcesDir = join(PATHS.RESOURCES_FOLDER, "app");
-const backendDir = join(resourcesDir, "backend");
 const dataDir = Utils.paths.userData;
-const databasePath = join(dataDir, "excalidash.db");
-const uploadsDir = join(dataDir, "uploads");
 const serveXiaolaiFont = await createXiaolaiFontServer(resourcesDir, dataDir);
-
-mkdirSync(dataDir, { recursive: true });
-mkdirSync(uploadsDir, { recursive: true });
-if (!existsSync(databasePath)) {
-  copyFileSync(join(resourcesDir, "template.db"), databasePath);
-}
-ensureWorkspaceSchema(databasePath);
-
-Object.assign(process.env, {
-  AUTH_MODE: "local",
-  BACKUP_DIR: join(dataDir, "backups"),
-  CSRF_SECRET: "excalidash-desktop-local-csrf-secret-2026",
-  DATABASE_URL: `file:${databasePath}`,
-  DISABLE_ONBOARDING_GATE: "true",
-  ENFORCE_HTTPS_REDIRECT: "false",
-  FRONTEND_URL: appUrl,
-  JWT_SECRET: "excalidash-desktop-local-jwt-secret-change-is-not-required",
-  NODE_ENV: "production",
-  PORT: String(BACKEND_PORT),
-  TRUST_PROXY: "false",
-  UPLOAD_DIR: uploadsDir,
-  UPDATE_CHECK_OUTBOUND: "false",
-});
-
-const backend = await import(join(backendDir, "dist/index.js"));
-
-await backend.configureSqlite();
-await backend.prisma.systemConfig.upsert({
-  where: { id: "default" },
-  update: {
-    authEnabled: false,
-    authOnboardingCompleted: true,
-    registrationEnabled: false,
-  },
-  create: {
-    id: "default",
-    authEnabled: false,
-    authOnboardingCompleted: true,
-    registrationEnabled: false,
-    oidcJitProvisioningEnabled: null,
-    authLoginRateLimitEnabled: true,
-    authLoginRateLimitWindowMs: 900_000,
-    authLoginRateLimitMax: 20,
-  },
-});
-
-const workspace = new FilesystemWorkspace(backend.prisma, dataDir);
+const workspace = new FilesystemWorkspace(
+  dataDir,
+  join(Utils.paths.documents, "LocalDraw"),
+);
 await workspace.initialize();
-const workspaceSyncTimer = setInterval(() => {
-  void workspace.rescan().catch((error) => {
-    console.error("[workspace] Failed to sync drawing files", error);
-  });
-}, 2_000);
-
-await new Promise<void>((resolve, reject) => {
-  backend.httpServer.once("error", reject);
-  backend.httpServer.listen(BACKEND_PORT, HOST, () => resolve());
-});
+const localApi = createLocalApi(
+  workspace,
+  process.env.ELECTROBUN_APP_VERSION || "0.0.0",
+  appUrl,
+);
 
 const frontendDir = join(resourcesDir, "frontend");
 const indexFile = Bun.file(join(frontendDir, "index.html"));
@@ -104,13 +46,11 @@ let shutdownPromise: Promise<void> | null = null;
 
 const shutdown = () => {
   shutdownPromise ??= (async () => {
-    clearInterval(workspaceSyncTimer);
     if (browserQuitTimer) clearTimeout(browserQuitTimer);
-    frontendServer?.stop(true);
-    backend.httpServer.close();
+    frontendServer?.stop(false);
     try {
+      workspace.close();
       await workspace.flush();
-      await backend.prisma.$disconnect();
     } finally {
       Utils.quit();
     }
@@ -154,10 +94,13 @@ Electrobun.events.on("new-window-open", (event) => {
 
 frontendServer = Bun.serve({
   hostname: HOST,
+  maxRequestBodySize: 50 * 1024 * 1024,
   port: FRONTEND_PORT,
   async fetch(request) {
     const url = new URL(request.url);
     const pathname = decodeURIComponent(url.pathname);
+    const apiResponse = await localApi(request);
+    if (apiResponse) return apiResponse;
     if (pathname === "/__localdraw/workspace" && request.method === "GET") {
       return Response.json(workspace.getStatus(), {
         headers: { "Cache-Control": "no-store" },
@@ -168,17 +111,27 @@ frontendServer = Bun.serve({
         return Response.json({ error: "Forbidden" }, { status: 403 });
       }
       try {
-        if (pathname.endsWith("/choose")) {
+        if (pathname.endsWith("/open-existing")) {
           const selected = (await Utils.openFileDialog({
             startingFolder: workspace.getStatus().path,
             canChooseFiles: false,
             canChooseDirectory: true,
             allowsMultipleSelection: false,
-          })).join(",").trim();
-          if (selected) await workspace.setRoot(selected);
+          }))[0]?.trim() ?? "";
+          if (selected) await workspace.openRoot(selected);
           return Response.json({ ...workspace.getStatus(), changed: Boolean(selected) });
         }
-        if (pathname.endsWith("/open")) {
+        if (pathname.endsWith("/move")) {
+          const selected = (await Utils.openFileDialog({
+            startingFolder: workspace.getStatus().defaultPath,
+            canChooseFiles: false,
+            canChooseDirectory: true,
+            allowsMultipleSelection: false,
+          }))[0]?.trim() ?? "";
+          if (selected) await workspace.moveRoot(selected);
+          return Response.json({ ...workspace.getStatus(), changed: Boolean(selected) });
+        }
+        if (pathname.endsWith("/reveal")) {
           Utils.openPath(workspace.getStatus().path);
           return Response.json({ ...workspace.getStatus(), opened: true });
         }
@@ -193,6 +146,28 @@ frontendServer = Bun.serve({
         );
       }
       return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    if (pathname === "/__localdraw/events" && request.method === "GET") {
+      let unsubscribe: () => void = () => undefined;
+      const stream = new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder();
+          const send = (revision: number) => controller.enqueue(
+            encoder.encode(`event: workspace-changed\ndata: ${JSON.stringify({ revision })}\n\n`),
+          );
+          unsubscribe = workspace.onChange(send);
+          controller.enqueue(encoder.encode(": connected\n\n"));
+        },
+        cancel() {
+          unsubscribe();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Cache-Control": "no-cache",
+          "Content-Type": "text/event-stream",
+        },
+      });
     }
     if (request.method === "GET") {
       const fontResponse = await serveXiaolaiFont(pathname);
@@ -255,5 +230,5 @@ if (browserMode) {
 }
 
 console.log(
-  `LocalDraw is running locally at ${appUrl} (API: ${backendUrl}, renderer: ${browserMode ? "browser" : "native"})`,
+  `LocalDraw is running locally at ${appUrl} (filesystem API, renderer: ${browserMode ? "browser" : "native"})`,
 );

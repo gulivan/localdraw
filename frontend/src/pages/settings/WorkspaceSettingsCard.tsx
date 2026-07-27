@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { FolderOpen, HardDrive, RefreshCw } from "lucide-react";
+import { FolderInput, FolderOpen, HardDrive, Move, RefreshCw } from "lucide-react";
 import {
-  chooseDesktopWorkspace,
   getDesktopWorkspace,
-  openDesktopWorkspace,
+  moveDesktopWorkspace,
+  openExistingDesktopWorkspace,
+  revealDesktopWorkspace,
   rescanDesktopWorkspace,
   type DesktopWorkspaceStatus,
 } from "../../api";
 
 export const WorkspaceSettingsCard = () => {
   const [status, setStatus] = useState<DesktopWorkspaceStatus | null>(null);
-  const [busy, setBusy] = useState<"choose" | "open" | "rescan" | null>(null);
+  const [busy, setBusy] = useState<"open-existing" | "move" | "reveal" | "rescan" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export const WorkspaceSettingsCard = () => {
   }, []);
 
   const run = async (
-    action: "choose" | "open" | "rescan",
+    action: "open-existing" | "move" | "reveal" | "rescan",
     operation: () => Promise<DesktopWorkspaceStatus>,
   ) => {
     setBusy(action);
@@ -51,14 +52,17 @@ export const WorkspaceSettingsCard = () => {
           {error && <p role="alert" className="mt-2 text-sm font-medium text-red-700 dark:text-red-400">{error}</p>}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <button type="button" disabled={busy !== null} onClick={() => void run("open", openDesktopWorkspace)} className="workspace-focus inline-flex h-9 items-center gap-1.5 rounded-xl border border-zinc-200 px-3 text-xs font-semibold hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800">
-            <FolderOpen size={14} /> Open
+          <button type="button" disabled={busy !== null} onClick={() => void run("reveal", revealDesktopWorkspace)} className="workspace-focus inline-flex h-9 items-center gap-1.5 rounded-xl border border-zinc-200 px-3 text-xs font-semibold hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800">
+            <FolderOpen size={14} /> Reveal folder
           </button>
           <button type="button" disabled={busy !== null} onClick={() => void run("rescan", rescanDesktopWorkspace)} className="workspace-focus inline-flex h-9 items-center gap-1.5 rounded-xl border border-zinc-200 px-3 text-xs font-semibold hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800">
             <RefreshCw size={14} className={busy === "rescan" ? "animate-spin" : ""} /> Rescan
           </button>
-          <button type="button" disabled={busy !== null} onClick={() => void run("choose", chooseDesktopWorkspace)} className="workspace-focus h-9 rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
-            {busy === "choose" ? "Moving…" : "Choose folder"}
+          <button type="button" disabled={busy !== null} onClick={() => void run("open-existing", openExistingDesktopWorkspace)} className="workspace-focus inline-flex h-9 items-center gap-1.5 rounded-xl border border-zinc-200 px-3 text-xs font-semibold hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800">
+            <FolderInput size={14} /> {busy === "open-existing" ? "Opening…" : "Open existing"}
+          </button>
+          <button type="button" disabled={busy !== null} onClick={() => void run("move", moveDesktopWorkspace)} className="workspace-focus inline-flex h-9 items-center gap-1.5 rounded-xl bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
+            <Move size={14} /> {busy === "move" ? "Moving…" : "Move workspace"}
           </button>
         </div>
       </div>

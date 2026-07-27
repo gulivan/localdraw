@@ -3,8 +3,8 @@ import { resolve } from "node:path";
 
 const desktopDir = resolve(import.meta.dirname, "..");
 const rootDir = resolve(desktopDir, "..");
-const backendDir = resolve(desktopDir, "build/backend");
 const frontendDir = resolve(rootDir, "frontend/dist");
+const buildDir = resolve(desktopDir, "build");
 const artifactsDir = resolve(desktopDir, "artifacts");
 const desktopVersion = JSON.parse(
   readFileSync(resolve(desktopDir, "package.json"), "utf8"),
@@ -29,7 +29,6 @@ const assertBudget = (label, bytes, maximum) => {
   console.log(`${label}: ${bytes} / ${maximum} bytes`);
 };
 
-const backendFiles = walkFiles(backendDir);
 const frontendFiles = walkFiles(frontendDir);
 const embedsDesktopVersion = frontendFiles
   .filter((path) => path.endsWith(".js") || path.endsWith(".html"))
@@ -39,11 +38,21 @@ if (!embedsDesktopVersion) {
   throw new Error(`Desktop frontend does not embed version ${desktopVersion}`);
 }
 console.log(`Embedded desktop version: ${desktopVersion}`);
-const forbiddenBackend = backendFiles.filter(
-  (path) => path.endsWith(".node") || path.includes("/node_modules/@libsql/"),
-);
-if (forbiddenBackend.length > 0) {
-  throw new Error(`Native desktop database payload returned: ${forbiddenBackend.join(", ")}`);
+for (const forbidden of ["build/backend", "build/template.db"]) {
+  if (existsSync(resolve(desktopDir, forbidden))) {
+    throw new Error(`Removed desktop database artifact returned: ${forbidden}`);
+  }
+}
+const packagedDatabaseFiles = walkFiles(buildDir).filter((path) => {
+  const normalized = path.replaceAll("\\", "/");
+  return normalized.includes("/Resources/app/backend/") ||
+    normalized.endsWith("/Resources/app/template.db") ||
+    normalized.endsWith("/Resources/app/excalidash.db");
+});
+if (packagedDatabaseFiles.length > 0) {
+  throw new Error(
+    `Removed desktop database payload returned: ${packagedDatabaseFiles.join(", ")}`,
+  );
 }
 
 const assetNames = frontendFiles
@@ -64,7 +73,6 @@ for (const requiredChunk of ["Dashboard-", "Editor-", "Settings-"]) {
   }
 }
 
-assertBudget("Staged backend", treeSize(backendDir), 6_000_000);
 assertBudget("Desktop frontend", treeSize(frontendDir), 4_500_000);
 
 if (existsSync(artifactsDir)) {

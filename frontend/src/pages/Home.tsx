@@ -16,6 +16,7 @@ import { WorkspaceHeader } from "../components/workspace/WorkspaceHeader";
 import { UploadStatus } from "../components/UploadStatus";
 import { useUpload } from "../context/UploadContext";
 import { useDebounce } from "../hooks/useDebounce";
+import { useDesktopWorkspaceChange } from "../hooks/useDesktopWorkspaceEvents";
 import type { Collection, DrawingSummary } from "../types";
 import { readRecentCanvasesLimit } from "../utils/recentCanvases";
 
@@ -63,6 +64,7 @@ export const Home = () => {
   }, []);
 
   useEffect(() => void load(), [load]);
+  useDesktopWorkspaceChange(() => void load());
   useEffect(() => {
     if (!debouncedQuery.trim()) {
       setSearchResults([]);

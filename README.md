@@ -139,21 +139,25 @@ npx localdraw
 
 The first run downloads and installs a checksum-verified native build; later runs open it directly. LocalDraw supports Apple silicon and Intel Macs, x64 Windows, and x64 Linux. Windows on ARM uses the x64 build through emulation.
 
-Drawings live as ordinary `.excalidraw` files under `~/.localdraw` by default.
-Projects are folders, while LocalDraw's hidden `.localdraw` metadata directory
-stores ordering information and the same restorable canvas-version history
-available in the editor. Settings can open, rescan, or move the drawing folder;
-changing it copies the current workspace before switching. A private SQLite
-index remains during the transition so existing installations migrate without
-losing data. The desktop build binds its frontend and API to `127.0.0.1` only
-and disables outbound update checks.
+Drawings live as ordinary `.excalidraw` files under `Documents/LocalDraw` by
+default. Root-level canvases are unfiled, and each first-level folder is a
+project. LocalDraw's hidden `.localdraw` metadata directory stores ordering,
+preferences, the Excalidraw library, previews, conflicts, Trash, and the same
+restorable canvas-version history available in the editor. Settings can reveal,
+rescan, open, or safely move the active drawing folder. LocalDraw reads and
+writes these files directly and does not use SQLite. The desktop build binds
+its frontend and filesystem API to `127.0.0.1` only and disables outbound
+update checks.
+
+This filesystem-native desktop storage is a pre-release breaking change.
+Legacy `excalidash.db` files are not read or migrated by LocalDraw.
 
 To keep the native download compact, LocalDraw omits deployment-only OIDC, S3,
 and Mermaid/text-to-diagram implementations. These features remain available
 in the self-hosted server build. The desktop editor
 ships its English interface only; the server build continues to include every
-Excalidraw translation. Desktop persistence uses Bun's built-in SQLite runtime,
-so no second native database library is packaged.
+Excalidraw translation. Desktop persistence uses atomic filesystem writes, and
+no database runtime is packaged.
 
 The CJK handwriting font is optional and is not bundled with the desktop
 download. When a drawing first needs a Xiaolai Unicode subset, LocalDraw fetches
