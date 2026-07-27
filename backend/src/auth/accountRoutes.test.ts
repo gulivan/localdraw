@@ -3,7 +3,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerAccountRoutes } from "./accountRoutes";
 
-const buildApp = (options?: { impersonatorId?: string }) => {
+const buildApp = (options?: { impersonatorId?: string; authEnabled?: boolean }) => {
   const router = express.Router();
   router.use(express.json());
 
@@ -29,6 +29,7 @@ const buildApp = (options?: { impersonatorId?: string }) => {
     },
   } as any;
 
+  const ensureAuthEnabled = vi.fn().mockResolvedValue(options?.authEnabled ?? true);
   registerAccountRoutes({
     router,
     prisma,
@@ -44,7 +45,7 @@ const buildApp = (options?: { impersonatorId?: string }) => {
     }) as any,
     loginAttemptRateLimiter: ((_req: any, _res: any, next: any) => next()) as any,
     accountActionRateLimiter: ((_req: any, _res: any, next: any) => next()) as any,
-    ensureAuthEnabled: vi.fn().mockResolvedValue(true),
+    ensureAuthEnabled,
     sanitizeText: (input: unknown) => String(input ?? "").trim(),
     config: {
       enablePasswordReset: true,
@@ -61,7 +62,7 @@ const buildApp = (options?: { impersonatorId?: string }) => {
 
   const app = express();
   app.use(router);
-  return { app, prisma };
+  return { app, prisma, ensureAuthEnabled };
 };
 
 describe("accountRoutes local-password safeguards", () => {
@@ -194,6 +195,20 @@ describe("accountRoutes local-password safeguards", () => {
         scopes: "drawings:read,drawings:write,collections:read,collections:write",
       }),
     }));
+  });
+
+  it("keeps API key management available for the auth-disabled bootstrap user", async () => {
+    const { app, prisma, ensureAuthEnabled } = buildApp({ authEnabled: false });
+    prisma.apiKey.findMany.mockResolvedValue([]);
+
+    const response = await request(app).get("/api-keys");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ apiKeys: [] });
+    expect(prisma.apiKey.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId: "user-1" },
+    }));
+    expect(ensureAuthEnabled).not.toHaveBeenCalled();
   });
 
   it("rejects API key creation with no scopes", async () => {

@@ -101,6 +101,29 @@ Automatically retain recent drawing snapshots, preview past versions from the ed
 
 </details>
 
+<details>
+<summary>Connect Codex, Claude Code, and other local AI agents</summary>
+
+Open the workspace and select **Connect AI**. ExcaliDash generates a revocable
+full-access API key and copy-ready setup for Codex, Claude Code, or a generic
+Streamable HTTP MCP client.
+
+The MCP server can manage projects, canvases, Trash, version history, individual
+Excalidraw elements, layout, and canvas storage. Canvas writes are versioned and
+snapshotted. When the requested canvas is open in an editor, the agent can also
+capture a PNG to visually check its work.
+
+Web deployments expose MCP at the current site origin under `/api/mcp`, for
+example `http://localhost:6767/api/mcp`. LocalDraw uses its loopback backend at
+`http://127.0.0.1:32145/mcp`. The modal derives the correct URL and lets you
+override it for a reverse proxy.
+
+Treat the copied setup as a secret: it contains the bearer API key. Keys remain
+active until revoked from the same modal or from Profile → API Keys. MCP always
+requires a key, even when normal ExcaliDash login is disabled.
+
+</details>
+
 # Upgrading
 
 See [release notes](https://github.com/ZimengXiong/ExcaliDash/releases) for a specific release.
