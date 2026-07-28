@@ -24,6 +24,16 @@ starting the app.
 
 Set `LOCALDRAW_VERBOSE=1` to show native installer output when troubleshooting.
 
+The same CLI can inspect a running LocalDraw or ExcaliDash MCP endpoint without
+launching the desktop app:
+
+```sh
+LOCALDRAW_MCP_TOKEN=exd_... npx localdraw -- list-tools
+LOCALDRAW_MCP_TOKEN=exd_... npx localdraw -- call list_projects
+```
+
+Set `LOCALDRAW_MCP_URL` when connecting to a non-default MCP endpoint.
+
 The desktop application keeps its SQLite database on your computer and starts with authentication disabled. Supported targets are macOS arm64/x64, Windows x64 (including Windows on ARM through emulation), and Linux x64.
 
 To keep the native download compact, CJK Xiaolai font subsets are downloaded

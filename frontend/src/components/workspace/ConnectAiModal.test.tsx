@@ -46,8 +46,8 @@ describe("ConnectAiModal", () => {
     expect(screen.getByText(/bearer_token_env_var = "EXCALIDASH_MCP_TOKEN"/)).toBeInTheDocument();
     expect(screen.queryByText(/http_headers/)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Dev CLI" }));
-    expect(screen.getByText(/npm run mcp:cli -- list-tools/)).toHaveTextContent("EXCALIDASH_MCP_TOKEN='exd_secret-token'");
+    fireEvent.click(screen.getByRole("tab", { name: "LocalDraw CLI" }));
+    expect(screen.getByText(/npx localdraw -- list-tools/)).toHaveTextContent("LOCALDRAW_MCP_TOKEN='exd_secret-token'");
 
     fireEvent.click(screen.getByRole("tab", { name: "Claude Code" }));
     expect(screen.getByText(/claude mcp add/)).toHaveTextContent("Authorization: Bearer exd_secret-token");

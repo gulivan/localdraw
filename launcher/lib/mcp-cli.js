@@ -1,12 +1,19 @@
-#!/usr/bin/env node
-
 import fs from "node:fs/promises";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
-export const DEFAULT_MCP_URL = "http://localhost:6767/api/mcp";
+export const DEFAULT_MCP_URL = "http://127.0.0.1:32145/mcp";
+
+export const MCP_COMMANDS = new Set([
+  "help",
+  "list-tools",
+  "call",
+  "list-projects",
+  "list-canvases",
+  "get-canvas",
+  "describe-canvas",
+]);
 
 export const DESTRUCTIVE_TOOLS = new Set([
   "apply_canvas_patch",
@@ -18,14 +25,14 @@ export const DESTRUCTIVE_TOOLS = new Set([
   "delete_canvas_orphan_files",
 ]);
 
-const HELP = `ExcaliDash MCP CLI
+const HELP = `LocalDraw MCP CLI
 
 Usage:
-  npm run mcp:cli -- [options] <command> [args]
+  localdraw -- [options] <command> [args]
 
 Options:
-  --url <url>       MCP endpoint. Defaults to EXCALIDASH_MCP_URL or ${DEFAULT_MCP_URL}
-  --token <token>   MCP bearer token. Defaults to EXCALIDASH_MCP_TOKEN
+  --url <url>       MCP endpoint. Defaults to LOCALDRAW_MCP_URL, EXCALIDASH_MCP_URL, or ${DEFAULT_MCP_URL}
+  --token <token>   MCP bearer token. Defaults to LOCALDRAW_MCP_TOKEN or EXCALIDASH_MCP_TOKEN
   --out <file>      Write the first image result to a file
   --yes             Allow destructive tool calls
   -h, --help        Show this help
@@ -40,10 +47,10 @@ Commands:
   describe-canvas <canvasId>
 
 Examples:
-  EXCALIDASH_MCP_TOKEN=exd_... npm run mcp:cli -- list-tools
-  npm run mcp:cli -- call list_projects
-  npm run mcp:cli -- list-canvases '{"projectId":null}'
-  npm run mcp:cli -- describe-canvas canvas_123
+  LOCALDRAW_MCP_TOKEN=exd_... npx localdraw -- list-tools
+  npx localdraw -- call list_projects
+  npx localdraw -- list-canvases '{"projectId":null}'
+  npx localdraw -- describe-canvas canvas_123
 `;
 
 export class CliError extends Error {
@@ -54,7 +61,13 @@ export class CliError extends Error {
   }
 }
 
-export const parseArgs = (argv) => {
+export const extractMcpArgs = (argv) => {
+  const separatorIndex = argv.indexOf("--");
+  if (separatorIndex !== -1) return argv.slice(separatorIndex + 1);
+  return MCP_COMMANDS.has(argv[0]) ? argv : null;
+};
+
+export const parseMcpArgs = (argv) => {
   const options = { yes: false };
   const positionals = [];
 
@@ -72,7 +85,7 @@ export const parseArgs = (argv) => {
       options[arg.slice(2)] = value;
       index += 1;
     } else if (arg.startsWith("--")) {
-      throw new CliError(`Unknown option: ${arg}`);
+      throw new CliError(`Unknown MCP option: ${arg}`);
     } else {
       positionals.push(arg);
     }
@@ -86,10 +99,10 @@ export const parseArgs = (argv) => {
 };
 
 export const resolveConfig = (options, env = process.env) => {
-  const url = options.url || env.EXCALIDASH_MCP_URL || DEFAULT_MCP_URL;
-  const token = options.token || env.EXCALIDASH_MCP_TOKEN;
+  const url = options.url || env.LOCALDRAW_MCP_URL || env.EXCALIDASH_MCP_URL || DEFAULT_MCP_URL;
+  const token = options.token || env.LOCALDRAW_MCP_TOKEN || env.EXCALIDASH_MCP_TOKEN;
   if (!token) {
-    throw new CliError("Missing MCP bearer token. Set EXCALIDASH_MCP_TOKEN or pass --token.");
+    throw new CliError("Missing MCP bearer token. Set LOCALDRAW_MCP_TOKEN or pass --token.");
   }
   try {
     return { url: new URL(url), token };
@@ -125,7 +138,7 @@ export const readJsonInput = async (raw) => {
 };
 
 const connect = async (config) => {
-  const client = new Client({ name: "excalidash-mcp-cli", version: "0.1.0" }, { capabilities: {} });
+  const client = new Client({ name: "localdraw-mcp-cli", version: "0.1.0" }, { capabilities: {} });
   const transport = new StreamableHTTPClientTransport(config.url, {
     requestInit: {
       headers: {
@@ -158,7 +171,7 @@ const callTool = async (client, toolName, args, options) => {
   await writeToolResult(result, options.out);
 };
 
-export const execute = async ({ command, args, options }) => {
+export const executeMcpCommand = async ({ command, args, options }) => {
   if (command === "help") {
     process.stdout.write(HELP);
     return;
@@ -206,22 +219,18 @@ export const execute = async ({ command, args, options }) => {
       return;
     }
 
-    throw new CliError(`Unknown command: ${command}`);
+    throw new CliError(`Unknown MCP command: ${command}`);
   } finally {
     await client.close();
   }
 };
 
-const main = async () => {
+export const runMcpCli = async (argv) => {
   try {
-    await execute(parseArgs(process.argv.slice(2)));
+    await executeMcpCommand(parseMcpArgs(argv));
+    return 0;
   } catch (error) {
-    const exitCode = error instanceof CliError ? error.exitCode : 1;
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    process.exitCode = exitCode;
+    return error instanceof CliError ? error.exitCode : 1;
   }
 };
-
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  void main();
-}

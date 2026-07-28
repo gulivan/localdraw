@@ -27,12 +27,18 @@ import {
   formatHelp,
   parseCliArgs,
 } from "../lib/cli.js";
+import { extractMcpArgs, runMcpCli } from "../lib/mcp-cli.js";
 import { createCommandRunner, getLaunchCommand } from "../lib/process.js";
 
 const RELEASE_BASE_URL = `https://github.com/gulivan/localdraw/releases/download/v${RELEASE_VERSION}`;
 const verbose = process.env.LOCALDRAW_VERBOSE === "1";
 const run = createCommandRunner({ verbose });
 const args = process.argv.slice(2);
+const mcpArgs = extractMcpArgs(args);
+if (mcpArgs) {
+  process.exit(await runMcpCli(mcpArgs));
+}
+
 const options = parseCliArgs(args);
 
 if (options.help) {

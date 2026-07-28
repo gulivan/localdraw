@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import * as api from "../../api";
 
-type ClientTab = "codexConfig" | "devCli" | "claude" | "generic";
+type ClientTab = "codexConfig" | "localdrawCli" | "claude" | "generic";
 
 const deriveMcpUrl = () => {
   const apiUrl = import.meta.env.VITE_API_URL || "/api";
@@ -48,9 +48,8 @@ url = ${JSON.stringify(url)}
 bearer_token_env_var = "EXCALIDASH_MCP_TOKEN"
 default_tools_approval_mode = "writes"`;
   }
-  if (tab === "devCli") {
-    return `cd backend
-EXCALIDASH_MCP_URL=${shellQuote(url)} EXCALIDASH_MCP_TOKEN=${shellQuote(token)} npm run mcp:cli -- list-tools`;
+  if (tab === "localdrawCli") {
+    return `LOCALDRAW_MCP_URL=${shellQuote(url)} LOCALDRAW_MCP_TOKEN=${shellQuote(token)} npx localdraw -- list-tools`;
   }
   if (tab === "claude") {
     return `claude mcp add --transport http --scope user --header ${shellQuote(`Authorization: Bearer ${token}`)} excalidash ${shellQuote(url)}`;
@@ -69,17 +68,17 @@ EXCALIDASH_MCP_URL=${shellQuote(url)} EXCALIDASH_MCP_TOKEN=${shellQuote(token)} 
 const usageInstruction = `Use the ExcaliDash MCP tools to inspect and manage my projects and canvases. Read a canvas and keep its version before editing. Prefer atomic canvas patches, describe the result, and capture a screenshot when the editor is open. Ask before deleting projects, moving canvases to Trash, restoring history, permanently deleting, or cleaning storage.`;
 const clientHints: Record<ClientTab, string> = {
   codexConfig: "Export the token in your shell and paste only the TOML block into ~/.codex/config.toml.",
-  devCli: "Run from the ExcaliDash repository to inspect the MCP endpoint directly.",
+  localdrawCli: "Run the existing LocalDraw CLI to inspect the MCP endpoint directly.",
   claude: "Run this command in your terminal, then start a new Claude Code session.",
   generic: "Paste into your MCP client's configuration and restart that client.",
 };
 const clientLabels: Record<ClientTab, string> = {
   codexConfig: "Codex config",
-  devCli: "Dev CLI",
+  localdrawCli: "LocalDraw CLI",
   claude: "Claude Code",
   generic: "Generic MCP",
 };
-const clientTabs: ClientTab[] = ["codexConfig", "devCli", "claude", "generic"];
+const clientTabs: ClientTab[] = ["codexConfig", "localdrawCli", "claude", "generic"];
 
 export const ConnectAiModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const [connectionName, setConnectionName] = useState("AI connection");
@@ -201,7 +200,7 @@ export const ConnectAiModal = ({ open, onClose }: { open: boolean; onClose: () =
           </span>
           <div className="min-w-0 flex-1">
             <h2 id="connect-ai-title" className="text-lg font-bold tracking-tight">Connect an AI agent</h2>
-            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Give Codex, Claude Code, direct CLI tooling, or another MCP client access to this workspace.</p>
+            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Give Codex, Claude Code, LocalDraw CLI, or another MCP client access to this workspace.</p>
           </div>
           <button ref={closeButtonRef} type="button" onClick={onClose} className="workspace-focus rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800" aria-label="Close Connect AI dialog">
             <X size={18} />
