@@ -359,4 +359,6 @@ jobs:
     name: Publish npm launcher
     needs: publish
     uses: ./.github/workflows/npm-publish.yml
+    with:
+      tag: ${{ inputs.tag || github.event.release.tag_name }}
     secrets: inherit

@@ -2,7 +2,17 @@ name: Publish npm launcher
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, for example v0.6.1-desktop. Defaults to the selected ref.
+        required: false
+        type: string
   workflow_call:
+    inputs:
+      tag:
+        description: Release tag to publish, for example v0.6.1-desktop.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -23,6 +33,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v7
         with:
