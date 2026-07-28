@@ -266,10 +266,46 @@ export const useEditorCollaboration = ({
     socket.on("drawing-server-update", (payload: { drawingId?: string }) => {
       if (!payload?.drawingId || payload.drawingId !== drawingId) return;
       toast.info(
-        "Drawing storage changed on the server. Reloading the editor.",
+        "Drawing changed on the server. Reloading the editor.",
       );
       window.location.reload();
     });
+    socket.on(
+      "mcp-render-request",
+      async (
+        payload: {
+          drawingId?: string;
+          elements?: readonly any[];
+          appState?: any;
+          files?: Record<string, any>;
+          background?: boolean;
+        },
+        acknowledge?: (response: { data?: string; mimeType?: string; error?: string }) => void,
+      ) => {
+        if (!acknowledge || payload?.drawingId !== drawingId || !Array.isArray(payload.elements)) {
+          acknowledge?.({ error: "Canvas is not available in this editor" });
+          return;
+        }
+        try {
+          const { exportToBlob } = await import("@excalidraw/excalidraw");
+          const blob = await exportToBlob({
+            elements: payload.elements as any,
+            appState: {
+              ...(payload.appState || {}),
+              exportBackground: payload.background !== false,
+            },
+            files: payload.files || {},
+            mimeType: "image/png",
+          });
+          const reader = new FileReader();
+          reader.onload = () => acknowledge({ data: String(reader.result || ""), mimeType: "image/png" });
+          reader.onerror = () => acknowledge({ error: "Failed to read rendered canvas" });
+          reader.readAsDataURL(blob);
+        } catch (error) {
+          acknowledge({ error: error instanceof Error ? error.message : "Failed to render canvas" });
+        }
+      },
+    );
     const handleActivity = (isActive: boolean) => {
       socket.emit("user-activity", { drawingId, isActive });
     };
@@ -291,6 +327,7 @@ export const useEditorCollaboration = ({
       socket.off("cursor-move");
       socket.off("element-update");
       socket.off("drawing-server-update");
+      socket.off("mcp-render-request");
       socket.disconnect();
       if (remoteFlushRafIdRef.current !== null) {
         cancelAnimationFrame(remoteFlushRafIdRef.current);

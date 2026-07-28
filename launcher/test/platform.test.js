@@ -1,9 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { APP_VERSION, RELEASE_VERSION, getInstallLayout, getTarget } from "../lib/platform.js";
 
+const packageJson = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+);
+
 test("derives the native release from the npm package version", () => {
-  assert.equal(APP_VERSION, "0.5.11");
+  assert.equal(APP_VERSION, packageJson.version);
   assert.equal(RELEASE_VERSION, `${APP_VERSION}-desktop`);
 });
 

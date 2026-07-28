@@ -15,4 +15,8 @@ Options:
   -h, --help     Show this help
   -v, --version  Show the launcher version
 
+MCP:
+  localdraw -- list-tools
+  localdraw -- call <tool> [json|@file|-]
+
 Browser address: ${LOCALDRAW_URL}`;

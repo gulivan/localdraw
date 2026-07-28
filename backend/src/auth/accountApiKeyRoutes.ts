@@ -45,14 +45,12 @@ export const registerAccountApiKeyRoutes = (deps: RegisterAccountRoutesDeps) => 
     prisma,
     requireAuth,
     accountActionRateLimiter,
-    ensureAuthEnabled,
     config,
     requireCsrf,
     sanitizeText,
   } = deps;
   router.get("/api-keys", requireAuth, async (req: Request, res: Response) => {
     try {
-      if (!(await ensureAuthEnabled(res))) return;
       if (!req.user) {
         return res.status(401).json({ error: "Unauthorized", message: "User not authenticated" });
       }
@@ -84,7 +82,6 @@ export const registerAccountApiKeyRoutes = (deps: RegisterAccountRoutesDeps) => 
 
   router.post("/api-keys", requireAuth, accountActionRateLimiter, async (req: Request, res: Response) => {
     try {
-      if (!(await ensureAuthEnabled(res))) return;
       if (!requireCsrf(req, res)) return;
       if (!req.user) {
         return res.status(401).json({ error: "Unauthorized", message: "User not authenticated" });
@@ -159,7 +156,6 @@ export const registerAccountApiKeyRoutes = (deps: RegisterAccountRoutesDeps) => 
 
   router.delete("/api-keys/:id", requireAuth, accountActionRateLimiter, async (req: Request, res: Response) => {
     try {
-      if (!(await ensureAuthEnabled(res))) return;
       if (!requireCsrf(req, res)) return;
       if (!req.user) {
         return res.status(401).json({ error: "Unauthorized", message: "User not authenticated" });
