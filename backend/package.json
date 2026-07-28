@@ -8,6 +8,8 @@
     "predev": "node scripts/predev-migrate.cjs",
     "dev": "nodemon src/index.ts",
     "start": "node dist/index.js",
+    "mcp:cli": "node scripts/excalidash-mcp-cli.mjs",
+    "test:mcp-cli": "node --test scripts/excalidash-mcp-cli.test.mjs",
     "admin:recover": "node scripts/admin-recover.cjs",
     "dev:simulate-auth-onboarding:fresh": "node scripts/simulate-auth-onboarding.cjs --scenario fresh",
     "dev:simulate-auth-onboarding:migration": "node scripts/simulate-auth-onboarding.cjs --scenario migration",

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import * as api from "../../api";
 
-type ClientTab = "codex" | "claude" | "generic";
+type ClientTab = "codexConfig" | "devCli" | "claude" | "generic";
 
 const deriveMcpUrl = () => {
   const apiUrl = import.meta.env.VITE_API_URL || "/api";
@@ -38,11 +38,19 @@ const copyText = async (value: string) => {
 const shellQuote = (value: string) => `'${value.replace(/'/g, `'"'"'`)}'`;
 
 const setupSnippet = (tab: ClientTab, url: string, token: string) => {
-  if (tab === "codex") {
-    return `[mcp_servers.excalidash]
+  if (tab === "codexConfig") {
+    return `# Shell
+export EXCALIDASH_MCP_TOKEN=${shellQuote(token)}
+
+# ~/.codex/config.toml
+[mcp_servers.excalidash]
 url = ${JSON.stringify(url)}
-http_headers = { "Authorization" = ${JSON.stringify(`Bearer ${token}`)} }
+bearer_token_env_var = "EXCALIDASH_MCP_TOKEN"
 default_tools_approval_mode = "writes"`;
+  }
+  if (tab === "devCli") {
+    return `cd backend
+EXCALIDASH_MCP_URL=${shellQuote(url)} EXCALIDASH_MCP_TOKEN=${shellQuote(token)} npm run mcp:cli -- list-tools`;
   }
   if (tab === "claude") {
     return `claude mcp add --transport http --scope user --header ${shellQuote(`Authorization: Bearer ${token}`)} excalidash ${shellQuote(url)}`;
@@ -60,15 +68,23 @@ default_tools_approval_mode = "writes"`;
 
 const usageInstruction = `Use the ExcaliDash MCP tools to inspect and manage my projects and canvases. Read a canvas and keep its version before editing. Prefer atomic canvas patches, describe the result, and capture a screenshot when the editor is open. Ask before deleting projects, moving canvases to Trash, restoring history, permanently deleting, or cleaning storage.`;
 const clientHints: Record<ClientTab, string> = {
-  codex: "Paste into ~/.codex/config.toml, then restart or open a new Codex session.",
+  codexConfig: "Export the token in your shell and paste only the TOML block into ~/.codex/config.toml.",
+  devCli: "Run from the ExcaliDash repository to inspect the MCP endpoint directly.",
   claude: "Run this command in your terminal, then start a new Claude Code session.",
   generic: "Paste into your MCP client's configuration and restart that client.",
 };
+const clientLabels: Record<ClientTab, string> = {
+  codexConfig: "Codex config",
+  devCli: "Dev CLI",
+  claude: "Claude Code",
+  generic: "Generic MCP",
+};
+const clientTabs: ClientTab[] = ["codexConfig", "devCli", "claude", "generic"];
 
 export const ConnectAiModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const [connectionName, setConnectionName] = useState("AI connection");
   const [serverUrl, setServerUrl] = useState(deriveMcpUrl);
-  const [tab, setTab] = useState<ClientTab>("codex");
+  const [tab, setTab] = useState<ClientTab>("codexConfig");
   const [keys, setKeys] = useState<api.ApiKeyMetadata[]>([]);
   const [generatedToken, setGeneratedToken] = useState("");
   const [generatedKeyId, setGeneratedKeyId] = useState("");
@@ -185,14 +201,7 @@ export const ConnectAiModal = ({ open, onClose }: { open: boolean; onClose: () =
           </span>
           <div className="min-w-0 flex-1">
             <h2 id="connect-ai-title" className="text-lg font-bold tracking-tight">Connect an AI agent</h2>
-            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Give Codex, Claude Code, or another MCP client access to this workspace.</p>
-            <div className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400" aria-label="Connection path">
-              <span className="rounded-md border border-zinc-200 px-2 py-1 dark:border-zinc-700">ExcaliDash</span>
-              <span aria-hidden="true">→</span>
-              <span className="rounded-md border border-violet-200 bg-violet-50 px-2 py-1 text-violet-700 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300">MCP</span>
-              <span aria-hidden="true">→</span>
-              <span className="rounded-md border border-zinc-200 px-2 py-1 dark:border-zinc-700">AI client</span>
-            </div>
+            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Give Codex, Claude Code, direct CLI tooling, or another MCP client access to this workspace.</p>
           </div>
           <button ref={closeButtonRef} type="button" onClick={onClose} className="workspace-focus rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800" aria-label="Close Connect AI dialog">
             <X size={18} />
@@ -231,10 +240,10 @@ export const ConnectAiModal = ({ open, onClose }: { open: boolean; onClose: () =
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-300">
                 Copy the setup now. Closing this dialog permanently hides the key.
               </div>
-              <div className="mt-4 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800" role="tablist" aria-label="MCP client">
-                {(["codex", "claude", "generic"] as ClientTab[]).map((candidate) => (
-                  <button key={candidate} type="button" role="tab" aria-selected={tab === candidate} onClick={() => setTab(candidate)} className={`workspace-focus flex-1 rounded-lg px-3 py-2 text-xs font-semibold ${tab === candidate ? "bg-white text-zinc-950 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"}`}>
-                    {candidate === "codex" ? "Codex" : candidate === "claude" ? "Claude Code" : "Generic MCP"}
+              <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-zinc-100 p-1 sm:grid-cols-4 dark:bg-zinc-800" role="tablist" aria-label="MCP client">
+                {clientTabs.map((candidate) => (
+                  <button key={candidate} type="button" role="tab" aria-selected={tab === candidate} onClick={() => setTab(candidate)} className={`workspace-focus rounded-lg px-2 py-2 text-xs font-semibold ${tab === candidate ? "bg-white text-zinc-950 shadow-sm dark:bg-zinc-700 dark:text-white" : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"}`}>
+                    {clientLabels[candidate]}
                   </button>
                 ))}
               </div>

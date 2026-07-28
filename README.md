@@ -99,8 +99,8 @@ from All items.
 <summary>Connect Codex, Claude Code, and other local AI agents</summary>
 
 Open the workspace and select **Connect AI**. ExcaliDash generates a revocable
-full-access API key and copy-ready setup for Codex, Claude Code, or a generic
-Streamable HTTP MCP client.
+full-access API key and copy-ready setup for Codex, Claude Code, the repo-local
+CLI, or a generic Streamable HTTP MCP client.
 
 The MCP server can manage projects, canvases, Trash, version history, individual
 Excalidraw elements, layout, and canvas storage. Canvas writes are versioned and
@@ -111,6 +111,14 @@ Web deployments expose MCP at the current site origin under `/api/mcp`, for
 example `http://localhost:6767/api/mcp`. LocalDraw uses its loopback backend at
 `http://127.0.0.1:32145/mcp`. The modal derives the correct URL and lets you
 override it for a reverse proxy.
+
+For local source checkouts, the backend package also includes a small CLI for
+inspecting the MCP endpoint directly:
+
+```bash
+cd backend
+EXCALIDASH_MCP_URL=http://localhost:6767/api/mcp EXCALIDASH_MCP_TOKEN=exd_... npm run mcp:cli -- list-tools
+```
 
 Treat the copied setup as a secret: it contains the bearer API key. Keys remain
 active until revoked from the same modal or from Profile → API Keys. MCP always

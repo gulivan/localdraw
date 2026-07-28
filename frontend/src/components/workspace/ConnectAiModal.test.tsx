@@ -26,20 +26,28 @@ describe("ConnectAiModal", () => {
   const writeText = vi.fn();
 
   beforeEach(() => {
+    writeText.mockClear();
     vi.mocked(api.listApiKeys).mockResolvedValue([]);
     vi.mocked(api.createApiKey).mockResolvedValue({ apiKey: generatedKey, token: "exd_secret-token" });
     vi.mocked(api.revokeApiKey).mockResolvedValue();
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
   });
 
-  it("derives the MCP URL and embeds the one-time key in Codex and Claude setup", async () => {
+  it("derives the MCP URL and embeds the one-time key in MCP setup snippets", async () => {
     render(<ConnectAiModal open onClose={vi.fn()} />);
     expect(screen.getByLabelText(/mcp server url/i)).toHaveValue("http://localhost:3000/api/mcp");
+    expect(screen.queryByLabelText(/connection path/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /generate connection key/i }));
     expect(await screen.findByText(/mcp_servers\.excalidash/)).toBeInTheDocument();
-    expect(screen.getByText(/Bearer exd_secret-token/)).toBeInTheDocument();
+    expect(screen.getByText(/EXCALIDASH_MCP_TOKEN='exd_secret-token'/)).toBeInTheDocument();
     expect(api.createApiKey).toHaveBeenCalledWith("AI connection", [...api.API_KEY_SCOPES]);
+
+    expect(screen.getByText(/bearer_token_env_var = "EXCALIDASH_MCP_TOKEN"/)).toBeInTheDocument();
+    expect(screen.queryByText(/http_headers/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Dev CLI" }));
+    expect(screen.getByText(/npm run mcp:cli -- list-tools/)).toHaveTextContent("EXCALIDASH_MCP_TOKEN='exd_secret-token'");
 
     fireEvent.click(screen.getByRole("tab", { name: "Claude Code" }));
     expect(screen.getByText(/claude mcp add/)).toHaveTextContent("Authorization: Bearer exd_secret-token");
@@ -61,12 +69,12 @@ describe("ConnectAiModal", () => {
     render(<ConnectAiModal open onClose={vi.fn()} />);
     await screen.findByText("AI connection");
     fireEvent.click(screen.getByRole("button", { name: /generate connection key/i }));
-    expect(await screen.findByText(/Bearer exd_secret-token/)).toBeInTheDocument();
+    expect(await screen.findByText(/EXCALIDASH_MCP_TOKEN='exd_secret-token'/)).toBeInTheDocument();
 
     const revokeButtons = screen.getAllByRole("button", { name: /revoke api key ai connection/i });
     fireEvent.click(revokeButtons[1]);
 
     await waitFor(() => expect(api.revokeApiKey).toHaveBeenCalledWith("older-key"));
-    expect(screen.getByText(/Bearer exd_secret-token/)).toBeInTheDocument();
+    expect(screen.getByText(/EXCALIDASH_MCP_TOKEN='exd_secret-token'/)).toBeInTheDocument();
   });
 });
