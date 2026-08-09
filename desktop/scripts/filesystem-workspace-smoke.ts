@@ -174,6 +174,50 @@ try {
   const listResponse = await api(new Request("http://localhost/api/drawings?includeData=true"));
   assert.equal(listResponse?.status, 200);
   assert.equal((await listResponse!.json()).drawings[0].id, loose.drawings[0].id);
+  const keyResponse = await api(new Request("http://localhost/api/auth/api-keys", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "Smoke MCP", scopes: [
+      "drawings:read",
+      "drawings:write",
+      "collections:read",
+      "collections:write",
+    ] }),
+  }));
+  assert.equal(keyResponse?.status, 201);
+  const createdKey = await keyResponse!.json();
+  assert.match(createdKey.token, /^exd_/);
+  assert.equal(existsSync(join(dataDir, "mcp-api-keys.json")), true);
+  const mcpRequest = (message: unknown, sessionId?: string) => api(new Request("http://localhost/api/mcp", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${createdKey.token}`,
+      "Content-Type": "application/json",
+      ...(sessionId ? { "mcp-session-id": sessionId } : {}),
+    },
+    body: JSON.stringify(message),
+  }));
+  const initializeResponse = await mcpRequest({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "smoke", version: "1" } },
+  });
+  assert.equal(initializeResponse?.status, 200);
+  const mcpSessionId = initializeResponse!.headers.get("mcp-session-id");
+  assert.ok(mcpSessionId);
+  assert.equal((await initializeResponse!.json()).result.serverInfo.name, "localdraw");
+  const toolsResponse = await mcpRequest({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }, mcpSessionId);
+  const toolsBody = await toolsResponse!.json();
+  assert.equal(toolsResponse?.status, 200);
+  assert.equal(toolsBody.result.tools.some((tool: any) => tool.name === "list_projects"), true);
+  const callResponse = await mcpRequest({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "list_projects", arguments: {} } }, mcpSessionId);
+  const callBody = await callResponse!.json();
+  assert.equal(callResponse?.status, 200);
+  assert.equal(Array.isArray(callBody.result.structuredContent.projects), true);
+  const revokeResponse = await api(new Request(`http://localhost/api/auth/api-keys/${createdKey.apiKey.id}`, { method: "DELETE" }));
+  assert.equal(revokeResponse?.status, 200);
+  assert.equal((await mcpRequest({ jsonrpc: "2.0", id: 4, method: "tools/list", params: {} }, mcpSessionId))?.status, 401);
   const createResponse = await api(new Request("http://localhost/api/drawings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -3,7 +3,7 @@ import process from "node:process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
-export const DEFAULT_MCP_URL = "http://127.0.0.1:32145/mcp";
+export const DEFAULT_MCP_URL = "http://127.0.0.1:32144/api/mcp";
 
 export const MCP_COMMANDS = new Set([
   "help",

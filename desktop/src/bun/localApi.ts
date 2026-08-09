@@ -4,6 +4,8 @@ import {
   type DrawingUpdate,
 } from "./filesystemWorkspace";
 import { getDesktopUpdateInfo } from "./desktopUpdates";
+import { LocalApiKeyStore } from "./localApiKeys";
+import { LocalMcpServer } from "./localMcp";
 
 const json = (body: unknown, status = 200): Response =>
   Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -120,13 +122,17 @@ export const createLocalApi = (
   workspace: FilesystemWorkspace,
   version: string,
   expectedOrigin?: string,
-) => async (request: Request): Promise<Response | null> => {
+) => {
+  const apiKeys = new LocalApiKeyStore(workspace.getMcpApiKeyStorePath());
+  const mcp = new LocalMcpServer(workspace, apiKeys, version);
+  return async (request: Request): Promise<Response | null> => {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/")) return null;
   const path = decodeURIComponent(url.pathname.slice(4));
   const method = request.method.toUpperCase();
 
   try {
+    if (path === "/mcp") return mcp.handle(request);
     const origin = request.headers.get("origin");
     if (
       expectedOrigin &&
@@ -159,6 +165,20 @@ export const createLocalApi = (
     }
     if (method === "POST" && (path === "/auth/refresh" || path === "/auth/logout")) {
       return json({ ok: true });
+    }
+    if (path === "/auth/api-keys") {
+      if (method === "GET") return json({ apiKeys: await apiKeys.list() });
+      if (method === "POST") {
+        const body = await readBody(request);
+        const created = await apiKeys.create(typeof body.name === "string" ? body.name : "", body.scopes);
+        return json(created, 201);
+      }
+    }
+    const apiKeyMatch = path.match(/^\/auth\/api-keys\/([^/]+)$/);
+    if (apiKeyMatch && method === "DELETE") {
+      return await apiKeys.revoke(apiKeyMatch[1])
+        ? json({ success: true })
+        : json({ error: "Not found", message: "API key not found" }, 404);
     }
     if (path === "/auth/preferences") {
       if (method === "GET") return json({ preferences: await workspace.getPreferences() });
@@ -409,4 +429,5 @@ export const createLocalApi = (
       error: error instanceof Error ? error.message : "Local workspace operation failed",
     }, errorStatus(error));
   }
+  };
 };

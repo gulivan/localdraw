@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Eye, EyeOff, ImagePlus, Loader2, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { readPluginSettings, writePluginSettings } from "../storage";
@@ -75,7 +76,7 @@ const ImageGenerationModal = ({ open, selectedCount, api, onClose }: { open: boo
       setBusy(false);
     }
   };
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-zinc-950/55 p-4" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !busy && onClose()}>
       <form onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="image-generation-title" className="w-full max-w-2xl overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_24px_70px_rgba(24,24,27,0.28)] dark:border-zinc-700 dark:bg-zinc-900">
         <header className="flex items-start justify-between border-b border-zinc-200 p-5 dark:border-zinc-800">
@@ -99,7 +100,8 @@ const ImageGenerationModal = ({ open, selectedCount, api, onClose }: { open: boo
           <button type="submit" disabled={busy} className="workspace-focus inline-flex min-w-32 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60">{busy ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}{busy ? "Generating…" : "Generate"}</button>
         </footer>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

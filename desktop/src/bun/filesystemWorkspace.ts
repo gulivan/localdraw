@@ -164,6 +164,10 @@ export class FilesystemWorkspace {
     };
   }
 
+  getMcpApiKeyStorePath(): string {
+    return join(this.dataDir, "mcp-api-keys.json");
+  }
+
   private exclusive<T>(task: () => Promise<T>): Promise<T> {
     const result = this.operation.then(task, task);
     this.operation = result.then(() => undefined, () => undefined);

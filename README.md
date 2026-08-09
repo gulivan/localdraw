@@ -118,8 +118,8 @@ snapshotted. When the requested canvas is open in an editor, the agent can also
 capture a PNG to visually check its work.
 
 Web deployments expose MCP at the current site origin under `/api/mcp`, for
-example `http://localhost:6767/api/mcp`. LocalDraw uses its loopback backend at
-`http://127.0.0.1:32145/mcp`. The modal derives the correct URL and lets you
+example `http://localhost:6767/api/mcp`. LocalDraw uses its loopback API at
+`http://127.0.0.1:32144/api/mcp`. The modal derives the correct URL and lets you
 override it for a reverse proxy.
 
 The existing LocalDraw CLI can inspect the MCP endpoint directly:

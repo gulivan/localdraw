@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Bot,
   Check,
@@ -182,7 +183,7 @@ export const ConnectAiModal = ({ open, onClose }: { open: boolean; onClose: () =
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[110] flex items-center justify-center bg-zinc-950/40 px-4 py-6"
       role="presentation"
@@ -292,6 +293,7 @@ export const ConnectAiModal = ({ open, onClose }: { open: boolean; onClose: () =
           </section>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 };
