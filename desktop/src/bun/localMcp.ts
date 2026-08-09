@@ -10,6 +10,12 @@ type ToolDefinition = {
   inputSchema: JsonRecord;
   annotations: { readOnlyHint: boolean; destructiveHint: boolean; idempotentHint: boolean; openWorldHint: boolean };
 };
+type McpImageResult = {
+  kind: "mcp-image";
+  data: string;
+  mimeType: string;
+  metadata: JsonRecord;
+};
 
 const objectSchema = (properties: JsonRecord = {}, required: string[] = []): JsonRecord => ({
   type: "object",
@@ -21,6 +27,8 @@ const string = { type: "string", minLength: 1 };
 const read = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const write = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 const destructive = { ...write, destructiveHint: true };
+const MAX_MCP_IMAGE_BYTES = 20 * 1024 * 1024;
+const supportedImageTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 const tools: ToolDefinition[] = [
   { name: "list_projects", title: "List LocalDraw projects", description: "List projects, Trash, colors, and canvas counts.", inputSchema: objectSchema(), annotations: read },
@@ -29,6 +37,7 @@ const tools: ToolDefinition[] = [
   { name: "delete_project", title: "Delete project", description: "Delete a project and move its canvases to Unfiled or Trash.", inputSchema: objectSchema({ projectId: string, canvasDisposition: { type: "string", enum: ["unfiled", "trash"] } }, ["projectId", "canvasDisposition"]), annotations: destructive },
   { name: "list_canvases", title: "List canvases", description: "List or search canvases. Use null for Unfiled or 'trash' for Trash.", inputSchema: objectSchema({ projectId: { type: ["string", "null"] }, search: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 200 }, offset: { type: "integer", minimum: 0 } }), annotations: read },
   { name: "get_canvas", title: "Get canvas", description: "Read a canvas scene and current version. Embedded image bytes are omitted.", inputSchema: objectSchema({ canvasId: string }, ["canvasId"]), annotations: read },
+  { name: "get_canvas_image", title: "Read embedded canvas image", description: "Read the original pixels for one embedded image file. Use get_canvas to discover file IDs, then call this tool to inspect image content independently of canvas size.", inputSchema: objectSchema({ canvasId: string, fileId: string }, ["canvasId", "fileId"]), annotations: read },
   { name: "create_canvas", title: "Create canvas", description: "Create a blank canvas in a project or Unfiled.", inputSchema: objectSchema({ name: { type: "string" }, projectId: { type: ["string", "null"] } }), annotations: write },
   { name: "update_canvas_metadata", title: "Rename canvas", description: "Rename a canvas without replacing its scene.", inputSchema: objectSchema({ canvasId: string, name: string }, ["canvasId", "name"]), annotations: write },
   { name: "duplicate_canvas", title: "Duplicate canvas", description: "Duplicate a canvas and its files.", inputSchema: objectSchema({ canvasId: string }, ["canvasId"]), annotations: write },
@@ -85,6 +94,32 @@ const describeElements = (elements: any[]) => elements.filter((element) => !elem
   startElementId: element.startBinding?.elementId ?? null,
   endElementId: element.endBinding?.elementId ?? null,
 }));
+const canvasImage = (workspace: FilesystemWorkspace, canvasId: unknown, fileId: unknown): McpImageResult => {
+  const drawing = drawingOrThrow(workspace, canvasId);
+  const id = requiredText(fileId, "fileId");
+  const files = drawing.files && typeof drawing.files === "object" ? drawing.files as Record<string, any> : {};
+  const file = files[id];
+  if (!file || typeof file.dataURL !== "string" || !file.dataURL) throw new Error("Embedded canvas image not found");
+  const match = file.dataURL.match(/^data:([^;,]+);base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (!match) throw new Error("Canvas image is not stored as an embedded base64 image");
+  const mimeType = match[1].toLocaleLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLocaleLowerCase();
+  if (!supportedImageTypes.has(mimeType)) throw new Error(`Unsupported embedded image type: ${mimeType}`);
+  const data = match[2].replace(/\s/g, "");
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(data) || data.length % 4 === 1) throw new Error("Embedded canvas image has invalid base64 data");
+  if (Math.floor(data.length * 3 / 4) > MAX_MCP_IMAGE_BYTES + 2) throw new Error("Embedded canvas image exceeds the 20 MB MCP limit");
+  const bytes = Buffer.from(data, "base64");
+  if (bytes.length === 0) throw new Error("Embedded canvas image is empty");
+  if (bytes.length > MAX_MCP_IMAGE_BYTES) throw new Error("Embedded canvas image exceeds the 20 MB MCP limit");
+  const placements = (drawing.elements || [])
+    .filter((element: any) => !element?.isDeleted && element?.type === "image" && element?.fileId === id)
+    .map((element: any) => ({ elementId: element.id, x: element.x, y: element.y, width: element.width, height: element.height }));
+  return {
+    kind: "mcp-image",
+    data: bytes.toString("base64"),
+    mimeType,
+    metadata: { canvasId: drawing.id, fileId: id, mimeType, sizeBytes: bytes.length, placements },
+  };
+};
 const newElement = (input: JsonRecord) => {
   const type = requiredText(input.type, "element type");
   const id = typeof input.id === "string" && input.id ? input.id : randomUUID().replaceAll("-", "").slice(0, 20);
@@ -121,6 +156,7 @@ const runTool = async (workspace: FilesystemWorkspace, name: string, input: Json
     return { canvases: result.drawings.map((drawing) => publicDrawing(drawing)), totalCount: result.totalCount, limit: input.limit ?? 50, offset: input.offset ?? 0 };
   }
   if (name === "get_canvas") return publicDrawing(drawingOrThrow(workspace, input.canvasId), true);
+  if (name === "get_canvas_image") return canvasImage(workspace, input.canvasId, input.fileId);
   if (name === "create_canvas") return publicDrawing(await workspace.createDrawing(typeof input.name === "string" ? input.name : "Untitled Drawing", input.projectId ?? null), true);
   if (name === "update_canvas_metadata") return publicDrawing(await workspace.updateDrawing(requiredText(input.canvasId, "canvasId"), { name: requiredText(input.name, "name") }));
   if (name === "duplicate_canvas") return publicDrawing(await workspace.duplicateDrawing(requiredText(input.canvasId, "canvasId")), true);
@@ -148,7 +184,19 @@ const runTool = async (workspace: FilesystemWorkspace, name: string, input: Json
   throw new Error(`Unknown tool: ${name}`);
 };
 
-const toolResult = (value: unknown) => ({ content: [{ type: "text", text: JSON.stringify(value, null, 2) }], structuredContent: value && typeof value === "object" && !Array.isArray(value) ? value : { value } });
+const toolResult = (value: unknown) => {
+  if (value && typeof value === "object" && (value as McpImageResult).kind === "mcp-image") {
+    const image = value as McpImageResult;
+    return {
+      content: [
+        { type: "image", data: image.data, mimeType: image.mimeType },
+        { type: "text", text: JSON.stringify(image.metadata, null, 2) },
+      ],
+      structuredContent: image.metadata,
+    };
+  }
+  return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], structuredContent: value && typeof value === "object" && !Array.isArray(value) ? value : { value } };
+};
 const toolError = (error: unknown) => { const payload = { error: "TOOL_ERROR", message: error instanceof Error ? error.message : "Tool failed" }; return { isError: true, content: [{ type: "text", text: JSON.stringify(payload, null, 2) }], structuredContent: payload }; };
 
 export class LocalMcpServer {
@@ -169,7 +217,7 @@ export class LocalMcpServer {
     if (message.method === "initialize") {
       const nextSessionId = randomUUID();
       this.sessions.add(nextSessionId);
-      return Response.json({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: typeof message.params?.protocolVersion === "string" ? message.params.protocolVersion : "2025-06-18", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "localdraw", version: this.version }, instructions: "LocalDraw is a filesystem-native Excalidraw workspace. Read a canvas and retain its version before editing. Ask before Trash, permanent deletion, project deletion, or history restoration." } }, { headers: { "mcp-session-id": nextSessionId } });
+      return Response.json({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: typeof message.params?.protocolVersion === "string" ? message.params.protocolVersion : "2025-06-18", capabilities: { tools: { listChanged: false } }, serverInfo: { name: "localdraw", version: this.version }, instructions: "LocalDraw is a filesystem-native Excalidraw workspace. Read a canvas and retain its version before editing. Use get_canvas_image to inspect embedded image pixels by file ID. Ask before Trash, permanent deletion, project deletion, or history restoration." } }, { headers: { "mcp-session-id": nextSessionId } });
     }
     if (!sessionId || !this.sessions.has(sessionId)) return Response.json({ jsonrpc: "2.0", id: message.id ?? null, error: { code: -32001, message: "Invalid MCP session" } }, { status: 404 });
     if (message.method === "ping") return Response.json({ jsonrpc: "2.0", id: message.id, result: {} });

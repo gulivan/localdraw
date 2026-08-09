@@ -114,8 +114,8 @@ CLI, or a generic Streamable HTTP MCP client.
 
 The MCP server can manage projects, canvases, Trash, version history, individual
 Excalidraw elements, layout, and canvas storage. Canvas writes are versioned and
-snapshotted. When the requested canvas is open in an editor, the agent can also
-capture a PNG to visually check its work.
+snapshotted. LocalDraw MCP can return an embedded canvas image at its original
+resolution by canvas and file ID, independently of the overall canvas size.
 
 Web deployments expose MCP at the current site origin under `/api/mcp`, for
 example `http://localhost:6767/api/mcp`. LocalDraw uses its loopback API at

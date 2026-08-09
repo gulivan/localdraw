@@ -169,6 +169,13 @@ try {
   assert.ok(JSON.parse(
     readFileSync(join(externalWorkspacePath, "Loose canvas.excalidraw"), "utf8"),
   ).localdraw.id);
+  const imageData = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+  const looseWithImage = workspace.getDrawing(loose.drawings[0].id)!;
+  await workspace.updateDrawing(looseWithImage.id, {
+    elements: [...looseWithImage.elements, { id: "embedded-image", type: "image", fileId: "image-file", x: 40, y: 50, width: 320, height: 200 }],
+    files: { "image-file": { id: "image-file", mimeType: "image/png", dataURL: `data:image/png;base64,${imageData}`, created: Date.now() } },
+    version: looseWithImage.version,
+  });
 
   const api = createLocalApi(workspace, "test-version");
   const listResponse = await api(new Request("http://localhost/api/drawings?includeData=true"));
@@ -211,13 +218,25 @@ try {
   const toolsBody = await toolsResponse!.json();
   assert.equal(toolsResponse?.status, 200);
   assert.equal(toolsBody.result.tools.some((tool: any) => tool.name === "list_projects"), true);
+  assert.equal(toolsBody.result.tools.some((tool: any) => tool.name === "get_canvas_image"), true);
+  assert.equal(toolsBody.result.tools.length, 20);
   const callResponse = await mcpRequest({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "list_projects", arguments: {} } }, mcpSessionId);
   const callBody = await callResponse!.json();
   assert.equal(callResponse?.status, 200);
   assert.equal(Array.isArray(callBody.result.structuredContent.projects), true);
+  const imageResponse = await mcpRequest({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_canvas_image", arguments: { canvasId: looseWithImage.id, fileId: "image-file" } } }, mcpSessionId);
+  const imageBody = await imageResponse!.json();
+  assert.equal(imageResponse?.status, 200);
+  assert.equal(imageBody.result.content[0].type, "image");
+  assert.equal(imageBody.result.content[0].mimeType, "image/png");
+  assert.equal(imageBody.result.content[0].data, imageData);
+  assert.equal(imageBody.result.structuredContent.fileId, "image-file");
+  assert.equal("data" in imageBody.result.structuredContent, false);
+  const missingImageResponse = await mcpRequest({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "get_canvas_image", arguments: { canvasId: looseWithImage.id, fileId: "missing" } } }, mcpSessionId);
+  assert.equal((await missingImageResponse!.json()).result.isError, true);
   const revokeResponse = await api(new Request(`http://localhost/api/auth/api-keys/${createdKey.apiKey.id}`, { method: "DELETE" }));
   assert.equal(revokeResponse?.status, 200);
-  assert.equal((await mcpRequest({ jsonrpc: "2.0", id: 4, method: "tools/list", params: {} }, mcpSessionId))?.status, 401);
+  assert.equal((await mcpRequest({ jsonrpc: "2.0", id: 6, method: "tools/list", params: {} }, mcpSessionId))?.status, 401);
   const createResponse = await api(new Request("http://localhost/api/drawings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
