@@ -7,6 +7,8 @@ import { displayFontFamily } from "../utils/displayFont";
 import { isDesktopApp } from "../utils/productBrand";
 import { WorkspaceSettingsCard } from "./settings/WorkspaceSettingsCard";
 import { SettingsFooter } from "./settings/SettingsFooter";
+import { PluginManagerCard } from "./settings/PluginManagerCard";
+import { usePlugins } from "../plugins/PluginProvider";
 import {
   readEditorSidebarScope,
   writeEditorSidebarScope,
@@ -16,6 +18,7 @@ import {
   writeRecentCanvasesLimit,
 } from "../utils/recentCanvases";
 export const Settings: React.FC = () => {
+  const { enabledEmbeddedPlugins } = usePlugins();
   const { theme, toggleTheme } = useTheme();
   const [backupExportExt, setBackupExportExt] = useState<
     "localdraw" | "localdraw.zip"
@@ -130,6 +133,8 @@ export const Settings: React.FC = () => {
         </div>
       )}{" "}
       {isDesktopApp && <WorkspaceSettingsCard />}
+      <PluginManagerCard />
+      {enabledEmbeddedPlugins.map((plugin) => plugin.SettingsPanel ? <plugin.SettingsPanel key={plugin.manifest.id} /> : null)}
       <SettingsMainGrid
         backupExportExt={backupExportExt}
         setBackupExportExt={setBackupExportExt}

@@ -1,9 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import {
   FilePlus2,
   LogOut,
   Moon,
-  PlugZap,
   Search,
   Settings,
   Shield,
@@ -18,7 +17,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { getInitialsFromName } from "../../utils/user";
 import { productName } from "../../utils/productBrand";
 import { Logo } from "../Logo";
-import { ConnectAiModal } from "./ConnectAiModal";
+import { usePlugins } from "../../plugins/PluginProvider";
 
 type Props = {
   query: string;
@@ -34,7 +33,7 @@ export const WorkspaceHeader = ({
   onImport,
 }: Props) => {
   const navigate = useNavigate();
-  const [connectAiOpen, setConnectAiOpen] = useState(false);
+  const { enabledEmbeddedPlugins } = usePlugins();
   const fileRef = useRef<HTMLInputElement>(null);
   const { user, authEnabled, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -67,14 +66,7 @@ export const WorkspaceHeader = ({
         </label>
 
         <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setConnectAiOpen(true)}
-            aria-label="Connect AI"
-            className="workspace-focus inline-flex h-10 items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/70"
-          >
-            <PlugZap size={15} /> <span className="hidden md:inline">Connect AI</span>
-          </button>
+          {enabledEmbeddedPlugins.map((plugin) => plugin.HomeAction ? <plugin.HomeAction key={plugin.manifest.id} /> : null)}
           <button
             type="button"
             onClick={onNewSlide}
@@ -126,7 +118,6 @@ export const WorkspaceHeader = ({
           </details>
         </div>
       </div>
-      <ConnectAiModal open={connectAiOpen} onClose={() => setConnectAiOpen(false)} />
     </header>
   );
 };

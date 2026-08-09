@@ -14,6 +14,7 @@ import {
   openExistingDesktopWorkspace,
   type DesktopWorkspaceStatus,
 } from './api';
+import { PluginProvider } from './plugins/PluginProvider';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })));
 const Home = lazy(() => import('./pages/Home').then((module) => ({ default: module.Home })));
@@ -74,7 +75,8 @@ export default function DesktopApp() {
       <DesktopWorkspaceGate>
         <Router>
           <AuthProvider>
-            <UploadProvider>
+            <PluginProvider>
+              <UploadProvider>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                 <Route path="/" element={protectedPage(<Home />)} />
@@ -85,7 +87,8 @@ export default function DesktopApp() {
                 <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
-            </UploadProvider>
+              </UploadProvider>
+            </PluginProvider>
           </AuthProvider>
         </Router>
       </DesktopWorkspaceGate>

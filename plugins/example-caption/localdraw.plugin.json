@@ -1,0 +1,20 @@
+{
+  "manifestVersion": 1,
+  "id": "localdraw.example-caption",
+  "name": "Caption card example",
+  "version": "1.0.0",
+  "description": "An example external plugin that adds a caption card beside selected elements.",
+  "author": "LocalDraw",
+  "entry": "./plugin.js",
+  "permissions": ["canvas:read", "canvas:write"],
+  "contributes": {
+    "editorActions": [
+      {
+        "id": "caption",
+        "label": "Add caption",
+        "description": "Add a caption card beside the current selection.",
+        "selection": "required"
+      }
+    ]
+  }
+}

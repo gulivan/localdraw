@@ -5,6 +5,7 @@ import { UploadProvider } from './context/UploadContext';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Loader2 } from 'lucide-react';
+import { PluginProvider } from './plugins/PluginProvider';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -35,7 +36,8 @@ function App() {
     <ThemeProvider>
       <Router>
         <AuthProvider>
-          <UploadProvider>
+          <PluginProvider>
+            <UploadProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -102,7 +104,8 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
-          </UploadProvider>
+            </UploadProvider>
+          </PluginProvider>
         </AuthProvider>
       </Router>
     </ThemeProvider>

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { WorkspaceHeader } from "./WorkspaceHeader";
+import { PluginProvider } from "../../plugins/PluginProvider";
 
 vi.mock("../../context/AuthContext", () => ({
   useAuth: () => ({ user: null, authEnabled: false, logout: vi.fn() }),
@@ -14,7 +15,9 @@ describe("WorkspaceHeader", () => {
   it("links the workspace attribution to Excalidraw and ExcaliDash", () => {
     render(
       <MemoryRouter>
-        <WorkspaceHeader query="" onQueryChange={vi.fn()} onNewSlide={vi.fn()} onImport={vi.fn()} />
+        <PluginProvider>
+          <WorkspaceHeader query="" onQueryChange={vi.fn()} onNewSlide={vi.fn()} onImport={vi.fn()} />
+        </PluginProvider>
       </MemoryRouter>,
     );
 

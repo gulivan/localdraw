@@ -374,6 +374,7 @@ export const Editor: React.FC = () => {
         canEdit={canEdit}
         drawingName={drawingName}
         editorContainerRef={editorContainerRef}
+        excalidrawAPIRef={excalidrawAPI}
         initialData={initialData}
         drawingNameSourceId={drawingNameSourceId}
         isHeaderVisible={isHeaderVisible}

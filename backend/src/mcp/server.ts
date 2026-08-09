@@ -11,7 +11,7 @@ import type { Server as SocketIoServer } from "socket.io";
 import { createElementSchema, updateElementSchema } from "./canvasElements";
 import { McpWorkspace, McpWorkspaceError } from "./workspace";
 
-type RegisterMcpDeps = {
+export type RegisterMcpDeps = {
   prisma: PrismaClient;
   io: SocketIoServer;
   authModeService: AuthModeService;

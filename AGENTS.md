@@ -157,6 +157,8 @@ Understand runtime first, then touch code with local tests if requested.
 
 - `backend/`: Express API, Prisma schema, auth, sockets, scripts, Docker runtime.
 - `frontend/`: React UI, API client wiring, Vite config/build pipeline.
+- `frontend/src/plugins/`: plugin manifests/runtime host, worker sandbox, and bundled plugin UI registration.
+- `plugins/`: repository-embedded plugin manifests plus an installable external-plugin example; authoring contract is in `PLUGINS.md`.
 - `desktop/`: Electrobun host, native packaging, and the filesystem workspace bridge.
 - `e2e/`: Playwright tests and compose-based test runner.
 - `docker-compose.yml`: local compose setup for source builds.

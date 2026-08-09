@@ -1,0 +1,9 @@
+{
+  "manifestVersion": 1,
+  "id": "localdraw.connect-ai",
+  "name": "Connect AI",
+  "version": "1.0.0",
+  "description": "Expose projects and canvases to MCP clients through a revocable workspace key.",
+  "author": "LocalDraw",
+  "permissions": ["canvas:read", "canvas:write", "network"]
+}

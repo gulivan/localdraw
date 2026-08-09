@@ -18,6 +18,8 @@ import { UIOptions } from "./shared";
 import { EditorProjectRail } from "../../components/workspace/EditorProjectRail";
 import type { DisposableDraft } from "./disposableDraft";
 import { readEditorSidebarScope } from "../../utils/editorSidebar";
+import { usePlugins } from "../../plugins/PluginProvider";
+import { ExternalPluginActions } from "../../plugins/ExternalPluginActions";
 
 type EditorViewProps = {
   id?: string;
@@ -26,6 +28,7 @@ type EditorViewProps = {
   drawingName: string;
   drawingNameSourceId: string | null;
   editorContainerRef: React.RefObject<HTMLDivElement>;
+  excalidrawAPIRef: React.MutableRefObject<any>;
   initialData: any;
   isHeaderVisible: boolean;
   isRenaming: boolean;
@@ -66,6 +69,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   drawingName,
   drawingNameSourceId,
   editorContainerRef,
+  excalidrawAPIRef,
   initialData,
   isHeaderVisible,
   isRenaming,
@@ -94,6 +98,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onHistoryOpen,
   onToggleAutoHide,
 }) => {
+  const { enabledEmbeddedPlugins } = usePlugins();
   const [railOpen, setRailOpen] = useState(() =>
     localStorage.getItem("excalidash-editor-project-rail") !== "closed",
   );
@@ -199,6 +204,10 @@ export const EditorView: React.FC<EditorViewProps> = ({
         </span>
       </div>
       <div className="flex items-center gap-3">
+        {enabledEmbeddedPlugins.map((plugin) => plugin.EditorActions ? (
+          <plugin.EditorActions key={plugin.manifest.id} canEdit={canEdit} excalidrawAPI={excalidrawAPIRef} />
+        ) : null)}
+        <ExternalPluginActions canEdit={canEdit} excalidrawAPI={excalidrawAPIRef} />
         {!canEdit ? (
           <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
             Read-only

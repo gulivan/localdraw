@@ -1,0 +1,9 @@
+{
+  "manifestVersion": 1,
+  "id": "localdraw.image-generation",
+  "name": "Image generation",
+  "version": "1.0.0",
+  "description": "Generate an image from a prompt and optional selected canvas elements through an OpenAI-compatible Image API.",
+  "author": "LocalDraw",
+  "permissions": ["canvas:read", "canvas:write", "network", "preferences:read", "preferences:write"]
+}

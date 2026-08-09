@@ -96,9 +96,19 @@ from All items.
 </details>
 
 <details>
-<summary>Connect Codex, Claude Code, and other local AI agents</summary>
+<summary>Plugins, image generation, and local AI agents</summary>
 
-Open the workspace and select **Connect AI**. ExcaliDash generates a revocable
+Open **Settings → Plugins** to enable bundled capabilities or install an
+external plugin from an HTTPS manifest or GitHub repository. External plugins
+start disabled, declare their canvas/network permissions, and run in an
+isolated worker. See [PLUGINS.md](PLUGINS.md) for the manifest and action API.
+
+The bundled **Image generation** plugin renders selected elements as an image
+reference, accepts a prompt, and adds the result beside the selection. It works
+with OpenAI out of the box and exposes provider host, API key, and model fields
+for other OpenAI-compatible Image APIs.
+
+The bundled **Connect AI** plugin generates a revocable
 full-access API key and copy-ready setup for Codex, Claude Code, the LocalDraw
 CLI, or a generic Streamable HTTP MCP client.
 
