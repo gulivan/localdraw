@@ -58,6 +58,27 @@ describe("image generation client", () => {
     expect(request.body.get("image")).toBeInstanceOf(File);
   });
 
+  it("surfaces provider API errors", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: { message: "Your image request was rejected" },
+    }), { status: 400, headers: { "Content-Type": "application/json" } })));
+    await expect(generateImage({
+      config: { apiKey: "test-key", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2" },
+      prompt: "Rejected prompt",
+    })).rejects.toThrow("Your image request was rejected");
+  });
+
+  it("times out a stalled provider request", async () => {
+    vi.stubGlobal("fetch", vi.fn((_url, init: RequestInit) => new Promise((_resolve, reject) => {
+      init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+    })));
+    await expect(generateImage({
+      config: { apiKey: "test-key", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2" },
+      prompt: "Stalled prompt",
+      timeoutMs: 5,
+    })).rejects.toThrow("timed out after 3 minutes");
+  });
+
   it("describes text inside a selected shape as its semantic label", () => {
     const api = {
       getAppState: () => ({ selectedElementIds: { rectangle: true } }),

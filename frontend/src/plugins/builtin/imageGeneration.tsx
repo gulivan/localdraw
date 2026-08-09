@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Eye, EyeOff, ImagePlus, Loader2, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
@@ -51,9 +51,14 @@ const ImageGenerationModal = ({ open, selectedCount, api, onClose }: { open: boo
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
   useEffect(() => {
     if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => event.key === "Escape" && !busy && onClose();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (busy) requestRef.current?.abort();
+      else onClose();
+    };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [busy, onClose, open]);
@@ -64,10 +69,12 @@ const ImageGenerationModal = ({ open, selectedCount, api, onClose }: { open: boo
     setBusy(true);
     setError(null);
     saveConfig(config);
+    const controller = new AbortController();
+    requestRef.current = controller;
     try {
       const reference = await exportSelectedElements(api);
       const selectionContext = describeSelectedElements(api);
-      const image = await generateImage({ config, prompt, reference, selectionContext });
+      const image = await generateImage({ config, prompt, reference, selectionContext, signal: controller.signal });
       await insertGeneratedImage(api, image);
       toast.success("Generated image added to the canvas");
       setPrompt("");
@@ -75,6 +82,7 @@ const ImageGenerationModal = ({ open, selectedCount, api, onClose }: { open: boo
     } catch (value) {
       setError(value instanceof Error ? value.message : "Image generation failed");
     } finally {
+      if (requestRef.current === controller) requestRef.current = null;
       setBusy(false);
     }
   };
@@ -98,7 +106,7 @@ const ImageGenerationModal = ({ open, selectedCount, api, onClose }: { open: boo
           {error && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
         </div>
         <footer className="flex justify-end gap-2 border-t border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
-          <button type="button" onClick={onClose} disabled={busy} className="workspace-focus rounded-xl px-4 py-2 text-sm font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-800">Cancel</button>
+          <button type="button" onClick={() => busy ? requestRef.current?.abort() : onClose()} className="workspace-focus rounded-xl px-4 py-2 text-sm font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-800">{busy ? "Stop" : "Cancel"}</button>
           <button type="submit" disabled={busy} className="workspace-focus inline-flex min-w-32 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60">{busy ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}{busy ? "Generating…" : "Generate"}</button>
         </footer>
       </form>

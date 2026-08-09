@@ -6,8 +6,12 @@ export type ImageGenerationConfig = {
 
 type ImageApiResponse = {
   data?: Array<{ b64_json?: string; url?: string }>;
-  error?: { message?: string };
+  error?: { message?: string } | string;
+  message?: string;
+  detail?: string;
 };
+
+export const IMAGE_GENERATION_TIMEOUT_MS = 180_000;
 
 export const DEFAULT_IMAGE_GENERATION_CONFIG: ImageGenerationConfig = {
   apiKey: "",
@@ -37,8 +41,12 @@ ${selectionContext.trim()}`;
 const responseError = async (response: Response): Promise<Error> => {
   let message = `Image provider returned ${response.status}`;
   try {
-    const body = await response.json() as ImageApiResponse;
-    if (body.error?.message) message = body.error.message;
+    const raw = await response.text();
+    const body = JSON.parse(raw) as ImageApiResponse;
+    const providerMessage = typeof body.error === "string"
+      ? body.error
+      : body.error?.message || body.message || body.detail;
+    if (providerMessage) message = providerMessage.slice(0, 1000);
   } catch {
     // Keep the status-only error when the provider does not return JSON.
   }
@@ -66,45 +74,69 @@ export const generateImage = async ({
   prompt,
   reference,
   selectionContext,
+  signal,
+  timeoutMs = IMAGE_GENERATION_TIMEOUT_MS,
 }: {
   config: ImageGenerationConfig;
   prompt: string;
   reference?: Blob;
   selectionContext?: string;
+  signal?: AbortSignal;
+  timeoutMs?: number;
 }): Promise<Blob> => {
   if (!config.apiKey.trim()) throw new Error("Add an OpenAI API key first");
   if (!config.model.trim()) throw new Error("Add an image model name first");
   const baseUrl = normalizeOpenAiBaseUrl(config.baseUrl);
   const endpoint = `${baseUrl}/images/${reference ? "edits" : "generations"}`;
   const effectivePrompt = buildImagePrompt(prompt, selectionContext);
+  const controller = new AbortController();
+  let timedOut = false;
+  const cancel = () => controller.abort(signal?.reason);
+  if (signal?.aborted) cancel();
+  else signal?.addEventListener("abort", cancel, { once: true });
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
   let response: Response;
-  if (reference) {
-    const body = new FormData();
-    body.set("model", config.model.trim());
-    body.set("prompt", effectivePrompt);
-    body.set("image", new File([reference], "selection.png", { type: "image/png" }));
-    body.set("output_format", "png");
-    response = await fetch(endpoint, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${config.apiKey.trim()}` },
-      body,
-    });
-  } else {
-    response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.apiKey.trim()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: config.model.trim(),
-        prompt: effectivePrompt,
-        output_format: "png",
-      }),
-    });
+  try {
+    if (reference) {
+      const body = new FormData();
+      body.set("model", config.model.trim());
+      body.set("prompt", effectivePrompt);
+      body.set("image", new File([reference], "selection.png", { type: "image/png" }));
+      body.set("output_format", "png");
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${config.apiKey.trim()}` },
+        body,
+        signal: controller.signal,
+      });
+    } else {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.apiKey.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: config.model.trim(),
+          prompt: effectivePrompt,
+          output_format: "png",
+        }),
+        signal: controller.signal,
+      });
+    }
+    if (!response.ok) throw await responseError(response);
+    return imageResultToBlob(await response.json() as ImageApiResponse);
+  } catch (error) {
+    if (timedOut) throw new Error("Image provider timed out after 3 minutes");
+    if (signal?.aborted) throw new Error("Image generation cancelled");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", cancel);
   }
-  if (!response.ok) throw await responseError(response);
-  return imageResultToBlob(await response.json() as ImageApiResponse);
 };
 
 const selectedElementsWithLabels = (api: any): any[] => {
