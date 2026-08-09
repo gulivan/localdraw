@@ -2,6 +2,7 @@ export type ImageGenerationConfig = {
   apiKey: string;
   baseUrl: string;
   model: string;
+  count: number;
 };
 
 type ImageApiResponse = {
@@ -17,6 +18,14 @@ export const DEFAULT_IMAGE_GENERATION_CONFIG: ImageGenerationConfig = {
   apiKey: "",
   baseUrl: "https://api.openai.com/v1",
   model: "gpt-image-2",
+  count: 1,
+};
+
+export const normalizeImageCount = (value: number): number => {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error("Number of images must be a whole number greater than zero");
+  }
+  return value;
 };
 
 export const normalizeOpenAiBaseUrl = (value: string): string => {
@@ -53,8 +62,7 @@ const responseError = async (response: Response): Promise<Error> => {
   return new Error(message);
 };
 
-const imageResultToBlob = async (body: ImageApiResponse): Promise<Blob> => {
-  const result = body.data?.[0];
+const imageResultToBlob = async (result: NonNullable<ImageApiResponse["data"]>[number]): Promise<Blob> => {
   if (result?.b64_json) {
     const binary = atob(result.b64_json);
     const bytes = new Uint8Array(binary.length);
@@ -69,7 +77,7 @@ const imageResultToBlob = async (body: ImageApiResponse): Promise<Blob> => {
   throw new Error("Image provider returned no image");
 };
 
-export const generateImage = async ({
+export const generateImages = async ({
   config,
   prompt,
   reference,
@@ -83,12 +91,13 @@ export const generateImage = async ({
   selectionContext?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
-}): Promise<Blob> => {
+}): Promise<Blob[]> => {
   if (!config.apiKey.trim()) throw new Error("Add an OpenAI API key first");
   if (!config.model.trim()) throw new Error("Add an image model name first");
   const baseUrl = normalizeOpenAiBaseUrl(config.baseUrl);
   const endpoint = `${baseUrl}/images/${reference ? "edits" : "generations"}`;
   const effectivePrompt = buildImagePrompt(prompt, selectionContext);
+  const count = normalizeImageCount(config.count);
   const controller = new AbortController();
   let timedOut = false;
   const cancel = () => controller.abort(signal?.reason);
@@ -106,6 +115,7 @@ export const generateImage = async ({
       body.set("prompt", effectivePrompt);
       body.set("image", new File([reference], "selection.png", { type: "image/png" }));
       body.set("output_format", "png");
+      body.set("n", String(count));
       response = await fetch(endpoint, {
         method: "POST",
         headers: { Authorization: `Bearer ${config.apiKey.trim()}` },
@@ -123,12 +133,15 @@ export const generateImage = async ({
           model: config.model.trim(),
           prompt: effectivePrompt,
           output_format: "png",
+          n: count,
         }),
         signal: controller.signal,
       });
     }
     if (!response.ok) throw await responseError(response);
-    return imageResultToBlob(await response.json() as ImageApiResponse);
+    const body = await response.json() as ImageApiResponse;
+    if (!body.data?.length) throw new Error("Image provider returned no image");
+    return Promise.all(body.data.map(imageResultToBlob));
   } catch (error) {
     if (timedOut) throw new Error("Image provider timed out after 3 minutes");
     if (signal?.aborted) throw new Error("Image generation cancelled");
@@ -208,69 +221,17 @@ export const describeSelectedElements = (api: any): string => {
 };
 
 export const exportSelectedElements = async (api: any): Promise<Blob | undefined> => {
-  const { exportToBlob } = await import("@excalidraw/excalidraw");
   const appState = api.getAppState?.();
   const elements = selectedElementsWithLabels(api);
+  const files = api.getFiles?.() || {};
   if (elements.length === 0) return undefined;
+  const { exportToBlob } = await import("@excalidraw/excalidraw");
   return exportToBlob({
     elements,
     appState: { ...appState, exportBackground: true },
-    files: api.getFiles?.() || {},
+    files,
     mimeType: "image/png",
     exportPadding: 32,
     maxWidthOrHeight: 1536,
   });
-};
-
-const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onerror = () => reject(reader.error || new Error("Could not read generated image"));
-  reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Could not read generated image"));
-  reader.readAsDataURL(blob);
-});
-
-const imageDimensions = (blob: Blob): Promise<{ width: number; height: number }> => new Promise((resolve, reject) => {
-  const url = URL.createObjectURL(blob);
-  const image = new Image();
-  image.onload = () => {
-    URL.revokeObjectURL(url);
-    resolve({ width: image.naturalWidth || 1024, height: image.naturalHeight || 1024 });
-  };
-  image.onerror = () => {
-    URL.revokeObjectURL(url);
-    reject(new Error("Could not decode generated image"));
-  };
-  image.src = url;
-});
-
-export const insertGeneratedImage = async (api: any, blob: Blob): Promise<void> => {
-  const { CaptureUpdateAction, convertToExcalidrawElements } = await import("@excalidraw/excalidraw");
-  const [dataURL, dimensions] = await Promise.all([blobToDataUrl(blob), imageDimensions(blob)]);
-  const fileId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `generated-${Date.now()}`;
-  const appState = api.getAppState?.() || {};
-  const selectedIds = appState.selectedElementIds || {};
-  const selected = (api.getSceneElements?.() || []).filter((element: any) => selectedIds[element.id] && !element.isDeleted);
-  const selectionRight = selected.length ? Math.max(...selected.map((element: any) => element.x + element.width)) : -(appState.scrollX || 0) + 120;
-  const selectionTop = selected.length ? Math.min(...selected.map((element: any) => element.y)) : -(appState.scrollY || 0) + 120;
-  const maxSide = 720;
-  const scale = Math.min(1, maxSide / Math.max(dimensions.width, dimensions.height));
-  const width = Math.max(1, Math.round(dimensions.width * scale));
-  const height = Math.max(1, Math.round(dimensions.height * scale));
-  api.addFiles([{ id: fileId, mimeType: blob.type || "image/png", dataURL, created: Date.now() }]);
-  const [element] = convertToExcalidrawElements([{
-    type: "image",
-    x: selectionRight + 48,
-    y: selectionTop,
-    width,
-    height,
-    fileId: fileId as any,
-    scale: [1, 1],
-    status: "saved",
-  }]);
-  api.updateScene({
-    elements: [...api.getSceneElementsIncludingDeleted(), element],
-    appState: { selectedElementIds: { [element.id]: true } },
-    captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-  });
-  api.scrollToContent?.(element, { fitToContent: true, animate: true });
 };

@@ -38,6 +38,36 @@ html.dark {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-950;
 }
 
+@keyframes localdraw-image-generation-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+
+.localdraw-image-generation-shimmer {
+  background-image: linear-gradient(
+    105deg,
+    transparent 22%,
+    rgb(255 255 255 / 0.08) 34%,
+    rgb(255 255 255 / 0.7) 48%,
+    rgb(255 255 255 / 0.08) 62%,
+    transparent 74%
+  );
+  background-position: 180% 0;
+  background-size: 220% 100%;
+  animation: localdraw-image-generation-shimmer 1.45s linear infinite;
+}
+
+html.dark .localdraw-image-generation-shimmer {
+  background-image: linear-gradient(
+    105deg,
+    transparent 22%,
+    rgb(196 181 253 / 0.04) 34%,
+    rgb(221 214 254 / 0.32) 48%,
+    rgb(196 181 253 / 0.04) 62%,
+    transparent 74%
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   .workspace-shell *,
   .workspace-shell *::before,
@@ -46,6 +76,11 @@ html.dark {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .localdraw-image-generation-shimmer {
+    animation: none;
+    background-position: 50% 0;
   }
 }
 

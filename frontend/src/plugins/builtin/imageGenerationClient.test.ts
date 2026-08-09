@@ -8,8 +8,8 @@ import {
   buildImagePrompt,
   describeSelectedElements,
   exportSelectedElements,
-  generateImage,
-  insertGeneratedImage,
+  generateImages,
+  normalizeImageCount,
   normalizeOpenAiBaseUrl,
 } from "./imageGenerationClient";
 
@@ -27,14 +27,14 @@ describe("image generation client", () => {
       data: [{ b64_json: btoa("png") }],
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
-    const result = await generateImage({
-      config: { apiKey: "test-key", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2" },
+    const result = await generateImages({
+      config: { apiKey: "test-key", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2", count: 2 },
       prompt: "A paper airplane",
     });
-    expect(result.type).toBe("image/png");
+    expect(result[0].type).toBe("image/png");
     expect(fetchMock).toHaveBeenCalledWith("https://api.openai.com/v1/images/generations", expect.objectContaining({ method: "POST" }));
     const request = fetchMock.mock.calls[0][1];
-    expect(JSON.parse(request.body)).toMatchObject({ model: "gpt-image-2", prompt: "A paper airplane" });
+    expect(JSON.parse(request.body)).toMatchObject({ model: "gpt-image-2", prompt: "A paper airplane", n: 2 });
   });
 
   it("uses image edits when selected canvas content is provided", async () => {
@@ -42,8 +42,8 @@ describe("image generation client", () => {
       data: [{ b64_json: btoa("edited") }],
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
-    await generateImage({
-      config: { apiKey: "test-key", baseUrl: "https://provider.example/v1", model: "gpt-image-2" },
+    await generateImages({
+      config: { apiKey: "test-key", baseUrl: "https://provider.example/v1", model: "gpt-image-2", count: 3 },
       prompt: "Refine this sketch",
       reference: new Blob(["png"], { type: "image/png" }),
       selectionContext: '- rectangle labeled "ICE CUBE"',
@@ -56,14 +56,15 @@ describe("image generation client", () => {
     expect(request.body.get("prompt")).toContain('rectangle labeled "ICE CUBE"');
     expect(request.body.get("prompt")).toContain("treat a label as the identity or meaning of its surrounding shape");
     expect(request.body.get("image")).toBeInstanceOf(File);
+    expect(request.body.get("n")).toBe("3");
   });
 
   it("surfaces provider API errors", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       error: { message: "Your image request was rejected" },
     }), { status: 400, headers: { "Content-Type": "application/json" } })));
-    await expect(generateImage({
-      config: { apiKey: "test-key", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2" },
+    await expect(generateImages({
+      config: { apiKey: "test-key", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2", count: 1 },
       prompt: "Rejected prompt",
     })).rejects.toThrow("Your image request was rejected");
   });
@@ -72,8 +73,8 @@ describe("image generation client", () => {
     vi.stubGlobal("fetch", vi.fn((_url, init: RequestInit) => new Promise((_resolve, reject) => {
       init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
     })));
-    await expect(generateImage({
-      config: { apiKey: "test-key", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2" },
+    await expect(generateImages({
+      config: { apiKey: "test-key", baseUrl: "https://api.openai.com/v1", model: "gpt-image-2", count: 1 },
       prompt: "Stalled prompt",
       timeoutMs: 5,
     })).rejects.toThrow("timed out after 3 minutes");
@@ -95,6 +96,13 @@ describe("image generation client", () => {
     expect(buildImagePrompt("  A paper airplane  ")).toBe("A paper airplane");
   });
 
+  it("accepts any positive whole-number option count", () => {
+    expect(normalizeImageCount(1)).toBe(1);
+    expect(normalizeImageCount(37)).toBe(37);
+    expect(() => normalizeImageCount(0)).toThrow("greater than zero");
+    expect(() => normalizeImageCount(1.5)).toThrow("whole number");
+  });
+
   it("includes selected canvas images and their files in the visual reference", async () => {
     const excalidraw = await import("@excalidraw/excalidraw");
     const reference = new Blob(["selection"], { type: "image/png" });
@@ -110,42 +118,4 @@ describe("image generation client", () => {
     expect(excalidraw.exportToBlob).toHaveBeenCalledWith(expect.objectContaining({ elements: [image], files }));
   });
 
-  it("adds the generated image beside the current selection", async () => {
-    class MockReader {
-      result: string | null = null;
-      error: Error | null = null;
-      onload: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-      readAsDataURL() {
-        this.result = "data:image/png;base64,cG5n";
-        this.onload?.();
-      }
-    }
-    class MockImage {
-      naturalWidth = 1024;
-      naturalHeight = 512;
-      onload: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-      set src(_value: string) { queueMicrotask(() => this.onload?.()); }
-    }
-    vi.stubGlobal("FileReader", MockReader);
-    vi.stubGlobal("Image", MockImage);
-    const excalidraw = await import("@excalidraw/excalidraw");
-    vi.mocked(excalidraw.convertToExcalidrawElements).mockReturnValue([{ id: "generated-element", type: "image" }] as any);
-    const api = {
-      addFiles: vi.fn(),
-      getAppState: vi.fn(() => ({ selectedElementIds: { selected: true } })),
-      getSceneElements: vi.fn(() => [{ id: "selected", x: 10, y: 20, width: 100, height: 80 }]),
-      getSceneElementsIncludingDeleted: vi.fn(() => [{ id: "selected" }]),
-      updateScene: vi.fn(),
-      scrollToContent: vi.fn(),
-    };
-    await insertGeneratedImage(api, new Blob(["png"], { type: "image/png" }));
-    expect(api.addFiles).toHaveBeenCalledWith([expect.objectContaining({ dataURL: "data:image/png;base64,cG5n" })]);
-    expect(excalidraw.convertToExcalidrawElements).toHaveBeenCalledWith([expect.objectContaining({ x: 158, y: 20, width: 720, height: 360 })]);
-    expect(api.updateScene).toHaveBeenCalledWith(expect.objectContaining({
-      elements: [{ id: "selected" }, { id: "generated-element", type: "image" }],
-      appState: { selectedElementIds: { "generated-element": true } },
-    }));
-  });
 });
