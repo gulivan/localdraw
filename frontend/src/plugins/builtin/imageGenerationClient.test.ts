@@ -5,6 +5,9 @@ vi.mock("@excalidraw/excalidraw", () => ({
   exportToBlob: vi.fn(),
 }));
 import {
+  buildImagePrompt,
+  describeSelectedElements,
+  exportSelectedElements,
   generateImage,
   insertGeneratedImage,
   normalizeOpenAiBaseUrl,
@@ -43,13 +46,47 @@ describe("image generation client", () => {
       config: { apiKey: "test-key", baseUrl: "https://provider.example/v1", model: "gpt-image-2" },
       prompt: "Refine this sketch",
       reference: new Blob(["png"], { type: "image/png" }),
+      selectionContext: '- rectangle labeled "ICE CUBE"',
     });
     expect(fetchMock).toHaveBeenCalledWith("https://provider.example/v1/images/edits", expect.objectContaining({ method: "POST" }));
     const request = fetchMock.mock.calls[0][1];
     expect(request.body).toBeInstanceOf(FormData);
     expect(request.body.get("model")).toBe("gpt-image-2");
-    expect(request.body.get("prompt")).toBe("Refine this sketch");
+    expect(request.body.get("prompt")).toContain("Refine this sketch");
+    expect(request.body.get("prompt")).toContain('rectangle labeled "ICE CUBE"');
+    expect(request.body.get("prompt")).toContain("treat a label as the identity or meaning of its surrounding shape");
     expect(request.body.get("image")).toBeInstanceOf(File);
+  });
+
+  it("describes text inside a selected shape as its semantic label", () => {
+    const api = {
+      getAppState: () => ({ selectedElementIds: { rectangle: true } }),
+      getSceneElements: () => [
+        { id: "rectangle", type: "rectangle", x: 10, y: 20, width: 220, height: 140, boundElements: [] },
+        { id: "label", type: "text", text: "ICE CUBE", x: 70, y: 75, width: 90, height: 24 },
+        { id: "outside", type: "text", text: "ignore me", x: 400, y: 400, width: 90, height: 24 },
+      ],
+    };
+    expect(describeSelectedElements(api)).toBe('- rectangle labeled "ICE CUBE"');
+  });
+
+  it("does not alter prompts without selected canvas context", () => {
+    expect(buildImagePrompt("  A paper airplane  ")).toBe("A paper airplane");
+  });
+
+  it("includes selected canvas images and their files in the visual reference", async () => {
+    const excalidraw = await import("@excalidraw/excalidraw");
+    const reference = new Blob(["selection"], { type: "image/png" });
+    vi.mocked(excalidraw.exportToBlob).mockResolvedValue(reference);
+    const image = { id: "image", type: "image", fileId: "file-1", x: 0, y: 0, width: 320, height: 200 };
+    const files = { "file-1": { id: "file-1", dataURL: "data:image/png;base64,cG5n" } };
+    const result = await exportSelectedElements({
+      getAppState: () => ({ selectedElementIds: { image: true } }),
+      getSceneElements: () => [image, { id: "other", type: "rectangle", x: 500, y: 0, width: 100, height: 100 }],
+      getFiles: () => files,
+    });
+    expect(result).toBe(reference);
+    expect(excalidraw.exportToBlob).toHaveBeenCalledWith(expect.objectContaining({ elements: [image], files }));
   });
 
   it("adds the generated image beside the current selection", async () => {

@@ -7,6 +7,7 @@ import { readPluginSettings, writePluginSettings } from "../storage";
 import type { EmbeddedPlugin, PluginEditorContext } from "../types";
 import {
   DEFAULT_IMAGE_GENERATION_CONFIG,
+  describeSelectedElements,
   exportSelectedElements,
   generateImage,
   insertGeneratedImage,
@@ -65,7 +66,8 @@ const ImageGenerationModal = ({ open, selectedCount, api, onClose }: { open: boo
     saveConfig(config);
     try {
       const reference = await exportSelectedElements(api);
-      const image = await generateImage({ config, prompt, reference });
+      const selectionContext = describeSelectedElements(api);
+      const image = await generateImage({ config, prompt, reference, selectionContext });
       await insertGeneratedImage(api, image);
       toast.success("Generated image added to the canvas");
       setPrompt("");

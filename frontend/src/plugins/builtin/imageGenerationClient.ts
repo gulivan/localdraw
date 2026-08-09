@@ -23,6 +23,17 @@ export const normalizeOpenAiBaseUrl = (value: string): string => {
   return url.href.replace(/\/$/, "");
 };
 
+export const buildImagePrompt = (prompt: string, selectionContext?: string): string => {
+  const request = prompt.trim();
+  if (!selectionContext?.trim()) return request;
+  return `${request}
+
+Use the attached selected-canvas image as a visual and composition reference. Preserve the semantic meaning of the selected elements described below. Canvas labels are annotations: treat a label as the identity or meaning of its surrounding shape unless the request explicitly asks to render the label as typography. Depict the labeled subject itself; do not merely print the label on an unrelated object.
+
+Selected canvas elements:
+${selectionContext.trim()}`;
+};
+
 const responseError = async (response: Response): Promise<Error> => {
   let message = `Image provider returned ${response.status}`;
   try {
@@ -54,20 +65,23 @@ export const generateImage = async ({
   config,
   prompt,
   reference,
+  selectionContext,
 }: {
   config: ImageGenerationConfig;
   prompt: string;
   reference?: Blob;
+  selectionContext?: string;
 }): Promise<Blob> => {
   if (!config.apiKey.trim()) throw new Error("Add an OpenAI API key first");
   if (!config.model.trim()) throw new Error("Add an image model name first");
   const baseUrl = normalizeOpenAiBaseUrl(config.baseUrl);
   const endpoint = `${baseUrl}/images/${reference ? "edits" : "generations"}`;
+  const effectivePrompt = buildImagePrompt(prompt, selectionContext);
   let response: Response;
   if (reference) {
     const body = new FormData();
     body.set("model", config.model.trim());
-    body.set("prompt", prompt.trim());
+    body.set("prompt", effectivePrompt);
     body.set("image", new File([reference], "selection.png", { type: "image/png" }));
     body.set("output_format", "png");
     response = await fetch(endpoint, {
@@ -84,7 +98,7 @@ export const generateImage = async ({
       },
       body: JSON.stringify({
         model: config.model.trim(),
-        prompt: prompt.trim(),
+        prompt: effectivePrompt,
         output_format: "png",
       }),
     });
@@ -93,11 +107,78 @@ export const generateImage = async ({
   return imageResultToBlob(await response.json() as ImageApiResponse);
 };
 
+const selectedElementsWithLabels = (api: any): any[] => {
+  const scene = (api.getSceneElements?.() || []).filter((element: any) => !element.isDeleted);
+  const selectedIds = api.getAppState?.()?.selectedElementIds || {};
+  const selected = scene.filter((element: any) => selectedIds[element.id]);
+  if (selected.length === 0) return [];
+
+  const includedIds = new Set(selected.map((element: any) => element.id));
+  for (const element of selected) {
+    for (const binding of element.boundElements || []) {
+      if (binding?.type === "text" && typeof binding.id === "string") includedIds.add(binding.id);
+    }
+    if (element.type === "text" && typeof element.containerId === "string") includedIds.add(element.containerId);
+  }
+
+  const selectedShapes = selected.filter((element: any) => element.type !== "text");
+  for (const element of scene) {
+    if (element.type !== "text") continue;
+    if (typeof element.containerId === "string" && includedIds.has(element.containerId)) {
+      includedIds.add(element.id);
+      continue;
+    }
+    const centerX = Number(element.x) + Number(element.width) / 2;
+    const centerY = Number(element.y) + Number(element.height) / 2;
+    if (selectedShapes.some((shape: any) => (
+      centerX >= Number(shape.x) && centerX <= Number(shape.x) + Number(shape.width) &&
+      centerY >= Number(shape.y) && centerY <= Number(shape.y) + Number(shape.height)
+    ))) includedIds.add(element.id);
+  }
+  return scene.filter((element: any) => includedIds.has(element.id));
+};
+
+const textValue = (element: any): string => String(element.text ?? element.originalText ?? "").trim().slice(0, 500);
+
+export const describeSelectedElements = (api: any): string => {
+  const elements = selectedElementsWithLabels(api);
+  if (elements.length === 0) return "";
+  const labelsByContainer = new Map<string, string[]>();
+  const consumedTextIds = new Set<string>();
+  for (const text of elements.filter((element: any) => element.type === "text")) {
+    const value = textValue(text);
+    if (!value) continue;
+    let containerId = typeof text.containerId === "string" ? text.containerId : null;
+    if (!containerId) {
+      const centerX = Number(text.x) + Number(text.width) / 2;
+      const centerY = Number(text.y) + Number(text.height) / 2;
+      containerId = elements.find((shape: any) => shape.type !== "text" && (
+        centerX >= Number(shape.x) && centerX <= Number(shape.x) + Number(shape.width) &&
+        centerY >= Number(shape.y) && centerY <= Number(shape.y) + Number(shape.height)
+      ))?.id ?? null;
+    }
+    if (containerId) {
+      labelsByContainer.set(containerId, [...(labelsByContainer.get(containerId) || []), value]);
+      consumedTextIds.add(text.id);
+    }
+  }
+  return elements
+    .filter((element: any) => !consumedTextIds.has(element.id))
+    .slice(0, 80)
+    .map((element: any) => {
+      const labels = labelsByContainer.get(element.id);
+      if (labels?.length) return `- ${element.type} labeled ${labels.map((label) => JSON.stringify(label)).join(", ")}`;
+      if (element.type === "text") return `- text ${JSON.stringify(textValue(element))}`;
+      return `- ${element.type}`;
+    })
+    .join("\n")
+    .slice(0, 4000);
+};
+
 export const exportSelectedElements = async (api: any): Promise<Blob | undefined> => {
   const { exportToBlob } = await import("@excalidraw/excalidraw");
   const appState = api.getAppState?.();
-  const selectedIds = appState?.selectedElementIds || {};
-  const elements = (api.getSceneElements?.() || []).filter((element: any) => selectedIds[element.id] && !element.isDeleted);
+  const elements = selectedElementsWithLabels(api);
   if (elements.length === 0) return undefined;
   return exportToBlob({
     elements,
