@@ -41,23 +41,23 @@ const shellQuote = (value: string) => `'${value.replace(/'/g, `'"'"'`)}'`;
 const setupSnippet = (tab: ClientTab, url: string, token: string) => {
   if (tab === "codexConfig") {
     return `# Shell
-export EXCALIDASH_MCP_TOKEN=${shellQuote(token)}
+export LOCALDRAW_MCP_TOKEN=${shellQuote(token)}
 
 # ~/.codex/config.toml
-[mcp_servers.excalidash]
+[mcp_servers.localdraw]
 url = ${JSON.stringify(url)}
-bearer_token_env_var = "EXCALIDASH_MCP_TOKEN"
+bearer_token_env_var = "LOCALDRAW_MCP_TOKEN"
 default_tools_approval_mode = "writes"`;
   }
   if (tab === "localdrawCli") {
     return `LOCALDRAW_MCP_URL=${shellQuote(url)} LOCALDRAW_MCP_TOKEN=${shellQuote(token)} npx localdraw -- list-tools`;
   }
   if (tab === "claude") {
-    return `claude mcp add --transport http --scope user --header ${shellQuote(`Authorization: Bearer ${token}`)} excalidash ${shellQuote(url)}`;
+    return `claude mcp add --transport http --scope user --header ${shellQuote(`Authorization: Bearer ${token}`)} localdraw ${shellQuote(url)}`;
   }
   return JSON.stringify({
     mcpServers: {
-      excalidash: {
+      localdraw: {
         type: "http",
         url,
         headers: { Authorization: `Bearer ${token}` },
@@ -66,7 +66,7 @@ default_tools_approval_mode = "writes"`;
   }, null, 2);
 };
 
-const usageInstruction = `Use the ExcaliDash MCP tools to inspect and manage my projects and canvases. Read a canvas and keep its version before editing. Prefer atomic canvas patches, describe the result, and capture a screenshot when the editor is open. Ask before deleting projects, moving canvases to Trash, restoring history, permanently deleting, or cleaning storage.`;
+const usageInstruction = `Use the LocalDraw MCP tools to inspect and manage my projects and canvases. Read a canvas and keep its version before editing. Prefer atomic canvas patches, describe the result, and capture a screenshot when the editor is open. Ask before deleting projects, moving canvases to Trash, restoring history, permanently deleting, or cleaning storage.`;
 const clientHints: Record<ClientTab, string> = {
   codexConfig: "Export the token in your shell and paste only the TOML block into ~/.codex/config.toml.",
   localdrawCli: "Run the existing LocalDraw CLI to inspect the MCP endpoint directly.",

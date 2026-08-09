@@ -105,7 +105,7 @@ const installExecutable = (archivePath, installDir) => {
 
 const findExecutable = (executables) => executables.find(existsSync);
 const layout = getInstallLayout();
-const explicitlyConfiguredBinary = process.env.EXCALIDASH_BINARY;
+const explicitlyConfiguredBinary = process.env.LOCALDRAW_BINARY;
 let executable = explicitlyConfiguredBinary || findExecutable(layout.executables);
 const installedVersion = existsSync(layout.versionFile)
   ? readFileSync(layout.versionFile, "utf8").trim()

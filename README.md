@@ -108,7 +108,7 @@ reference, accepts a prompt, and adds the result beside the selection. It works
 with OpenAI out of the box and exposes provider host, API key, and model fields
 for other OpenAI-compatible Image APIs.
 
-The bundled **Connect AI** plugin generates a revocable
+The bundled **Connect AI** plugin exposes **LocalDraw MCP** and generates a revocable
 full-access API key and copy-ready setup for Codex, Claude Code, the LocalDraw
 CLI, or a generic Streamable HTTP MCP client.
 
@@ -129,8 +129,8 @@ LOCALDRAW_MCP_URL=http://localhost:6767/api/mcp LOCALDRAW_MCP_TOKEN=exd_... npx 
 ```
 
 Treat the copied setup as a secret: it contains the bearer API key. Keys remain
-active until revoked from the same modal or from Profile → API Keys. MCP always
-requires a key, even when normal ExcaliDash login is disabled.
+active until revoked from the same modal or from Profile → API Keys. LocalDraw
+MCP always requires a key, even when normal web login is disabled.
 
 </details>
 

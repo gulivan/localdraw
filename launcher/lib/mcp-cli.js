@@ -31,8 +31,8 @@ Usage:
   localdraw -- [options] <command> [args]
 
 Options:
-  --url <url>       MCP endpoint. Defaults to LOCALDRAW_MCP_URL, EXCALIDASH_MCP_URL, or ${DEFAULT_MCP_URL}
-  --token <token>   MCP bearer token. Defaults to LOCALDRAW_MCP_TOKEN or EXCALIDASH_MCP_TOKEN
+  --url <url>       MCP endpoint. Defaults to LOCALDRAW_MCP_URL or ${DEFAULT_MCP_URL}
+  --token <token>   MCP bearer token. Defaults to LOCALDRAW_MCP_TOKEN
   --out <file>      Write the first image result to a file
   --yes             Allow destructive tool calls
   -h, --help        Show this help
@@ -99,8 +99,8 @@ export const parseMcpArgs = (argv) => {
 };
 
 export const resolveConfig = (options, env = process.env) => {
-  const url = options.url || env.LOCALDRAW_MCP_URL || env.EXCALIDASH_MCP_URL || DEFAULT_MCP_URL;
-  const token = options.token || env.LOCALDRAW_MCP_TOKEN || env.EXCALIDASH_MCP_TOKEN;
+  const url = options.url || env.LOCALDRAW_MCP_URL || DEFAULT_MCP_URL;
+  const token = options.token || env.LOCALDRAW_MCP_TOKEN;
   if (!token) {
     throw new CliError("Missing MCP bearer token. Set LOCALDRAW_MCP_TOKEN or pass --token.");
   }

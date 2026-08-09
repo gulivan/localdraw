@@ -32,7 +32,7 @@ test("resolveConfig uses defaults and requires a token", () => {
     url: new URL(DEFAULT_MCP_URL),
     token: "exd_test",
   });
-  assert.deepEqual(resolveConfig({}, { EXCALIDASH_MCP_TOKEN: "exd_test", EXCALIDASH_MCP_URL: "http://localhost:6767/api/mcp" }), {
+  assert.deepEqual(resolveConfig({}, { LOCALDRAW_MCP_TOKEN: "exd_test", LOCALDRAW_MCP_URL: "http://localhost:6767/api/mcp" }), {
     url: new URL("http://localhost:6767/api/mcp"),
     token: "exd_test",
   });
@@ -54,7 +54,7 @@ test("readJsonInput parses inline JSON and defaults to an empty object", async (
 test("prints MCP help without installing or launching the app", () => {
   const result = spawnSync(
     process.execPath,
-    [resolve(import.meta.dirname, "../bin/excalidash.js"), "--", "--help"],
+    [resolve(import.meta.dirname, "../bin/localdraw.js"), "--", "--help"],
     { encoding: "utf8" },
   );
 

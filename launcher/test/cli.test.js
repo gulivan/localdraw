@@ -24,7 +24,7 @@ test("documents browser mode and its local address", () => {
 test("prints help without installing or launching the app", () => {
   const result = spawnSync(
     process.execPath,
-    [resolve(import.meta.dirname, "../bin/excalidash.js"), "--help"],
+    [resolve(import.meta.dirname, "../bin/localdraw.js"), "--help"],
     { encoding: "utf8" },
   );
 
