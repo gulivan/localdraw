@@ -223,10 +223,11 @@ Commit subjects select the next version: `fix:`/`perf:` increment the patch,
 the major. Documentation and maintenance-only commits do not create a release.
 Automation creates a `v<VERSION>-desktop` tag and draft GitHub Release, uploads
 all platform artifacts and checksums, then publishes the release only when every
-platform succeeds. It then publishes the matching `localdraw` npm launcher, so
-`npx localdraw@latest` and the native downloads stay on the same version. Version
-files and release tags should not be bumped manually during the normal
-contributor flow.
+platform succeeds. It then dispatches the standalone npm trusted-publishing
+workflow for the same tag and waits until the matching `localdraw` launcher is
+published, so `npx localdraw@latest` and the native downloads stay on the same
+version. Version files and release tags should not be bumped manually during the
+normal contributor flow.
 
 > [!CAUTION]
 > This is a BETA deployment and production-readiness depends on deployment controls:

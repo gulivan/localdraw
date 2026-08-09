@@ -28,6 +28,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
   id-token: write
 
 concurrency:
@@ -358,5 +359,41 @@ jobs:
   publish-launcher:
     name: Publish npm launcher
     needs: publish
-    uses: ./.github/workflows/npm-publish.yml
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch npm publish workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        shell: bash
+        run: |
+          echo "dispatched_at=$(date -u -d '2 minutes ago' '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+          gh workflow run npm-publish.yml --repo "${{ github.repository }}" --ref main -f tag="$TAG"
+
+      - name: Wait for npm publish workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        shell: bash
+        run: |
+          VERSION="${TAG#v}"
+          VERSION="${VERSION%-desktop}"
+          for attempt in $(seq 1 36); do
+            RUN_ID=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow npm-publish.yml \
+              --event workflow_dispatch \
+              --branch main \
+              --limit 5 \
+              --json databaseId,createdAt \
+              | jq -r --arg since "$dispatched_at" \
+                  'map(select(.createdAt >= $since)) | sort_by(.createdAt) | reverse | .[0].databaseId // empty')
+            if test -n "$RUN_ID"; then
+              gh run watch "$RUN_ID" --repo "${{ github.repository }}" --exit-status --interval 10
+              test "$(npm view "localdraw@$VERSION" version)" = "$VERSION"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Timed out waiting for npm publish workflow dispatch."
+          exit 1
