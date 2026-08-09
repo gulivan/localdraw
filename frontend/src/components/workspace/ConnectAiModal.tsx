@@ -66,7 +66,7 @@ default_tools_approval_mode = "writes"`;
   }, null, 2);
 };
 
-const usageInstruction = `Use the LocalDraw MCP tools to inspect and manage my projects and canvases. Read a canvas and keep its version before editing. Use get_canvas_image with a canvas and file ID whenever you need to inspect an embedded image at its original resolution. Prefer atomic canvas patches and describe the result. Ask before deleting projects, moving canvases to Trash, restoring history, permanently deleting, or cleaning storage.`;
+const usageInstruction = `Use the LocalDraw MCP tools to inspect and manage my projects and canvases. Read a canvas and keep its version before editing. Use get_canvas_image with a canvas and file ID whenever you need to inspect an embedded image independently of the overall canvas size. Prefer atomic canvas patches and describe the result. Ask before deleting projects, moving canvases to Trash, restoring history, permanently deleting, or cleaning storage.`;
 const clientHints: Record<ClientTab, string> = {
   codexConfig: "Export the token in your shell and paste only the TOML block into ~/.codex/config.toml.",
   localdrawCli: "Run the existing LocalDraw CLI to inspect the MCP endpoint directly.",

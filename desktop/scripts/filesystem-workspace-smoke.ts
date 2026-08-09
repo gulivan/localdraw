@@ -10,11 +10,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
+import { PNG } from "pngjs";
 import {
   FileConflictError,
   FilesystemWorkspace,
 } from "../src/bun/filesystemWorkspace";
 import { createLocalApi } from "../src/bun/localApi";
+import { compressImageForMcp } from "../src/bun/mcpImageCompression";
 import {
   compareDesktopVersions,
   parseDesktopReleaseVersion,
@@ -28,6 +30,21 @@ const movedWorkspacePath = join(fixtureRoot, "moved-workspace");
 const externalWorkspacePath = join(fixtureRoot, "external-workspace");
 
 mkdirSync(fixtureRoot, { recursive: true });
+
+const noisyPng = new PNG({ width: 512, height: 512 });
+let noise = 0x12345678;
+for (let offset = 0; offset < noisyPng.data.length; offset += 4) {
+  noise = (noise * 1664525 + 1013904223) >>> 0;
+  noisyPng.data[offset] = noise & 0xff;
+  noisyPng.data[offset + 1] = (noise >>> 8) & 0xff;
+  noisyPng.data[offset + 2] = (noise >>> 16) & 0xff;
+  noisyPng.data[offset + 3] = 255;
+}
+const oversizedPng = PNG.sync.write(noisyPng);
+const compressedVisionCopy = compressImageForMcp(oversizedPng, "image/png", 400 * 1024);
+assert.equal(compressedVisionCopy.mimeType, "image/jpeg");
+assert.equal(compressedVisionCopy.bytes.length <= 400 * 1024, true);
+assert.equal(compressedVisionCopy.bytes.length < oversizedPng.length, true);
 
 const currentRelease = parseDesktopReleaseVersion("v0.6.0-desktop");
 const laterRelease = parseDesktopReleaseVersion("v0.6.1-desktop");

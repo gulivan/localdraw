@@ -1,6 +1,7 @@
 import { randomInt, randomUUID } from "node:crypto";
 import type { FilesystemWorkspace } from "./filesystemWorkspace";
 import type { LocalApiKeyStore } from "./localApiKeys";
+import { compressImageForMcp } from "./mcpImageCompression";
 
 type JsonRecord = Record<string, any>;
 type ToolDefinition = {
@@ -28,6 +29,7 @@ const read = { readOnlyHint: true, destructiveHint: false, idempotentHint: true,
 const write = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 const destructive = { ...write, destructiveHint: true };
 const MAX_MCP_IMAGE_BYTES = 20 * 1024 * 1024;
+const MAX_MCP_SOURCE_IMAGE_BYTES = 100 * 1024 * 1024;
 const supportedImageTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 const tools: ToolDefinition[] = [
@@ -37,7 +39,7 @@ const tools: ToolDefinition[] = [
   { name: "delete_project", title: "Delete project", description: "Delete a project and move its canvases to Unfiled or Trash.", inputSchema: objectSchema({ projectId: string, canvasDisposition: { type: "string", enum: ["unfiled", "trash"] } }, ["projectId", "canvasDisposition"]), annotations: destructive },
   { name: "list_canvases", title: "List canvases", description: "List or search canvases. Use null for Unfiled or 'trash' for Trash.", inputSchema: objectSchema({ projectId: { type: ["string", "null"] }, search: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 200 }, offset: { type: "integer", minimum: 0 } }), annotations: read },
   { name: "get_canvas", title: "Get canvas", description: "Read a canvas scene and current version. Embedded image bytes are omitted.", inputSchema: objectSchema({ canvasId: string }, ["canvasId"]), annotations: read },
-  { name: "get_canvas_image", title: "Read embedded canvas image", description: "Read the original pixels for one embedded image file. Use get_canvas to discover file IDs, then call this tool to inspect image content independently of canvas size.", inputSchema: objectSchema({ canvasId: string, fileId: string }, ["canvasId", "fileId"]), annotations: read },
+  { name: "get_canvas_image", title: "Read embedded canvas image", description: "Read pixels for one embedded image file independently of canvas size. Use get_canvas to discover file IDs. Images over 20 MB are downscaled and compressed when possible without changing the stored original.", inputSchema: objectSchema({ canvasId: string, fileId: string }, ["canvasId", "fileId"]), annotations: read },
   { name: "create_canvas", title: "Create canvas", description: "Create a blank canvas in a project or Unfiled.", inputSchema: objectSchema({ name: { type: "string" }, projectId: { type: ["string", "null"] } }), annotations: write },
   { name: "update_canvas_metadata", title: "Rename canvas", description: "Rename a canvas without replacing its scene.", inputSchema: objectSchema({ canvasId: string, name: string }, ["canvasId", "name"]), annotations: write },
   { name: "duplicate_canvas", title: "Duplicate canvas", description: "Duplicate a canvas and its files.", inputSchema: objectSchema({ canvasId: string }, ["canvasId"]), annotations: write },
@@ -106,18 +108,31 @@ const canvasImage = (workspace: FilesystemWorkspace, canvasId: unknown, fileId: 
   if (!supportedImageTypes.has(mimeType)) throw new Error(`Unsupported embedded image type: ${mimeType}`);
   const data = match[2].replace(/\s/g, "");
   if (!/^[A-Za-z0-9+/]*={0,2}$/.test(data) || data.length % 4 === 1) throw new Error("Embedded canvas image has invalid base64 data");
-  if (Math.floor(data.length * 3 / 4) > MAX_MCP_IMAGE_BYTES + 2) throw new Error("Embedded canvas image exceeds the 20 MB MCP limit");
+  if (Math.floor(data.length * 3 / 4) > MAX_MCP_SOURCE_IMAGE_BYTES + 2) throw new Error("Embedded canvas image exceeds the 100 MB safe compression limit");
   const bytes = Buffer.from(data, "base64");
   if (bytes.length === 0) throw new Error("Embedded canvas image is empty");
-  if (bytes.length > MAX_MCP_IMAGE_BYTES) throw new Error("Embedded canvas image exceeds the 20 MB MCP limit");
+  if (bytes.length > MAX_MCP_SOURCE_IMAGE_BYTES) throw new Error("Embedded canvas image exceeds the 100 MB safe compression limit");
+  const delivered = bytes.length > MAX_MCP_IMAGE_BYTES
+    ? compressImageForMcp(bytes, mimeType, MAX_MCP_IMAGE_BYTES)
+    : { bytes, mimeType, width: null, height: null };
   const placements = (drawing.elements || [])
     .filter((element: any) => !element?.isDeleted && element?.type === "image" && element?.fileId === id)
     .map((element: any) => ({ elementId: element.id, x: element.x, y: element.y, width: element.width, height: element.height }));
   return {
     kind: "mcp-image",
-    data: bytes.toString("base64"),
-    mimeType,
-    metadata: { canvasId: drawing.id, fileId: id, mimeType, sizeBytes: bytes.length, placements },
+    data: delivered.bytes.toString("base64"),
+    mimeType: delivered.mimeType,
+    metadata: {
+      canvasId: drawing.id,
+      fileId: id,
+      mimeType: delivered.mimeType,
+      sizeBytes: delivered.bytes.length,
+      originalMimeType: mimeType,
+      originalSizeBytes: bytes.length,
+      compressed: delivered.bytes !== bytes,
+      ...(delivered.width ? { width: delivered.width, height: delivered.height } : {}),
+      placements,
+    },
   };
 };
 const newElement = (input: JsonRecord) => {
