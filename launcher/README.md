@@ -22,6 +22,10 @@ Browser mode prints and opens `http://127.0.0.1:32144`. Run
 `npx localdraw --help` to see all launcher options without installing or
 starting the app.
 
+If another LocalDraw build is already using port `32144`, the launcher verifies
+its identity, asks it to shut down cleanly, and then starts the requested
+release. It never kills an unrelated process that happens to use the port.
+
 Set `LOCALDRAW_VERBOSE=1` to show native installer output when troubleshooting.
 
 The same CLI can inspect a running LocalDraw MCP endpoint without

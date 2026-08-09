@@ -28,6 +28,11 @@ import {
   parseCliArgs,
 } from "../lib/cli.js";
 import { extractMcpArgs, runMcpCli } from "../lib/mcp-cli.js";
+import {
+  probeLocalDrawInstance,
+  requestLocalDrawShutdown,
+  waitForPortRelease,
+} from "../lib/instance.js";
 import { createCommandRunner, getLaunchCommand } from "../lib/process.js";
 
 const RELEASE_BASE_URL = `https://github.com/gulivan/localdraw/releases/download/v${RELEASE_VERSION}`;
@@ -49,6 +54,72 @@ if (options.help) {
 if (options.version) {
   console.log(RELEASE_VERSION.replace(/-desktop$/, ""));
   process.exit(0);
+}
+
+const runningInstance = await probeLocalDrawInstance({ baseUrl: LOCALDRAW_URL });
+if (runningInstance.kind === "legacy-localdraw") {
+  if (process.platform !== "darwin") {
+    console.error(
+      "An older LocalDraw is already using port 32144. Quit it, then run this command again.",
+    );
+    process.exit(1);
+  }
+
+  console.log("Stopping the older LocalDraw instance on port 32144...");
+  try {
+    let quitError = null;
+    try {
+      run("osascript", ["-e", 'tell application id "dev.gulivan.excalidash" to quit']);
+    } catch (error) {
+      // Some Electrobun releases answer the Apple quit event with -128 even
+      // after terminating. Port release is the reliable completion signal.
+      quitError = error;
+    }
+    if (!(await waitForPortRelease({ baseUrl: LOCALDRAW_URL }))) {
+      throw quitError ?? new Error("LocalDraw did not release port 32144 within 5 seconds");
+    }
+  } catch (error) {
+    console.error(
+      `Unable to replace the older LocalDraw: ${error instanceof Error ? error.message : error}`,
+    );
+    process.exit(1);
+  }
+}
+if (runningInstance.kind === "occupied") {
+  console.error(
+    `Port 32144 is already in use by another program. LocalDraw did not stop it.\n` +
+      `Close that program or free the port, then run this command again.`,
+  );
+  process.exit(1);
+}
+
+if (runningInstance.kind === "localdraw") {
+  const requestedVersion = RELEASE_VERSION.replace(/-desktop$/, "");
+  const shouldReplace =
+    runningInstance.version !== requestedVersion ||
+    (runningInstance.channel !== "stable" && runningInstance.channel !== "unknown");
+
+  if (shouldReplace) {
+    console.log(
+      `Stopping LocalDraw ${runningInstance.version} (${runningInstance.channel}) on port 32144...`,
+    );
+    try {
+      await requestLocalDrawShutdown({
+        baseUrl: LOCALDRAW_URL,
+        token: runningInstance.shutdownToken,
+      });
+      if (!(await waitForPortRelease({ baseUrl: LOCALDRAW_URL }))) {
+        throw new Error("LocalDraw did not release port 32144 within 5 seconds");
+      }
+    } catch (error) {
+      console.error(
+        `Unable to replace the running LocalDraw: ${error instanceof Error ? error.message : error}`,
+      );
+      process.exit(1);
+    }
+  } else {
+    console.log(`LocalDraw ${runningInstance.version} is already running; bringing it forward...`);
+  }
 }
 
 const download = async (url, destination) => {

@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { createXiaolaiFontServer } from "./xiaolai";
 import { FilesystemWorkspace } from "./filesystemWorkspace";
 import { createLocalApi } from "./localApi";
+import desktopPackage from "../../package.json" with { type: "json" };
 
 const HOST = "127.0.0.1";
 const FRONTEND_PORT = 32144;
@@ -18,7 +19,13 @@ const browserMode =
   process.env.LOCALDRAW_BROWSER_MODE === "1";
 const skipBrowserOpen = process.env.LOCALDRAW_SKIP_BROWSER_OPEN === "1";
 const browserLifecycleToken = browserMode ? randomUUID() : null;
+const instanceToken = randomUUID();
 const resourcesDir = join(PATHS.RESOURCES_FOLDER, "app");
+const appVersion = process.env.ELECTROBUN_APP_VERSION || desktopPackage.version;
+const pathChannel = resourcesDir.match(
+  /(?:^|[\\/])(?:LocalDraw-)?(dev|canary)(?:[.\\/-]|$)/i,
+)?.[1]?.toLowerCase();
+const buildChannel = process.env.ELECTROBUN_BUILD_ENV || pathChannel || "stable";
 const dataDir = Utils.paths.userData;
 const serveXiaolaiFont = await createXiaolaiFontServer(resourcesDir, dataDir);
 const workspace = new FilesystemWorkspace(
@@ -28,7 +35,7 @@ const workspace = new FilesystemWorkspace(
 await workspace.initialize();
 const localApi = createLocalApi(
   workspace,
-  process.env.ELECTROBUN_APP_VERSION || "0.0.0",
+  appVersion,
   appUrl,
 );
 
@@ -84,7 +91,7 @@ ApplicationMenu.setApplicationMenu([
   },
 ]);
 
-ApplicationMenu.on("application-menu-clicked", (event) => {
+Electrobun.events.on("application-menu-clicked", (event) => {
   if ((event as any).data?.action === "quit") void shutdown();
 });
 
@@ -111,6 +118,27 @@ frontendServer = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     const pathname = decodeURIComponent(url.pathname);
+    if (pathname === "/__localdraw/instance" && request.method === "GET") {
+      return Response.json(
+        {
+          product: "localdraw",
+          version: appVersion,
+          channel: buildChannel,
+          shutdownToken: instanceToken,
+        },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    if (pathname === "/__localdraw/shutdown" && request.method === "POST") {
+      if (
+        request.headers.get("origin") ||
+        request.headers.get("authorization") !== `Bearer ${instanceToken}`
+      ) {
+        return Response.json({ error: "Forbidden" }, { status: 403 });
+      }
+      setTimeout(() => void shutdown(), 0);
+      return new Response(null, { status: 202 });
+    }
     const apiResponse = await localApi(request);
     if (apiResponse) return apiResponse;
     if (pathname === "/__localdraw/workspace" && request.method === "GET") {
