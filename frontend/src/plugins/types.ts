@@ -43,12 +43,17 @@ export type InstalledPlugin = {
 export type PluginEditorContext = {
   canEdit: boolean;
   excalidrawAPI: React.MutableRefObject<any>;
+  hideTrigger?: boolean;
+};
+
+export type PluginHomeContext = {
+  hideTrigger?: boolean;
 };
 
 export type EmbeddedPlugin = {
   manifest: LocalDrawPluginManifest;
   defaultEnabled: boolean;
-  HomeAction?: React.ComponentType;
+  HomeAction?: React.ComponentType<PluginHomeContext>;
   EditorActions?: React.ComponentType<PluginEditorContext>;
   SettingsPanel?: React.ComponentType;
 };

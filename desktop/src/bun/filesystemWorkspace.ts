@@ -772,7 +772,7 @@ export class FilesystemWorkspace {
   }
 
   async createDrawing(
-    name = "Untitled Drawing",
+    name = "Untitled canvas",
     collectionId: string | null = null,
     initial: Pick<DrawingUpdate, "elements" | "appState" | "files" | "preview"> = {},
   ) {
@@ -986,7 +986,7 @@ export class FilesystemWorkspace {
     let initialDrawing;
     try {
       initialDrawing = createInitialDrawing
-        ? await this.createDrawing("Canvas 1", collection.id)
+        ? await this.createDrawing("Untitled canvas", collection.id)
         : undefined;
     } catch (error) {
       await this.exclusive(async () => {

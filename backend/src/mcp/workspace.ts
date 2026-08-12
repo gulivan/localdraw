@@ -130,7 +130,7 @@ export class McpWorkspace {
     }
     const drawing = await this.prisma.drawing.create({
       data: {
-        name: sanitizeText(input.name || "Untitled Drawing", 255) || "Untitled Drawing",
+        name: sanitizeText(input.name || "Untitled canvas", 255) || "Untitled canvas",
         collectionId,
         userId: this.userId,
         sortOrder: await getNextSortOrder(this.prisma, collectionId, this.userId),

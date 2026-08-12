@@ -172,7 +172,7 @@ const runTool = async (workspace: FilesystemWorkspace, name: string, input: Json
   }
   if (name === "get_canvas") return publicDrawing(drawingOrThrow(workspace, input.canvasId), true);
   if (name === "get_canvas_image") return canvasImage(workspace, input.canvasId, input.fileId);
-  if (name === "create_canvas") return publicDrawing(await workspace.createDrawing(typeof input.name === "string" ? input.name : "Untitled Drawing", input.projectId ?? null), true);
+  if (name === "create_canvas") return publicDrawing(await workspace.createDrawing(typeof input.name === "string" ? input.name : "Untitled canvas", input.projectId ?? null), true);
   if (name === "update_canvas_metadata") return publicDrawing(await workspace.updateDrawing(requiredText(input.canvasId, "canvasId"), { name: requiredText(input.name, "name") }));
   if (name === "duplicate_canvas") return publicDrawing(await workspace.duplicateDrawing(requiredText(input.canvasId, "canvasId")), true);
   if (name === "move_canvas") return workspace.placeDrawing(requiredText(input.canvasId, "canvasId"), input.projectId ?? null, Number(input.targetIndex ?? 0));

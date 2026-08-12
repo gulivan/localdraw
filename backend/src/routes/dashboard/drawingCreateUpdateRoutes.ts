@@ -64,7 +64,7 @@ export const registerDrawingCreateUpdateRoutes = (
         preview?: string | null;
         files?: Record<string, unknown>;
       };
-      const drawingName = payload.name ?? "Untitled Drawing";
+      const drawingName = payload.name ?? "Untitled canvas";
       const targetCollectionIdRaw =
         payload.collectionId === undefined ? null : payload.collectionId;
       const targetCollectionId =

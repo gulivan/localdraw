@@ -220,7 +220,7 @@ describe("EditorProjectRail project visibility", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Add canvas" }));
 
     await waitFor(() =>
-      expect(createDrawing).toHaveBeenCalledWith("Canvas 2", project.id),
+      expect(createDrawing).toHaveBeenCalledWith("Untitled canvas", project.id),
     );
   });
 
@@ -248,7 +248,7 @@ describe("EditorProjectRail project visibility", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Add canvas" }));
 
     await waitFor(() =>
-      expect(createDrawing).toHaveBeenCalledWith("Canvas 4", project.id),
+      expect(createDrawing).toHaveBeenCalledWith("Untitled canvas", project.id),
     );
   });
 

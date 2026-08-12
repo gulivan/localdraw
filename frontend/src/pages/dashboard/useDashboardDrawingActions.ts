@@ -42,7 +42,7 @@ export const useDashboardDrawingActions = ({
       const targetCollectionId =
         selectedCollectionId === undefined ? null : selectedCollectionId;
       const drawing = await api.createDrawing(
-        "Untitled Drawing",
+        "Untitled canvas",
         targetCollectionId,
       );
       navigate(`/editor/${drawing.id}`, {

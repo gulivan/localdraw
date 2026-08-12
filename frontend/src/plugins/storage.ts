@@ -3,6 +3,7 @@ import type { InstalledPlugin } from "./types";
 const PLUGINS_KEY = "localdraw.plugins.v1";
 const ENABLED_KEY = "localdraw.plugin-enabled.v1";
 const SETTINGS_PREFIX = "localdraw.plugin-settings.v1.";
+const PINNED_ACTIONS_KEY = "localdraw.plugin-pins.v1";
 
 export const readExternalPlugins = (): InstalledPlugin[] => {
   try {
@@ -47,4 +48,17 @@ export const writePluginSettings = (pluginId: string, settings: Record<string, u
 
 export const removePluginSettings = (pluginId: string): void => {
   window.localStorage.removeItem(`${SETTINGS_PREFIX}${pluginId}`);
+};
+
+export const readPinnedPluginActions = (): string[] => {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PINNED_ACTIONS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
+export const writePinnedPluginActions = (actionIds: string[]): void => {
+  window.localStorage.setItem(PINNED_ACTIONS_KEY, JSON.stringify([...new Set(actionIds)]));
 };

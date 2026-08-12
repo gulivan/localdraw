@@ -65,4 +65,8 @@ The bundled image plugin uses the OpenAI-compatible Image API:
 - `/images/generations` when there is no selection.
 - `/images/edits` with a rendered PNG of selected elements when there is a selection.
 
-The provider host, API key, and model are configurable. OpenAI works out of the box with `https://api.openai.com/v1` and `gpt-image-2`. The key remains in the current browser profile and is sent only to the configured provider host.
+Provider, API endpoint, key, and model come from reusable AI connection profiles. Model suggestions refresh from models.dev, and every field remains editable for custom or local OpenAI-compatible providers. Keys remain in the current browser profile and are sent only to the selected endpoint.
+
+### AI drawing
+
+The bundled AI drawing plugin calls the selected profile's OpenAI-compatible `/chat/completions` endpoint and adds the returned diagram as editable Excalidraw elements. Configure named profiles under **Settings → AI**, then open **Plugins → Create with AI** in the editor. Plugin actions can be pinned beside the compact Plugins menu.

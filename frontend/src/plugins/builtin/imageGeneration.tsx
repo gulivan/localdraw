@@ -1,10 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Eye, EyeOff, ImagePlus, Sparkles, X } from "lucide-react";
+import { ImagePlus, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { readPluginSettings, writePluginSettings } from "../storage";
 import type { EmbeddedPlugin, PluginEditorContext } from "../types";
+import { listenForPluginAction } from "../actionEvents";
 import {
   DEFAULT_IMAGE_GENERATION_CONFIG,
   describeSelectedElements,
@@ -20,37 +21,52 @@ import {
   replaceImageGenerationPlaceholder,
   type ImageGenerationPlaceholder,
 } from "./imageGenerationCanvas";
+import { AiProfileFields } from "../AiProfileFields";
+import { readActiveAiProfileId, readAiProfiles, writeActiveAiProfileId, writeAiProfiles, type AiProfile } from "../aiProfiles";
 
 const PLUGIN_ID = "localdraw.image-generation";
+const ACTION_ID = `${PLUGIN_ID}:generate`;
 
-const readConfig = (): ImageGenerationConfig => ({
-  ...DEFAULT_IMAGE_GENERATION_CONFIG,
-  ...readPluginSettings<Partial<ImageGenerationConfig>>(PLUGIN_ID),
-});
+const readConfig = (): ImageGenerationConfig => {
+  const legacy = readPluginSettings<Partial<ImageGenerationConfig>>(PLUGIN_ID);
+  const profiles = readAiProfiles();
+  const activeId = readActiveAiProfileId();
+  const profile = profiles.find((item) => item.id === activeId) || profiles[0];
+  return {
+    ...DEFAULT_IMAGE_GENERATION_CONFIG,
+    ...legacy,
+    apiKey: profile?.apiKey ?? legacy.apiKey ?? "",
+    baseUrl: profile?.baseUrl ?? legacy.baseUrl ?? DEFAULT_IMAGE_GENERATION_CONFIG.baseUrl,
+    model: profile?.imageModel ?? legacy.model ?? DEFAULT_IMAGE_GENERATION_CONFIG.model,
+  };
+};
 
 const saveConfig = (config: ImageGenerationConfig) => writePluginSettings(PLUGIN_ID, config);
 
 const ConfigFields = ({ config, onChange }: { config: ImageGenerationConfig; onChange: (config: ImageGenerationConfig) => void }) => {
-  const [showKey, setShowKey] = useState(false);
+  const [profiles, setProfiles] = useState(readAiProfiles);
+  const [profileId, setProfileId] = useState(() => readActiveAiProfileId() || profiles[0]?.id || "");
+  const profile = profiles.find((item) => item.id === profileId) || profiles[0];
+  const updateProfile = (next: AiProfile) => {
+    const nextProfiles = profiles.map((item) => item.id === next.id ? next : item);
+    setProfiles(nextProfiles);
+    writeAiProfiles(nextProfiles);
+    onChange({ ...config, apiKey: next.apiKey, baseUrl: next.baseUrl, model: next.imageModel });
+  };
+  if (!profile) return null;
   return (
-    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
-      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 sm:col-span-3">
-        API key
-        <span className="relative mt-1.5 block">
-          <input type={showKey ? "text" : "password"} value={config.apiKey} onChange={(event) => onChange({ ...config, apiKey: event.target.value })} autoComplete="off" spellCheck={false} placeholder="sk-…" className="workspace-focus h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 pr-11 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800" />
-          <button type="button" onClick={() => setShowKey((value) => !value)} className="workspace-focus absolute right-1.5 top-1.5 rounded-lg p-2 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700" aria-label={showKey ? "Hide API key" : "Show API key"}>{showKey ? <EyeOff size={15} /> : <Eye size={15} />}</button>
-        </span>
+    <div className="space-y-3">
+      <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Connection profile
+        <select value={profile.id} onChange={(event) => {
+          const next = profiles.find((item) => item.id === event.target.value);
+          if (!next) return;
+          setProfileId(next.id); writeActiveAiProfileId(next.id);
+          onChange({ ...config, apiKey: next.apiKey, baseUrl: next.baseUrl, model: next.imageModel });
+        }} className="workspace-focus mt-1.5 h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800">{profiles.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
       </label>
+      <AiProfileFields profile={profile} modelKind="image" onChange={updateProfile} />
       <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-        Provider host
-        <input type="url" value={config.baseUrl} onChange={(event) => onChange({ ...config, baseUrl: event.target.value })} spellCheck={false} className="workspace-focus mt-1.5 h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800" />
-      </label>
-      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-        Model
-        <input value={config.model} onChange={(event) => onChange({ ...config, model: event.target.value })} spellCheck={false} className="workspace-focus mt-1.5 h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800" />
-      </label>
-      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-        Options
+        Number of images
         <input type="number" min={1} step={1} inputMode="numeric" value={config.count} onChange={(event) => onChange({ ...config, count: Number(event.target.value) })} className="workspace-focus mt-1.5 h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 text-sm tabular-nums dark:border-zinc-700 dark:bg-zinc-800" />
       </label>
     </div>
@@ -101,7 +117,7 @@ const ImageGenerationModal = ({ open, selectedCount, onStart, onClose }: { open:
             <textarea autoFocus rows={4} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Replace these rough shapes with a hand-drawn product illustration…" className="workspace-focus mt-1.5 w-full resize-y rounded-xl border border-zinc-300 bg-zinc-100 p-3 text-sm dark:border-zinc-700 dark:bg-zinc-800" />
           </label>
           <ConfigFields config={config} onChange={setConfig} />
-          <p className="text-[11px] leading-5 text-zinc-500 dark:text-zinc-400">The API key stays in this browser profile. The selected canvas image and prompt are sent only to the configured provider host.</p>
+          <p className="text-[11px] leading-5 text-zinc-500 dark:text-zinc-400">The selected canvas image and prompt are sent only to the provider in the selected profile.</p>
           {error && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
         </div>
         <footer className="flex justify-end gap-2 border-t border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
@@ -165,12 +181,13 @@ const ImageGenerationShimmers = ({ api, placeholders }: { api: any; placeholders
   ))}</>, document.body);
 };
 
-const ImageGenerationActions = ({ canEdit, excalidrawAPI }: PluginEditorContext) => {
+const ImageGenerationActions = ({ canEdit, excalidrawAPI, hideTrigger = false }: PluginEditorContext) => {
   const [open, setOpen] = useState(false);
   const [selectedCount, setSelectedCount] = useState(0);
   const [activePlaceholders, setActivePlaceholders] = useState<ImageGenerationPlaceholder[]>([]);
   const activePlaceholderIds = useRef(new Set<string>());
   const api = excalidrawAPI.current;
+  useEffect(() => listenForPluginAction(ACTION_ID, () => setOpen(true)), []);
   useEffect(() => {
     if (!api?.onChange) return;
     const update = (_elements: readonly any[], appState: any) => setSelectedCount(Object.values(appState?.selectedElementIds || {}).filter(Boolean).length);
@@ -229,9 +246,9 @@ const ImageGenerationActions = ({ canEdit, excalidrawAPI }: PluginEditorContext)
   };
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="workspace-focus inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-bold text-violet-700 hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300" title="Generate an image from the selected elements">
+      {!hideTrigger && <button type="button" onClick={() => setOpen(true)} className="workspace-focus inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-bold text-violet-700 hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300" title="Generate an image from the selected elements">
         <Sparkles size={15} /> Generate image{activePlaceholders.length > 0 ? ` · ${activePlaceholders.length} running` : selectedCount > 0 ? ` · ${selectedCount}` : ""}
-      </button>
+      </button>}
       <ImageGenerationModal open={open} selectedCount={selectedCount} onStart={startGeneration} onClose={() => setOpen(false)} />
       <ImageGenerationShimmers api={api} placeholders={activePlaceholders} />
     </>
@@ -243,7 +260,10 @@ const ImageGenerationSettings = () => {
   const saved = useMemo(() => Boolean(config.apiKey.trim()), [config.apiKey]);
   return (
     <section className="mb-6 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-4 flex items-start justify-between gap-4"><div><h2 className="font-bold">Image generation</h2><p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">OpenAI-compatible Image API configuration for the bundled plugin.</p></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${saved ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"}`}>{saved ? "Key configured" : "Key required"}</span></div>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div><h2 className="font-bold">Image generation</h2><p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Choose a reusable AI connection and an image-capable model.</p></div>
+        <span className={saved ? "rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200" : "rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"}>{saved ? "Key configured" : "Key optional for local"}</span>
+      </div>
       <ConfigFields config={config} onChange={(next) => { setConfig(next); saveConfig(next); }} />
     </section>
   );
@@ -258,6 +278,7 @@ export const imageGenerationPlugin: EmbeddedPlugin = {
     description: "Generate an image from a prompt and optional selected canvas elements using an OpenAI-compatible Image API.",
     author: "LocalDraw",
     permissions: ["canvas:read", "canvas:write", "network", "preferences:read", "preferences:write"],
+    contributes: { editorActions: [{ id: "generate", label: "Generate image", description: "Generate an image from a prompt and optional canvas selection." }] },
   },
   defaultEnabled: true,
   EditorActions: ImageGenerationActions,

@@ -120,7 +120,7 @@ export const registerCollectionRoutes = (
         }
         const drawing = await tx.drawing.create({
           data: {
-            name: "Canvas 1",
+            name: "Untitled canvas",
             elements: "[]",
             appState: "{}",
             files: "{}",

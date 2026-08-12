@@ -1,12 +1,14 @@
-<img src="readme-assets/logoExcaliDash.png" alt="ExcaliDash Logo" width="80" height="88">
+<img src="readme-assets/logoExcaliDash.png" alt="LocalDraw logo" width="80" height="88">
 
-# ExcaliDash
+# LocalDraw
 
 ![License](https://img.shields.io/github/license/zimengxiong/ExcaliDash)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com)
 
-A self-hosted dashboard and organizer for [Excalidraw](https://github.com/excalidraw/excalidraw) with live collaboration features.
+A file-first desktop workspace and self-hosted organizer for [Excalidraw](https://github.com/excalidraw/excalidraw), with projects, plugins, AI tools, and live collaboration.
+
+LocalDraw grew from [ExcaliDash](https://github.com/ZimengXiong/ExcaliDash), whose self-hosted dashboard, persistence, and collaboration foundations still power the server edition. The LocalDraw desktop app keeps ordinary `.excalidraw` files authoritative on your device.
 
 ![](readme-assets/demo.gif)
 
@@ -103,10 +105,17 @@ external plugin from an HTTPS manifest or GitHub repository. External plugins
 start disabled, declare their canvas/network permissions, and run in an
 isolated worker. See [PLUGINS.md](PLUGINS.md) for the manifest and action API.
 
+The editor keeps plugins behind one compact menu. Pin favorite actions beside
+the menu and manage enabled or external plugins under **Settings → Plugins**.
+
 The bundled **Image generation** plugin renders selected elements as an image
-reference, accepts a prompt, and adds the result beside the selection. It works
-with OpenAI out of the box and exposes provider host, API key, and model fields
-for other OpenAI-compatible Image APIs.
+reference, accepts a prompt, and adds the result beside the selection. Reusable
+AI profiles store a provider, endpoint, key, chat model, and image model. Model
+suggestions refresh from [models.dev](https://models.dev), while custom and
+local OpenAI-compatible endpoints remain fully editable.
+
+The bundled **AI drawing** plugin prompts the selected profile to create
+editable Excalidraw elements for diagrams, plans, and other structured visuals.
 
 The bundled **Connect AI** plugin exposes **LocalDraw MCP** and generates a revocable
 full-access API key and copy-ready setup for Codex, Claude Code, the LocalDraw
@@ -139,7 +148,7 @@ MCP always requires a key, even when normal web login is disabled.
 
 See [release notes](https://github.com/ZimengXiong/ExcaliDash/releases) for a specific release.
 
-ExcaliDash includes an in-app update notifier that checks GitHub Releases. If your deployment must not make outbound network calls, disable it on the backend:
+The self-hosted LocalDraw edition includes an in-app update notifier that checks GitHub Releases. If your deployment must not make outbound network calls, disable it on the backend:
 
 ```bash
 UPDATE_CHECK_OUTBOUND=false
@@ -171,7 +180,7 @@ Notes:
 
 ## Personal desktop app
 
-Run ExcaliDash as a local Electrobun application without Docker, accounts, or passwords:
+Run LocalDraw as a native Electrobun application without Docker, accounts, or passwords:
 
 ```bash
 npx localdraw
@@ -234,7 +243,7 @@ normal contributor flow.
 > use TLS, trusted reverse proxy, fixed secrets, backups, and endpoint rate limits.
 
 > [!CAUTION]
-> ExcaliDash is in BETA. Please backup your data regularly.
+> LocalDraw is in BETA. Please back up your data regularly.
 
 ## Quickstart
 

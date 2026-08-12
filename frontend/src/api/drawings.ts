@@ -1,6 +1,7 @@
 import type { Drawing, DrawingSummary } from "../types";
 import { normalizePreviewSvg } from "../utils/previewSvg";
 import { api } from "./client";
+import { DEFAULT_CANVAS_NAME } from "../utils/canvasNames";
 
 const coerceTimestamp = (value: string | number | Date): number => {
   if (typeof value === "number") return value;
@@ -117,7 +118,7 @@ export const getDrawing = async (id: string) => {
 
 export const createDrawing = async (name?: string, collectionId?: string | null) => {
   const response = await api.post<Drawing>("/drawings", {
-    name: name || "Untitled Drawing",
+    name: name || DEFAULT_CANVAS_NAME,
     collectionId: collectionId ?? null,
     elements: [],
     appState: {},

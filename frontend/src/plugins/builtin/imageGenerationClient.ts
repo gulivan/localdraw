@@ -92,7 +92,6 @@ export const generateImages = async ({
   signal?: AbortSignal;
   timeoutMs?: number;
 }): Promise<Blob[]> => {
-  if (!config.apiKey.trim()) throw new Error("Add an OpenAI API key first");
   if (!config.model.trim()) throw new Error("Add an image model name first");
   const baseUrl = normalizeOpenAiBaseUrl(config.baseUrl);
   const endpoint = `${baseUrl}/images/${reference ? "edits" : "generations"}`;
@@ -118,7 +117,7 @@ export const generateImages = async ({
       body.set("n", String(count));
       response = await fetch(endpoint, {
         method: "POST",
-        headers: { Authorization: `Bearer ${config.apiKey.trim()}` },
+        headers: config.apiKey.trim() ? { Authorization: `Bearer ${config.apiKey.trim()}` } : undefined,
         body,
         signal: controller.signal,
       });
@@ -126,7 +125,7 @@ export const generateImages = async ({
       response = await fetch(endpoint, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${config.apiKey.trim()}`,
+          ...(config.apiKey.trim() ? { Authorization: `Bearer ${config.apiKey.trim()}` } : {}),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

@@ -9,6 +9,7 @@ import { WorkspaceSettingsCard } from "./settings/WorkspaceSettingsCard";
 import { SettingsFooter } from "./settings/SettingsFooter";
 import { PluginManagerCard } from "./settings/PluginManagerCard";
 import { usePlugins } from "../plugins/PluginProvider";
+import { AiProfilesSettings } from "../plugins/AiProfilesSettings";
 import {
   readEditorSidebarScope,
   writeEditorSidebarScope,
@@ -52,6 +53,15 @@ export const Settings: React.FC = () => {
   const [recentCanvasesLimit, setRecentCanvasesLimit] = useState(
     readRecentCanvasesLimit,
   );
+  const [tab, setTab] = useState<"general" | "plugins" | "ai">(() => {
+    if (window.location.hash === "#plugins") return "plugins";
+    if (window.location.hash === "#ai") return "ai";
+    return "general";
+  });
+  const selectTab = (next: "general" | "plugins" | "ai") => {
+    setTab(next);
+    window.history.replaceState(null, "", next === "general" ? window.location.pathname : `#${next}`);
+  };
   const toggleImageCompression = () => {
     const next = !imageCompression;
     try {
@@ -132,10 +142,10 @@ export const Settings: React.FC = () => {
           </p>{" "}
         </div>
       )}{" "}
-      {isDesktopApp && <WorkspaceSettingsCard />}
-      <PluginManagerCard />
-      {enabledEmbeddedPlugins.map((plugin) => plugin.SettingsPanel ? <plugin.SettingsPanel key={plugin.manifest.id} /> : null)}
-      <SettingsMainGrid
+      <nav className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800" aria-label="Settings sections">{(["general", "plugins", "ai"] as const).map((item) => <button key={item} type="button" onClick={() => selectTab(item)} aria-current={tab === item ? "page" : undefined} className={`workspace-focus border-b-2 px-4 py-2.5 text-sm font-semibold capitalize ${tab === item ? "border-violet-600 text-violet-700 dark:text-violet-300" : "border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"}`}>{item}</button>)}</nav>
+      {tab === "plugins" && <><PluginManagerCard />{enabledEmbeddedPlugins.map((plugin) => plugin.SettingsPanel ? <plugin.SettingsPanel key={plugin.manifest.id} /> : null)}</>}
+      {tab === "ai" && <AiProfilesSettings />}
+      {tab === "general" && <>{isDesktopApp && <WorkspaceSettingsCard />}<SettingsMainGrid
         backupExportExt={backupExportExt}
         setBackupExportExt={setBackupExportExt}
         exportBackup={exportBackup}
@@ -166,8 +176,8 @@ export const Settings: React.FC = () => {
           void checkForUpdates(next);
         }}
         onCheckForUpdates={() => void checkForUpdates(updateChannel)}
-      />
-      <SettingsFooter appVersion={appVersion} buildLabel={buildLabel} />
+      /></>}
+      {tab === "general" && <SettingsFooter appVersion={appVersion} buildLabel={buildLabel} />}
     </Layout>
   );
 };

@@ -15,6 +15,8 @@ import {
   removePluginSettings,
   writeEmbeddedPluginStates,
   writeExternalPlugins,
+  readPinnedPluginActions,
+  writePinnedPluginActions,
 } from "./storage";
 import type { EmbeddedPlugin, InstalledPlugin } from "./types";
 import { stopExternalPlugin } from "./externalRuntime";
@@ -25,6 +27,8 @@ type PluginContextValue = {
   install: (source: string) => Promise<InstalledPlugin>;
   uninstall: (pluginId: string) => void;
   setEnabled: (pluginId: string, enabled: boolean) => void;
+  pinnedActionIds: string[];
+  togglePinnedAction: (actionId: string) => void;
 };
 
 const PluginContext = createContext<PluginContextValue | null>(null);
@@ -44,6 +48,7 @@ const buildEmbeddedInstall = (
 export const PluginProvider = ({ children }: { children: ReactNode }) => {
   const [embeddedStates, setEmbeddedStates] = useState(readEmbeddedPluginStates);
   const [externalPlugins, setExternalPlugins] = useState(readExternalPlugins);
+  const [pinnedActionIds, setPinnedActionIds] = useState(readPinnedPluginActions);
 
   const plugins = useMemo(
     () => [
@@ -105,9 +110,19 @@ export const PluginProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
+  const togglePinnedAction = useCallback((actionId: string) => {
+    setPinnedActionIds((current) => {
+      const next = current.includes(actionId)
+        ? current.filter((id) => id !== actionId)
+        : [...current, actionId];
+      writePinnedPluginActions(next);
+      return next;
+    });
+  }, []);
+
   const value = useMemo<PluginContextValue>(
-    () => ({ plugins, enabledEmbeddedPlugins, install, uninstall, setEnabled }),
-    [plugins, enabledEmbeddedPlugins, install, uninstall, setEnabled],
+    () => ({ plugins, enabledEmbeddedPlugins, install, uninstall, setEnabled, pinnedActionIds, togglePinnedAction }),
+    [plugins, enabledEmbeddedPlugins, install, uninstall, setEnabled, pinnedActionIds, togglePinnedAction],
   );
   return <PluginContext.Provider value={value}>{children}</PluginContext.Provider>;
 };

@@ -18,6 +18,7 @@ import { getInitialsFromName } from "../../utils/user";
 import { productName } from "../../utils/productBrand";
 import { Logo } from "../Logo";
 import { usePlugins } from "../../plugins/PluginProvider";
+import { PluginActionMenu } from "../../plugins/PluginActionMenu";
 
 type Props = {
   query: string;
@@ -66,7 +67,8 @@ export const WorkspaceHeader = ({
         </label>
 
         <div className="ml-auto flex items-center gap-2">
-          {enabledEmbeddedPlugins.map((plugin) => plugin.HomeAction ? <plugin.HomeAction key={plugin.manifest.id} /> : null)}
+          {enabledEmbeddedPlugins.map((plugin) => plugin.HomeAction ? <plugin.HomeAction key={plugin.manifest.id} hideTrigger /> : null)}
+          <PluginActionMenu surface="home" onManage={() => navigate("/settings#plugins")} />
           <button
             type="button"
             onClick={onNewSlide}

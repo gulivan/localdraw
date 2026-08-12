@@ -22,9 +22,9 @@ import { Logo } from "../Logo";
 import type { DisposableDraft } from "../../pages/editor/disposableDraft";
 import type { EditorSidebarScope } from "../../utils/editorSidebar";
 import { useDesktopWorkspaceChange } from "../../hooks/useDesktopWorkspaceEvents";
+import { DEFAULT_CANVAS_NAME } from "../../utils/canvasNames";
 
 const OTHER_PROJECT_KEY = "__other__";
-const NUMBERED_CANVAS_NAME = /^Canvas\s+(\d+)$/i;
 
 const slideRowTone = (active: boolean) =>
   active
@@ -194,11 +194,7 @@ export const EditorProjectRail = ({
     let created: DrawingSummary | null = null;
     let switched = false;
     try {
-      const highestCanvasNumber = slides.reduce((highest, canvas) => {
-        const match = NUMBERED_CANVAS_NAME.exec(canvas.name.trim());
-        return match ? Math.max(highest, Number(match[1])) : highest;
-      }, 0);
-      const name = `Canvas ${Math.max(slides.length, highestCanvasNumber) + 1}`;
+      const name = DEFAULT_CANVAS_NAME;
       created = await api.createDrawing(name, activeCollectionId);
       switched = await go(created.id, name, {
         drawingId: created.id,

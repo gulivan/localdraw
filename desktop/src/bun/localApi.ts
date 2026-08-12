@@ -287,7 +287,7 @@ export const createLocalApi = (
       }
       if (method === "POST") {
         const body = await readBody(request);
-        const name = typeof body.name === "string" ? body.name.trim() : "Untitled Drawing";
+        const name = typeof body.name === "string" ? body.name.trim() : "Untitled canvas";
         if (!name || name.length > 100) return json({ error: "Invalid canvas name" }, 400);
         const collectionId = body.collectionId === null || typeof body.collectionId === "string"
           ? body.collectionId

@@ -25,6 +25,7 @@ import {
   readDisposableDraft,
   type DisposableDraft,
 } from "./editor/disposableDraft";
+import { useDesktopDrawingReconciliation } from "./editor/useDesktopDrawingReconciliation";
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -295,6 +296,7 @@ export const Editor: React.FC = () => {
     setLoadError,
     recordElementVersion,
   });
+  useDesktopDrawingReconciliation({ drawingId: id, loadedDrawingId, excalidrawAPI, isSyncing, saveQueue: saveQueueRef, currentDrawingVersion: currentDrawingVersionRef, lastPersistedElements: lastPersistedElementsRef, lastPersistedFiles: lastPersistedFilesRef, latestElements: latestElementsRef, latestFiles: latestFilesRef, lastSyncedFiles: lastSyncedFilesRef, latestAppState: latestAppStateRef, debouncedSave, recordElementVersion });
   const canvasHandlerRefs = React.useMemo(
     () => ({
       debouncedSave: debouncedSaveRef,

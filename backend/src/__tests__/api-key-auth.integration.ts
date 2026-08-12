@@ -199,7 +199,7 @@ describe("API key authentication", () => {
       drawingCount: 1,
       latestDrawing: {
         id: createResponse.body.initialDrawingId,
-        name: "Canvas 1",
+        name: "Untitled canvas",
         sortOrder: 0,
       },
     });

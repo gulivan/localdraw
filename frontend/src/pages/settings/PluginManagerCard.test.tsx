@@ -22,9 +22,9 @@ describe("PluginManagerCard", () => {
     render(<PluginProvider><PluginManagerCard /></PluginProvider>);
     expect(screen.getByText("Connect AI")).toBeInTheDocument();
     expect(screen.getByText("Image generation")).toBeInTheDocument();
-    expect(screen.getByText("2 active")).toBeInTheDocument();
+    expect(screen.getByText("3 active")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("switch", { name: "Disable Connect AI" }));
-    expect(screen.getByText("1 active")).toBeInTheDocument();
+    expect(screen.getByText("2 active")).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem("localdraw.plugin-enabled.v1") || "{}")).toMatchObject({
       "localdraw.connect-ai": false,
     });

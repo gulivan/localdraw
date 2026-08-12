@@ -23,6 +23,7 @@ import { useUpload } from "../context/UploadContext";
 import type { Collection, DrawingSummary } from "../types";
 import { exportDrawingToFile } from "../utils/exportUtils";
 import { useDesktopWorkspaceChange } from "../hooks/useDesktopWorkspaceEvents";
+import { DEFAULT_CANVAS_NAME } from "../utils/canvasNames";
 
 export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   const { id } = useParams<{ id: string }>();
@@ -106,7 +107,7 @@ export const Project = ({ unfiled = false }: { unfiled?: boolean }) => {
   };
 
   const createSlide = async () => {
-    const drawing = await api.createDrawing(`Canvas ${slides.length + 1}`, collectionId);
+    const drawing = await api.createDrawing(DEFAULT_CANVAS_NAME, collectionId);
     navigate(`/editor/${drawing.id}`, {
       state: disposableDraftNavigationState(drawing),
     });

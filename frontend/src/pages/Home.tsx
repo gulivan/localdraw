@@ -19,6 +19,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { useDesktopWorkspaceChange } from "../hooks/useDesktopWorkspaceEvents";
 import type { Collection, DrawingSummary } from "../types";
 import { readRecentCanvasesLimit } from "../utils/recentCanvases";
+import { DEFAULT_CANVAS_NAME } from "../utils/canvasNames";
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ export const Home = () => {
   }, [debouncedQuery, projects, searchResults]);
 
   const createSlide = async (collectionId: string | null = null) => {
-    const drawing = await api.createDrawing("Untitled Canvas", collectionId);
+    const drawing = await api.createDrawing(DEFAULT_CANVAS_NAME, collectionId);
     navigate(`/editor/${drawing.id}`, {
       state: disposableDraftNavigationState(drawing),
     });
