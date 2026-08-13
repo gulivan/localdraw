@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import * as api from "../api";
 import { useTheme } from "../context/ThemeContext";
@@ -8,8 +9,7 @@ import { isDesktopApp } from "../utils/productBrand";
 import { WorkspaceSettingsCard } from "./settings/WorkspaceSettingsCard";
 import { SettingsFooter } from "./settings/SettingsFooter";
 import { PluginManagerCard } from "./settings/PluginManagerCard";
-import { usePlugins } from "../plugins/PluginProvider";
-import { AiProfilesSettings } from "../plugins/AiProfilesSettings";
+import { PluginSettingsPage } from "./settings/PluginSettingsPage";
 import {
   readEditorSidebarScope,
   writeEditorSidebarScope,
@@ -19,7 +19,9 @@ import {
   writeRecentCanvasesLimit,
 } from "../utils/recentCanvases";
 export const Settings: React.FC = () => {
-  const { enabledEmbeddedPlugins } = usePlugins();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { pluginId } = useParams<{ pluginId: string }>();
   const { theme, toggleTheme } = useTheme();
   const [backupExportExt, setBackupExportExt] = useState<
     "localdraw" | "localdraw.zip"
@@ -53,15 +55,12 @@ export const Settings: React.FC = () => {
   const [recentCanvasesLimit, setRecentCanvasesLimit] = useState(
     readRecentCanvasesLimit,
   );
-  const [tab, setTab] = useState<"general" | "plugins" | "ai">(() => {
-    if (window.location.hash === "#plugins") return "plugins";
-    if (window.location.hash === "#ai") return "ai";
-    return "general";
-  });
-  const selectTab = (next: "general" | "plugins" | "ai") => {
-    setTab(next);
-    window.history.replaceState(null, "", next === "general" ? window.location.pathname : `#${next}`);
-  };
+  const section = location.pathname.startsWith("/settings/plugins") ? "plugins" : "general";
+  useEffect(() => {
+    if (location.pathname !== "/settings") return;
+    if (location.hash === "#plugins") navigate("/settings/plugins", { replace: true });
+    if (location.hash === "#ai") navigate("/settings/plugins/localdraw.ai-drawing", { replace: true });
+  }, [location.hash, location.pathname, navigate]);
   const toggleImageCompression = () => {
     const next = !imageCompression;
     try {
@@ -142,10 +141,11 @@ export const Settings: React.FC = () => {
           </p>{" "}
         </div>
       )}{" "}
-      <nav className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800" aria-label="Settings sections">{(["general", "plugins", "ai"] as const).map((item) => <button key={item} type="button" onClick={() => selectTab(item)} aria-current={tab === item ? "page" : undefined} className={`workspace-focus border-b-2 px-4 py-2.5 text-sm font-semibold capitalize ${tab === item ? "border-violet-600 text-violet-700 dark:text-violet-300" : "border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"}`}>{item}</button>)}</nav>
-      {tab === "plugins" && <><PluginManagerCard />{enabledEmbeddedPlugins.map((plugin) => plugin.SettingsPanel ? <plugin.SettingsPanel key={plugin.manifest.id} /> : null)}</>}
-      {tab === "ai" && <AiProfilesSettings />}
-      {tab === "general" && <>{isDesktopApp && <WorkspaceSettingsCard />}<SettingsMainGrid
+      <nav className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800" aria-label="Settings sections">{(["general", "plugins"] as const).map((item) => <button key={item} type="button" onClick={() => navigate(item === "general" ? "/settings" : "/settings/plugins")} aria-current={section === item ? "page" : undefined} className={`workspace-focus border-b-2 px-4 py-2.5 text-sm font-semibold capitalize ${section === item ? "border-violet-600 text-violet-700 dark:text-violet-300" : "border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"}`}>{item}</button>)}</nav>
+      {section === "plugins" && (pluginId
+        ? <PluginSettingsPage pluginId={pluginId} onBack={() => navigate("/settings/plugins")} />
+        : <PluginManagerCard onOpenPlugin={(id) => navigate(`/settings/plugins/${encodeURIComponent(id)}`)} />)}
+      {section === "general" && <>{isDesktopApp && <WorkspaceSettingsCard />}<SettingsMainGrid
         backupExportExt={backupExportExt}
         setBackupExportExt={setBackupExportExt}
         exportBackup={exportBackup}
@@ -177,7 +177,7 @@ export const Settings: React.FC = () => {
         }}
         onCheckForUpdates={() => void checkForUpdates(updateChannel)}
       /></>}
-      {tab === "general" && <SettingsFooter appVersion={appVersion} buildLabel={buildLabel} />}
+      {section === "general" && <SettingsFooter appVersion={appVersion} buildLabel={buildLabel} />}
     </Layout>
   );
 };

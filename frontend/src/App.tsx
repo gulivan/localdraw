@@ -77,6 +77,8 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/settings/plugins" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/settings/plugins/:pluginId" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route
                   path="/profile"
                   element={

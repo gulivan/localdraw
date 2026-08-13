@@ -83,6 +83,8 @@ export default function DesktopApp() {
                 <Route path="/projects/:id" element={protectedPage(<Project />)} />
                 <Route path="/collections" element={protectedPage(<CollectionsPage />)} />
                 <Route path="/settings" element={protectedPage(<Settings />)} />
+                <Route path="/settings/plugins" element={protectedPage(<Settings />)} />
+                <Route path="/settings/plugins/:pluginId" element={protectedPage(<Settings />)} />
                 <Route path="/editor/:id" element={protectedPage(<Editor />)} />
                 <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

@@ -5,7 +5,6 @@ import { spawn, spawnSync } from "node:child_process";
 import {
   copyFileSync,
   createReadStream,
-  createWriteStream,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -15,8 +14,7 @@ import {
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
+import { fileURLToPath } from "node:url";
 import {
   RELEASE_VERSION,
   getInstallLayout,
@@ -28,12 +26,14 @@ import {
   parseCliArgs,
 } from "../lib/cli.js";
 import { extractMcpArgs, runMcpCli } from "../lib/mcp-cli.js";
+import { runMcpBridge } from "../lib/mcp-bridge.js";
 import {
   probeLocalDrawInstance,
   requestLocalDrawShutdown,
   waitForPortRelease,
 } from "../lib/instance.js";
 import { createCommandRunner, getLaunchCommand } from "../lib/process.js";
+import { downloadFile } from "../lib/download.js";
 
 const RELEASE_BASE_URL = `https://github.com/gulivan/localdraw/releases/download/v${RELEASE_VERSION}`;
 const verbose = process.env.LOCALDRAW_VERBOSE === "1";
@@ -41,6 +41,9 @@ const run = createCommandRunner({ verbose });
 const args = process.argv.slice(2);
 const mcpArgs = extractMcpArgs(args);
 if (mcpArgs) {
+  if (mcpArgs[0] === "mcp-bridge") {
+    process.exit(await runMcpBridge({ launcherEntry: fileURLToPath(import.meta.url) }));
+  }
   process.exit(await runMcpCli(mcpArgs));
 }
 
@@ -122,14 +125,6 @@ if (runningInstance.kind === "localdraw") {
   }
 }
 
-const download = async (url, destination) => {
-  const response = await fetch(url, { redirect: "follow" });
-  if (!response.ok || !response.body) {
-    throw new Error(`Download failed (${response.status} ${response.statusText})`);
-  }
-  await pipeline(Readable.fromWeb(response.body), createWriteStream(destination));
-};
-
 const sha256 = async (file) => {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(file)) hash.update(chunk);
@@ -191,8 +186,8 @@ if (!explicitlyConfiguredBinary && (!executable || installedVersion !== RELEASE_
     const archivePath = join(workDir, target.archive);
     const checksumPath = `${archivePath}.sha256`;
     console.log(`Downloading LocalDraw ${RELEASE_VERSION} for ${process.platform}/${process.arch}...`);
-    await download(`${RELEASE_BASE_URL}/${target.archive}`, archivePath);
-    await download(`${RELEASE_BASE_URL}/${target.archive}.sha256`, checksumPath);
+    await downloadFile(`${RELEASE_BASE_URL}/${target.archive}`, archivePath);
+    await downloadFile(`${RELEASE_BASE_URL}/${target.archive}.sha256`, checksumPath);
     await verifyDownload(archivePath, checksumPath);
 
     console.log("Installing LocalDraw...");

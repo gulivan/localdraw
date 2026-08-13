@@ -15,6 +15,7 @@ import {
 test("extractMcpArgs supports separator and direct npx passthrough forms", () => {
   assert.deepEqual(extractMcpArgs(["--", "list-tools"]), ["list-tools"]);
   assert.deepEqual(extractMcpArgs(["list-tools"]), ["list-tools"]);
+  assert.deepEqual(extractMcpArgs(["mcp-bridge"]), ["mcp-bridge"]);
   assert.equal(extractMcpArgs(["--browser"]), null);
 });
 
@@ -61,5 +62,18 @@ test("prints MCP help without installing or launching the app", () => {
   assert.equal(result.status, 0);
   assert.match(result.stdout, /^LocalDraw MCP CLI/);
   assert.match(result.stdout, /npx localdraw -- list-tools/);
+  assert.match(result.stdout, /mcp-bridge/);
+  assert.doesNotMatch(result.stdout, /Downloading|Launching/);
+});
+
+test("bridge reports a missing key without installing or launching the app", () => {
+  const result = spawnSync(
+    process.execPath,
+    [resolve(import.meta.dirname, "../bin/localdraw.js"), "--", "mcp-bridge"],
+    { encoding: "utf8", env: { ...process.env, LOCALDRAW_MCP_TOKEN: "" } },
+  );
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /MCP bridge unavailable: Missing MCP bearer token/);
   assert.doesNotMatch(result.stdout, /Downloading|Launching/);
 });

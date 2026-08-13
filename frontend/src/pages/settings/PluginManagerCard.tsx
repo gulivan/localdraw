@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, Loader2, PackagePlus, Plug, Trash2 } from "lucide-react";
+import { ExternalLink, Loader2, PackagePlus, Plug, Settings, Trash2 } from "lucide-react";
 import { usePlugins } from "../../plugins/PluginProvider";
 import type { PluginPermission } from "../../plugins/types";
 
@@ -11,7 +11,7 @@ const permissionLabels: Record<PluginPermission, string> = {
   "preferences:write": "Store plugin settings",
 };
 
-export const PluginManagerCard = () => {
+export const PluginManagerCard = ({ onOpenPlugin }: { onOpenPlugin?: (pluginId: string) => void }) => {
   const { plugins, enabledEmbeddedPlugins, install, uninstall, setEnabled } = usePlugins();
   const [source, setSource] = useState("");
   const [busy, setBusy] = useState(false);
@@ -68,6 +68,11 @@ export const PluginManagerCard = () => {
               </div>
             </div>
             <div className="flex items-center justify-end gap-2">
+              {onOpenPlugin && (
+                <button type="button" onClick={() => onOpenPlugin(plugin.manifest.id)} className="workspace-focus inline-flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                  <Settings size={14} /> Details
+                </button>
+              )}
               {plugin.manifest.homepage && (
                 <a href={plugin.manifest.homepage} target="_blank" rel="noopener noreferrer" className="workspace-focus rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label={`Open ${plugin.manifest.name} homepage`}>
                   <ExternalLink size={16} />

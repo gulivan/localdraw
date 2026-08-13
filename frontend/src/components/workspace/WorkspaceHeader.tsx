@@ -68,7 +68,7 @@ export const WorkspaceHeader = ({
 
         <div className="ml-auto flex items-center gap-2">
           {enabledEmbeddedPlugins.map((plugin) => plugin.HomeAction ? <plugin.HomeAction key={plugin.manifest.id} hideTrigger /> : null)}
-          <PluginActionMenu surface="home" onManage={() => navigate("/settings#plugins")} />
+          <PluginActionMenu surface="home" onManage={() => navigate("/settings/plugins")} />
           <button
             type="button"
             onClick={onNewSlide}

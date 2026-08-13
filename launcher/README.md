@@ -38,6 +38,17 @@ LOCALDRAW_MCP_TOKEN=exd_... npx localdraw -- call list_projects
 
 Set `LOCALDRAW_MCP_URL` when connecting to a non-default MCP endpoint.
 
+For MCP clients, prefer the resilient stdio bridge over configuring the HTTP
+endpoint directly:
+
+```sh
+LOCALDRAW_MCP_TOKEN=exd_... npx localdraw -- mcp-bridge
+```
+
+The bridge starts the native app when the local endpoint is offline, waits for
+it to become ready, and attaches the bearer key to upstream MCP requests. A
+revoked or missing key still fails closed with a focused recovery message.
+
 The desktop application stores ordinary `.excalidraw` files in your LocalDraw
 workspace and starts with authentication disabled. Supported targets are macOS
 arm64/x64, Windows x64 (including Windows on ARM through emulation), and Linux

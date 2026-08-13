@@ -16,6 +16,7 @@ Options:
   -v, --version  Show the launcher version
 
 MCP:
+  localdraw -- mcp-bridge
   localdraw -- list-tools
   localdraw -- call <tool> [json|@file|-]
 

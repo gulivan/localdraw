@@ -7,6 +7,7 @@ export const DEFAULT_MCP_URL = "http://127.0.0.1:32144/api/mcp";
 
 export const MCP_COMMANDS = new Set([
   "help",
+  "mcp-bridge",
   "list-tools",
   "call",
   "list-projects",
@@ -39,6 +40,7 @@ Options:
 
 Commands:
   help
+  mcp-bridge
   list-tools
   call <tool> [json|@file|-]
   list-projects
@@ -47,6 +49,7 @@ Commands:
   describe-canvas <canvasId>
 
 Examples:
+  LOCALDRAW_MCP_TOKEN=exd_... npx localdraw -- mcp-bridge
   LOCALDRAW_MCP_TOKEN=exd_... npx localdraw -- list-tools
   npx localdraw -- call list_projects
   npx localdraw -- list-canvases '{"projectId":null}'

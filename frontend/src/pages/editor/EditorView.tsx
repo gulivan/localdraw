@@ -206,10 +206,10 @@ export const EditorView: React.FC<EditorViewProps> = ({
       </div>
       <div className="flex items-center gap-3">
         {enabledEmbeddedPlugins.map((plugin) => plugin.EditorActions ? (
-          <plugin.EditorActions key={plugin.manifest.id} canEdit={canEdit} excalidrawAPI={excalidrawAPIRef} hideTrigger />
+          <plugin.EditorActions key={plugin.manifest.id} canEdit={canEdit} excalidrawAPI={excalidrawAPIRef} hideTrigger onNavigateTo={onNavigateTo} />
         ) : null)}
         <ExternalPluginActions canEdit={canEdit} excalidrawAPI={excalidrawAPIRef} hideTrigger />
-        <PluginActionMenu surface="editor" editorContext={{ canEdit, excalidrawAPI: excalidrawAPIRef }} onManage={() => void onNavigateTo("/settings#plugins")} />
+        <PluginActionMenu surface="editor" editorContext={{ canEdit, excalidrawAPI: excalidrawAPIRef }} onManage={() => void onNavigateTo("/settings/plugins")} />
         {!canEdit ? (
           <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
             Read-only

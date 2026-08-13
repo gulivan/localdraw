@@ -30,6 +30,13 @@ describe("PluginManagerCard", () => {
     });
   });
 
+  it("opens a dedicated plugin details page", () => {
+    const onOpenPlugin = vi.fn();
+    render(<PluginProvider><PluginManagerCard onOpenPlugin={onOpenPlugin} /></PluginProvider>);
+    fireEvent.click(screen.getAllByRole("button", { name: "Details" })[1]);
+    expect(onOpenPlugin).toHaveBeenCalledWith("localdraw.ai-drawing");
+  });
+
   it("installs a direct manifest disabled for permission review", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       manifestVersion: 1,

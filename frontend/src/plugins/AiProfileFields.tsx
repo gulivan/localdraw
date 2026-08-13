@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, RefreshCw } from "lucide-react";
-import { AI_PROVIDERS, providerFor, type AiProfile } from "./aiProfiles";
+import { providerFor, providersFor, type AiProfile, type AiProfileKind } from "./aiProfiles";
 import { loadModelCatalog, type ModelCatalogEntry } from "./modelCatalog";
 
 export const AiProfileFields = ({ profile, modelKind, onChange }: {
@@ -8,12 +8,14 @@ export const AiProfileFields = ({ profile, modelKind, onChange }: {
   modelKind: "chat" | "image";
   onChange: (profile: AiProfile) => void;
 }) => {
+  const profileKind: AiProfileKind = modelKind === "image" ? "image" : "general";
+  const providers = providersFor(profileKind);
   const [models, setModels] = useState<ModelCatalogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const model = modelKind === "image" ? profile.imageModel : profile.chatModel;
   const matchingModels = useMemo(() => models.filter((entry) =>
-    entry.providerId === profile.providerId && (modelKind !== "image" || entry.output.includes("image")),
+    entry.providerId === profile.providerId && (modelKind === "image" ? entry.output.includes("image") : entry.output.includes("text")),
   ).slice(0, 120), [modelKind, models, profile.providerId]);
   const refresh = () => {
     setLoading(true);
@@ -25,10 +27,10 @@ export const AiProfileFields = ({ profile, modelKind, onChange }: {
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Provider
         <select value={profile.providerId} onChange={(event) => {
-          const provider = providerFor(event.target.value);
+          const provider = providerFor(event.target.value, profileKind);
           onChange({ ...profile, providerId: provider.id, baseUrl: provider.baseUrl, name: profile.name || provider.name });
         }} className="workspace-focus mt-1.5 h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800">
-          {AI_PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
+          {providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
         </select>
       </label>
       <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Model

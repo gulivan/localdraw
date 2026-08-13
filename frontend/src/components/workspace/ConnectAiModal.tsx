@@ -40,27 +40,27 @@ const shellQuote = (value: string) => `'${value.replace(/'/g, `'"'"'`)}'`;
 
 const setupSnippet = (tab: ClientTab, url: string, token: string) => {
   if (tab === "codexConfig") {
-    return `# Shell
-export LOCALDRAW_MCP_TOKEN=${shellQuote(token)}
-
-# ~/.codex/config.toml
+    return `# ~/.codex/config.toml
 [mcp_servers.localdraw]
-url = ${JSON.stringify(url)}
-bearer_token_env_var = "LOCALDRAW_MCP_TOKEN"
+command = "npx"
+args = ["-y", "localdraw@latest", "--", "mcp-bridge"]
+env = { LOCALDRAW_MCP_TOKEN = ${JSON.stringify(token)}, LOCALDRAW_MCP_URL = ${JSON.stringify(url)} }
+startup_timeout_sec = 180
 default_tools_approval_mode = "writes"`;
   }
   if (tab === "localdrawCli") {
     return `LOCALDRAW_MCP_URL=${shellQuote(url)} LOCALDRAW_MCP_TOKEN=${shellQuote(token)} npx localdraw -- list-tools`;
   }
   if (tab === "claude") {
-    return `claude mcp add --transport http --scope user --header ${shellQuote(`Authorization: Bearer ${token}`)} localdraw ${shellQuote(url)}`;
+    return `claude mcp add --transport stdio --scope user --env ${shellQuote(`LOCALDRAW_MCP_TOKEN=${token}`)} --env ${shellQuote(`LOCALDRAW_MCP_URL=${url}`)} localdraw -- npx -y localdraw@latest -- mcp-bridge`;
   }
   return JSON.stringify({
     mcpServers: {
       localdraw: {
-        type: "http",
-        url,
-        headers: { Authorization: `Bearer ${token}` },
+        type: "stdio",
+        command: "npx",
+        args: ["-y", "localdraw@latest", "--", "mcp-bridge"],
+        env: { LOCALDRAW_MCP_TOKEN: token, LOCALDRAW_MCP_URL: url },
       },
     },
   }, null, 2);
@@ -68,10 +68,10 @@ default_tools_approval_mode = "writes"`;
 
 const usageInstruction = `Use the LocalDraw MCP tools to inspect and manage my projects and canvases. Read a canvas and keep its version before editing. Use get_canvas_image with a canvas and file ID whenever you need to inspect an embedded image independently of the overall canvas size. Prefer atomic canvas patches and describe the result. Ask before deleting projects, moving canvases to Trash, restoring history, permanently deleting, or cleaning storage.`;
 const clientHints: Record<ClientTab, string> = {
-  codexConfig: "Export the token in your shell and paste only the TOML block into ~/.codex/config.toml.",
+  codexConfig: "Paste this block into ~/.codex/config.toml. The bridge starts or installs LocalDraw when needed and attaches the key for you.",
   localdrawCli: "Run the existing LocalDraw CLI to inspect the MCP endpoint directly.",
-  claude: "Run this command in your terminal, then start a new Claude Code session.",
-  generic: "Paste into your MCP client's configuration and restart that client.",
+  claude: "Run this command in your terminal, then start a new Claude Code session. The stdio bridge handles app startup and authentication.",
+  generic: "Paste into your MCP client's configuration and restart it. Use direct HTTP only when connecting to a remote LocalDraw server.",
 };
 const clientLabels: Record<ClientTab, string> = {
   codexConfig: "Codex config",

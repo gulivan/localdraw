@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ImagePlus, Sparkles, X } from "lucide-react";
+import { ImagePlus, Settings, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { readPluginSettings, writePluginSettings } from "../storage";
 import type { EmbeddedPlugin, PluginEditorContext } from "../types";
@@ -22,6 +22,7 @@ import {
   type ImageGenerationPlaceholder,
 } from "./imageGenerationCanvas";
 import { AiProfileFields } from "../AiProfileFields";
+import { AiProfilesSettings } from "../AiProfilesSettings";
 import { readActiveAiProfileId, readAiProfiles, writeActiveAiProfileId, writeAiProfiles, type AiProfile } from "../aiProfiles";
 
 const PLUGIN_ID = "localdraw.image-generation";
@@ -29,8 +30,8 @@ const ACTION_ID = `${PLUGIN_ID}:generate`;
 
 const readConfig = (): ImageGenerationConfig => {
   const legacy = readPluginSettings<Partial<ImageGenerationConfig>>(PLUGIN_ID);
-  const profiles = readAiProfiles();
-  const activeId = readActiveAiProfileId();
+  const profiles = readAiProfiles("image");
+  const activeId = readActiveAiProfileId("image");
   const profile = profiles.find((item) => item.id === activeId) || profiles[0];
   return {
     ...DEFAULT_IMAGE_GENERATION_CONFIG,
@@ -43,14 +44,14 @@ const readConfig = (): ImageGenerationConfig => {
 
 const saveConfig = (config: ImageGenerationConfig) => writePluginSettings(PLUGIN_ID, config);
 
-const ConfigFields = ({ config, onChange }: { config: ImageGenerationConfig; onChange: (config: ImageGenerationConfig) => void }) => {
-  const [profiles, setProfiles] = useState(readAiProfiles);
-  const [profileId, setProfileId] = useState(() => readActiveAiProfileId() || profiles[0]?.id || "");
+const ConfigFields = ({ config, onChange, compact = false }: { config: ImageGenerationConfig; onChange: (config: ImageGenerationConfig) => void; compact?: boolean }) => {
+  const [profiles, setProfiles] = useState(() => readAiProfiles("image"));
+  const [profileId, setProfileId] = useState(() => readActiveAiProfileId("image") || profiles[0]?.id || "");
   const profile = profiles.find((item) => item.id === profileId) || profiles[0];
   const updateProfile = (next: AiProfile) => {
     const nextProfiles = profiles.map((item) => item.id === next.id ? next : item);
     setProfiles(nextProfiles);
-    writeAiProfiles(nextProfiles);
+    writeAiProfiles(nextProfiles, "image");
     onChange({ ...config, apiKey: next.apiKey, baseUrl: next.baseUrl, model: next.imageModel });
   };
   if (!profile) return null;
@@ -60,11 +61,12 @@ const ConfigFields = ({ config, onChange }: { config: ImageGenerationConfig; onC
         <select value={profile.id} onChange={(event) => {
           const next = profiles.find((item) => item.id === event.target.value);
           if (!next) return;
-          setProfileId(next.id); writeActiveAiProfileId(next.id);
+          setProfileId(next.id); writeActiveAiProfileId(next.id, "image");
           onChange({ ...config, apiKey: next.apiKey, baseUrl: next.baseUrl, model: next.imageModel });
         }} className="workspace-focus mt-1.5 h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800">{profiles.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
       </label>
-      <AiProfileFields profile={profile} modelKind="image" onChange={updateProfile} />
+      {!compact && <AiProfileFields profile={profile} modelKind="image" onChange={updateProfile} />}
+      {compact && <p className="rounded-lg bg-zinc-100 px-3 py-2 font-mono text-[11px] text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{profile.imageModel || "No image model selected"}</p>}
       <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
         Number of images
         <input type="number" min={1} step={1} inputMode="numeric" value={config.count} onChange={(event) => onChange({ ...config, count: Number(event.target.value) })} className="workspace-focus mt-1.5 h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 text-sm tabular-nums dark:border-zinc-700 dark:bg-zinc-800" />
@@ -73,7 +75,7 @@ const ConfigFields = ({ config, onChange }: { config: ImageGenerationConfig; onC
   );
 };
 
-const ImageGenerationModal = ({ open, selectedCount, onStart, onClose }: { open: boolean; selectedCount: number; onStart: (request: { config: ImageGenerationConfig; prompt: string }) => void; onClose: () => void }) => {
+const ImageGenerationModal = ({ open, selectedCount, onStart, onClose, onConfigure }: { open: boolean; selectedCount: number; onStart: (request: { config: ImageGenerationConfig; prompt: string }) => void; onClose: () => void; onConfigure: () => void }) => {
   const [config, setConfig] = useState(readConfig);
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +118,8 @@ const ImageGenerationModal = ({ open, selectedCount, onStart, onClose }: { open:
           <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Prompt
             <textarea autoFocus rows={4} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Replace these rough shapes with a hand-drawn product illustration…" className="workspace-focus mt-1.5 w-full resize-y rounded-xl border border-zinc-300 bg-zinc-100 p-3 text-sm dark:border-zinc-700 dark:bg-zinc-800" />
           </label>
-          <ConfigFields config={config} onChange={setConfig} />
+          <ConfigFields config={config} onChange={setConfig} compact />
+          <button type="button" onClick={onConfigure} className="workspace-focus inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-bold text-violet-700 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-950/40"><Settings size={14} /> Configure provider, model, and API key</button>
           <p className="text-[11px] leading-5 text-zinc-500 dark:text-zinc-400">The selected canvas image and prompt are sent only to the provider in the selected profile.</p>
           {error && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
         </div>
@@ -181,7 +184,7 @@ const ImageGenerationShimmers = ({ api, placeholders }: { api: any; placeholders
   ))}</>, document.body);
 };
 
-const ImageGenerationActions = ({ canEdit, excalidrawAPI, hideTrigger = false }: PluginEditorContext) => {
+const ImageGenerationActions = ({ canEdit, excalidrawAPI, hideTrigger = false, onNavigateTo }: PluginEditorContext) => {
   const [open, setOpen] = useState(false);
   const [selectedCount, setSelectedCount] = useState(0);
   const [activePlaceholders, setActivePlaceholders] = useState<ImageGenerationPlaceholder[]>([]);
@@ -249,7 +252,7 @@ const ImageGenerationActions = ({ canEdit, excalidrawAPI, hideTrigger = false }:
       {!hideTrigger && <button type="button" onClick={() => setOpen(true)} className="workspace-focus inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-bold text-violet-700 hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300" title="Generate an image from the selected elements">
         <Sparkles size={15} /> Generate image{activePlaceholders.length > 0 ? ` · ${activePlaceholders.length} running` : selectedCount > 0 ? ` · ${selectedCount}` : ""}
       </button>}
-      <ImageGenerationModal open={open} selectedCount={selectedCount} onStart={startGeneration} onClose={() => setOpen(false)} />
+      <ImageGenerationModal open={open} selectedCount={selectedCount} onStart={startGeneration} onClose={() => setOpen(false)} onConfigure={() => { setOpen(false); void onNavigateTo?.(`/settings/plugins/${PLUGIN_ID}`); }} />
       <ImageGenerationShimmers api={api} placeholders={activePlaceholders} />
     </>
   );
@@ -258,15 +261,16 @@ const ImageGenerationActions = ({ canEdit, excalidrawAPI, hideTrigger = false }:
 const ImageGenerationSettings = () => {
   const [config, setConfig] = useState(readConfig);
   const saved = useMemo(() => Boolean(config.apiKey.trim()), [config.apiKey]);
-  return (
-    <section className="mb-6 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+  return <>
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="mb-4 flex items-start justify-between gap-4">
-        <div><h2 className="font-bold">Image generation</h2><p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Choose a reusable AI connection and an image-capable model.</p></div>
+        <div><h2 className="font-bold">Image generation</h2><p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Choose how many images this plugin creates per request. Provider profiles are managed below.</p></div>
         <span className={saved ? "rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200" : "rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"}>{saved ? "Key configured" : "Key optional for local"}</span>
       </div>
-      <ConfigFields config={config} onChange={(next) => { setConfig(next); saveConfig(next); }} />
+      <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">Number of images<input type="number" min={1} step={1} inputMode="numeric" value={config.count} onChange={(event) => { const next = { ...config, count: Number(event.target.value) }; setConfig(next); saveConfig(next); }} className="workspace-focus mt-1.5 h-11 w-full rounded-xl border border-zinc-300 bg-zinc-100 px-3 text-sm tabular-nums dark:border-zinc-700 dark:bg-zinc-800" /></label>
     </section>
-  );
+    <AiProfilesSettings modelKind="image" />
+  </>;
 };
 
 export const imageGenerationPlugin: EmbeddedPlugin = {

@@ -44,6 +44,7 @@ export type PluginEditorContext = {
   canEdit: boolean;
   excalidrawAPI: React.MutableRefObject<any>;
   hideTrigger?: boolean;
+  onNavigateTo?: (destination: string) => Promise<boolean> | void;
 };
 
 export type PluginHomeContext = {
